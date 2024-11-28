@@ -1,0 +1,218 @@
+\documentclass[12pt, twoside]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+% Bibliography.
+\usepackage[style=ieee]{biblatex}
+\addbibresource{bibliography/refs.bib}
+
+\newcommand{\reporttitle}{The \textit{hp-Adaptive} Discontinuous Galërkin Method}
+\newcommand{\accentcolor}{solarized-blue}
+\newcommand{\urlcolor}{\accentcolor}
+
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{bm}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+
+% Sets and spaces.
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\RT}{\mathbb{R}^2}
+\newcommand{\N}{\mathbb{N}}
+
+\newcommand{\PK}[1]{\mathbb{P}_{#1}}
+
+\newcommand{\LT}{\mathscr{L}^2}
+\newcommand{\HO}{\mathscr{H}^1}
+
+\newcommand{\Tau}{\mathcal{T}}
+\newcommand{\F}{\mathcal{F}}
+
+% Vectors and operators.
+\newcommand{\Vector}[1]{\bm{#1}}
+\newcommand{\Operator}[1]{\textcolor{solarized-cyan}{#1}}
+
+% Matrices.
+\newcommand{\MM}{\mathcal{M}}
+\newcommand{\MA}{\mathcal{A}}
+\newcommand{\VB}{\mathcal{B}}
+
+% Gradient and divergence.
+\newcommand{\grad}{\Vector{\nabla}}
+\newcommand{\diver}{\text{div }}
+
+% Span.
+\newcommand{\Span}[1]{\text{span} \left\{ #1 \right\}}
+
+% Bilinear operators.
+\newcommand{\boa}[2]{\Operator{a}(#1, #2)}
+
+% Redefinition.
+\newcommand{\Exists}{\exists ~}
+\newcommand{\Forall}{\forall ~}
+
+% Theorems.
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{proposition}{Proposition}[section]
+
+\newtheorem*{theorem*}{Theorem}
+
+\usepackage{courier}
+\usepackage{listings}
+
+\lstdefinestyle{default}{
+	basicstyle=\ttfamily\color{solarized-base01},
+	breakatwhitespace=false,
+	breaklines=true,
+	keepspaces=true,
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	tabsize=2
+}
+
+\lstdefinestyle{cpp}{ % C++
+	commentstyle=\color{solarized-green},
+	keywordstyle=\color{solarized-blue},
+	stringstyle=\color{solarized-orange},
+	basicstyle=\ttfamily\color{solarized-base02},
+	numberstyle=\ttfamily\color{solarized-base01},
+	breakatwhitespace=false,
+	breaklines=true,
+	captionpos=b,
+	keepspaces=true,
+	showspaces=false,
+	language=c++,
+	showstringspaces=false,
+	showtabs=false,
+	numbers=left,
+	tabsize=4
+}
+
+\lstset{style=default}
+
+\usepackage{nameref}
+\usepackage{multicol}
+\usepackage{titlesec}
+
+\usepackage{enumerate}
+
+\usepackage{graphicx}
+\graphicspath{{gallery/}}
+
+% Plots.
+\usepackage{subcaption}
+
+% TikZ.
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\usepackage{xcolor-solarized}
+\color{solarized-base02}
+
+\usepackage[a4paper]{geometry}
+\geometry{
+	inner=20mm,
+	outer=20mm,
+	top=30mm,
+	bottom=30mm,
+	heightrounded,
+	marginparwidth=50pt,
+	marginparsep=20pt,
+	headsep=25pt,
+	headheight=30pt
+}
+
+% Paragraph spacing.
+\usepackage{parskip}
+
+\usepackage{hyperref}
+\hypersetup{
+	linktocpage=true,
+	colorlinks=true,
+	linkcolor=\accentcolor,
+	urlcolor=\urlcolor,
+	citecolor=\accentcolor,
+	pdftitle={\reporttitle},
+	pdfpagemode=FullScreen,
+	pdfauthor={Andrea Di Antonio}
+}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{Andrea Di Antonio}
+\fancyhead[EL]{\reporttitle}
+\fancyhead[OL]{Advanced Programming for Scientific Computing}
+\fancyfoot[C]{\thepage}
+
+\title{\reporttitle}
+\author{Andrea Di Antonio\footnote{UniMiB: 858798, PoliMi: 10655477.} \\ Supervised by Professors Paola F. Antonietti and Marco Verani}
+\date{Exam session of September 10, 2024 \\ Academic Year 2023-24}
+
+\setcounter{tocdepth}{3}
+
+\begin{document}
+	\pagenumbering{roman}
+	\maketitle
+	\thispagestyle{fancy}
+
+	\begin{abstract}
+		\begin{center}
+			This report details the implementation of the \textit{hp-adaptive} discontinuous Galërkin method, as part of the course \textit{Advanced Programming for Scientific Computing}. It covers key aspects including mesh generation, problem solving, and the integration of \textit{hp-adaptivity}. For technical details, refer to the project repository on \href{https://github.com/diantonioandrea/pacs-project}{GitHub}.
+		\end{center}
+	\end{abstract}
+
+	\newpage
+	\tableofcontents
+
+	\newpage
+	\pagenumbering{arabic}
+    \section{Introduction}
+	\input{sections/problem.tex}
+
+	\newpage
+    \section{Polygonal Meshes Over a Polygonal Domain}
+	\input{sections/meshes.tex}
+
+	\newpage
+    \section{Solving the Poisson Problem}
+	\input{sections/poisson.tex}
+
+	\newpage
+    \section{Tests over a Sequence of Uniform Meshes}
+	\input{sections/uniform.tex}
+
+	\newpage
+    \section{Implementing \textit{h-Adaptivity}}
+	\input{sections/hadaptivity.tex}
+
+	\newpage
+    \section{Implementing \textit{hp-Adaptivity}}
+	\input{sections/hpadaptivity.tex}
+
+	\newpage
+    \section{Conclusion}
+	\input{sections/conclusion.tex}
+
+	\newpage
+	\addcontentsline{toc}{section}{References}
+	\printbibliography
+
+	\newpage
+	
+	\vspace*{\fill}
+	\begin{center}
+		Compiled on \today.
+	\end{center}
+	\vspace*{\fill}
+
+	\thispagestyle{empty}
+
+\end{document}
