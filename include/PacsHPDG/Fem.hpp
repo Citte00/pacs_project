@@ -20,8 +20,11 @@
 // Basis functions.
 #include "./Fem/Basis.hpp"
 
+// Evaluate function.
+#include "./Fem/EvaluateCoefficients.hpp"
+
 // Functors.
-//#include "./Fem/Functor.hpp"
+#include "./Fem/Functor.hpp"
 
 // General functors.
 #include "./Fem/GeneralFunctor.hpp"

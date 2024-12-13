@@ -16,48 +16,60 @@
 
 namespace pacs {
 
+    template<typename ResultType, typename... Params>
+    using GenFunc = std::function<ResultType(Params...)>;
+
     /**
      * @brief General Functor class.
      * 
      */
-    template<typename VariableType, typename... Args>
+    template<typename ResultType, typename... Args>
     class GeneralFunctor {
         private:
             
             // Function.
-            GenFunc<VariableType, Args...> m_function;
+            GenFunc<ResultType, Args...> m_function;
 
         public:
 
             // CONSTRUCTORS.
-            
             GeneralFunctor() = default;
-            GeneralFunctor(const GenFunc<VariableType, Args...>& function_) : m_function{function_} {};
+            explicit GeneralFunctor(const GenFunc<ResultType, Args...>& function_) : m_function{function_} {};
 
             // EVALUATION.
-            auto operator()(const Args&... args) const {
-                // Determine the return type based on inputs
-                if constexpr ((IsVector<Args> || ...)) {
-                    // At least one argument is a vector: perform element-wise operation
-                    std::size_t length = 0;
-                    ((length = IsVector<Args> ? args.length : length), ...);
+            ResultType operator()(const Args&... args) const {
+                return this->m_function(args...);
+            };
+    };
 
-                    Vector<Real> result(length);
+    /**
+     * @brief General TwoFunctor class.
+     * 
+     */
+    template<typename ResultType, typename... Args>
+    class GeneralTwoFunctor {
+        private:
 
-                    // Compute element-wise results
-                    for (std::size_t i = 0; i < length; ++i) {
-                        result[i] = m_function((IsVector<Args> ? args[i] : args)...);
-                    }
+            // Functions.
+            GenFunc<ResultType, Args...> m_first;
+            GenFunc<ResultType, Args...> m_second;
 
-                    return result;
-                    
-                } else {
-                    // All arguments are scalars: directly apply the function
-                    return m_function(args...);
-                }
+        public:
+
+            // CONSTRUCTORS.
+            GeneralTwoFunctor() = default;
+            explicit GeneralTwoFunctor(const GenFunc<ResultType, Args...>& first_, const GenFunc<ResultType, Args...>& second_) : m_first{first_}, m_second{second_} {};
+
+            // EVALUATION.
+            std::array<ResultType, 2> operator() (const Args&... args) const {
+                return {this->m_first(args...), this->m_second(args...)};
             };
 
     };
+
+    using BiFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>>;
+    using TriFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+    using SourceFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>;
 
 }
 

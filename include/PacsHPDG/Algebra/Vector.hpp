@@ -749,16 +749,12 @@ namespace pacs {
             return *this;
         }
 
-        // SIZE and NORM operator
+        // SIZE operator
 
         std::size_t size() const {
             return this->length;
         }
-
-        T norm() const {
-            return elements.norm();
-        }
-
+        
         // OUTPUT.
 
         /**

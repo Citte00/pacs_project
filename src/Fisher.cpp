@@ -15,12 +15,12 @@ namespace pacs{
      * @brief Assembly of matrices for Fisher-KPP equation
      * 
      * @param mesh 
-     * @param a alpha
+     * @param Alpha alpha
      * @param D D_ext
      * @param penalty_coefficient 
      * @return std::array<Sparse<Real>, 4> 
      */
-    std::array<Sparse<Real>, 4> fisher(const Mesh &mesh, const GeneralFunctor<Vector<Real>,Vector<Real>,Vector<Real>,Real> &Alpha, const GeneralFunctor<Vector<Real>,Vector<Real>,Vector<Real>,Real> &D, const Real &penalty_coefficient)
+    std::array<Sparse<Real>, 4> fisher(const Mesh &mesh, const TriFunctor &Alpha, const TriFunctor &D, const Real &penalty_coefficient)
     {
         #ifndef NVERBOSE
         std::cout << "Computing the Fisher-KPP matrices." << std::endl;
@@ -221,7 +221,6 @@ namespace pacs{
 
                 // Param initialization.
                 Vector<Real> Dext = D(physical_x, physical_y, 0.0);
-                Vector<Real> alpha = Alpha(physical_x, physical_y, 0.0);
 
                 // Basis functions.
                 auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
@@ -300,14 +299,13 @@ namespace pacs{
     /**
      * @brief Assembly of the non-linear matrix for Fisher-KPP equation
      * 
-     * @param a alpha
-     * @param D D_ext
+     * @param mesh 
+     * @param Alpha 
      * @param uh 
      * @param penalty_coefficient 
      * @return Sparse<Real> 
      */
-    /*
-    Sparse<Real> NLfisher(const Mesh &mesh, const Functor &a, const Vector<Real> &uh, const Real &penalty_coefficient)
+    Sparse<Real> NLfisher(const Mesh &mesh, const TriFunctor &Alpha, const Vector<Real> &uh, const Real &penalty_coefficient)
     {
         #ifndef NVERBOSE
         std::cout << "Computing the Fisher-KPP matrices." << std::endl;
@@ -402,18 +400,17 @@ namespace pacs{
                 Vector<Real> scaled = jacobian_det * weights_2d;
 
                 // Param initialization.
-                Vector<Real> alpha = a(physical_x, physical_y, 0.0);
+                Vector<Real> alpha = Alpha(physical_x, physical_y, 0.0);
                 Vector<Real> c_star = uh(indices);
-                Vector<Real> c_star_loc{c_star};
 
                 // Basis functions.
                 auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
 
                 // Some products.
                 Matrix<Real> scaled_phi{phi};
+                Vector<Real> c_star_loc = phi * c_star;
 
                 for(std::size_t l = 0; l < scaled_phi.columns; ++l) {
-                    c_star_loc = c_star * phi.column(l);
                     scaled_phi.column(l, (alpha * scaled_phi.column(l)) * c_star_loc * scaled);
                 }
 
@@ -424,7 +421,6 @@ namespace pacs{
 
             // Global matrix assembly.
             M_star.insert(indices, indices, local_M);
-
             
         }
 
@@ -435,6 +431,6 @@ namespace pacs{
         non_lin.compress();
         
         return non_lin;
-    }*/
+    }
 
 }

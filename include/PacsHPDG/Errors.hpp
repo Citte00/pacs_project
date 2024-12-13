@@ -14,7 +14,7 @@
 // Error evaluation.
 #include "./Errors/Errors.hpp"
 
-// Estimators.
-#include "./Errors/Estimators.hpp"
+// Error evaluation.
+#include "./Errors/GeneralErrors.hpp"
 
 #endif

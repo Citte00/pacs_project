@@ -193,7 +193,7 @@ namespace pacs {
      */
     template<typename T>
     concept Normable = requires(T x) {
-        { x.norm() } -> Scalar;
+        { norm(x) } -> Scalar;
     };
 
     /**
@@ -222,14 +222,6 @@ namespace pacs {
      */
     template<typename T>
     concept ScalarOrVector = Scalar<T> || IsVector<T>;
-
-    /**
-     * @brief General function alias.
-     * 
-     */
-    template<typename Result, typename... Args>
-    using GenFunc = Result (*) (const Args...&);
-
 }
 
 #endif

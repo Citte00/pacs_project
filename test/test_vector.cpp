@@ -18,8 +18,6 @@ int main() {
     pacs::Vector<pacs::Real> first{4, 1.0};
     pacs::Vector<pacs::Real> second{4};
 
-    pacs::Real norm = first.norm();
-
     second[1] = 2.0;
     second[2] = -2.0;
 

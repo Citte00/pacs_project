@@ -16,7 +16,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <filesystem>
+
 
 int main(int argc, char **argv) {
     
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     if(argc == 3)
         elements = static_cast<std::size_t>(std::stoi(argv[2]));
 
-    std::vector<pacs::Polygon> diagram = pacs::mesh_diagram("data/square/square_" + std::to_string(elements) + ".poly");
+    std::vector<pacs::Polygon> diagram = pacs::mesh_diagram("meshes/square/square_" + std::to_string(elements) + ".poly");
 
     // "Splash".
     std::ofstream output{"output/square_hp_" + std::to_string(elements) + "@" + std::to_string(degree) + ".error"};

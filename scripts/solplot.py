@@ -12,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import sys
+import os
 
 # Font.
 matplotlib.rcParams.update({'font.size': 18})
@@ -73,7 +74,7 @@ fig, axes = plt.subplots(1, 3)
 fig.suptitle("Solution Scatterplot")
 
 data: list[list[float]] = [numerical, exact, error]
-titles: list[str] = ["Numerical solution", "Exact solution", "Error"]
+titles: list[str] = ["Numerical", "Exact", "Error"]
 
 scatters: list = [None] * 3
 bars: list = [None] * 3
@@ -98,5 +99,9 @@ for j in range(3):
         bars[j].set_ticks([min(data[j]), max(data[j])])
         bars[j].set_ticklabels([f"{min(data[j]):.2f}", f"{max(data[j]):.2f}"])
 
-# Output.
-plt.show()
+# Output from interactive backend.
+#plt.show()
+
+# Output from terminal.
+name = f"{os.path.splitext(sys.argv[1])[0]}.png"
+plt.savefig(name)

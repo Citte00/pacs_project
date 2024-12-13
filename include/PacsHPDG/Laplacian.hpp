@@ -21,7 +21,7 @@
 #include "./Laplacian/Solvers.hpp"
 
 // Estimators.
-// #include "./Laplacian/Estimators.hpp"
+#include "./Laplacian/Estimators.hpp"
 
 // Refine.
 #include "./Laplacian/Refine.hpp"

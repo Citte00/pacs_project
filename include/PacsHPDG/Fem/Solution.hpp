@@ -37,10 +37,12 @@ namespace pacs {
 
         Solution() = delete;
         Solution(const Mesh &, const Vector<Real> &, const Functor &);
+        Solution(const Mesh &, const Vector<Real> &, const TriFunctor &, const Real &);
 
         // OUTPUT.
 
         void write(const std::string &);
+        // void writeVTK(const std::string &);
 
     };
 

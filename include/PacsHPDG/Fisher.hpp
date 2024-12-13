@@ -5,7 +5,9 @@
 #include "./Fisher/Fisher.hpp"
 
 // Forcing term.
-// #include "./Fisher/Forcing.hpp"
+#include "./Fisher/ForcingFKPP.hpp"
 
+// Solver.
+#include "./Fisher/SolverFKPP.hpp"
 
 #endif
