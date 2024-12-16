@@ -19,11 +19,11 @@
 namespace pacs {
 
     // Fisher matrices.
-    std::array<Sparse<Real>, 4> fisher(const Mesh &, const TriFunctor&, const TriFunctor&, const Real &penalty_coefficient = 10.0);
+    std::array<Sparse<Real>, 4> fisher(const Mesh &, const size_t &, const TriFunctor&, const TriFunctor&, const Real &penalty_coefficient = 10.0);
 
     // Non-linear Fisher matrix. 
 
-    Sparse<Real> NLfisher(const Mesh &, const TriFunctor&, const Vector<Real> &, const Real &penalty_coefficient = 10.0);
+    Sparse<Real> NLfisher(const Mesh &, const size_t &, const TriFunctor&, const Vector<Real> &, const Real &penalty_coefficient = 10.0);
 
 }
 

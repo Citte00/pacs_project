@@ -46,13 +46,13 @@ int main(int argc, char **argv) {
     // Diagrams.
     std::vector<std::vector<pacs::Polygon>> diagrams;
 
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_125.poly"));
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_250.poly"));
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_500.poly"));
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_1000.poly"));
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_2000.poly"));
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_4000.poly"));
-    diagrams.emplace_back(pacs::mesh_diagram("data/square/square_8000.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_125.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_250.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_500.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_1000.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_2000.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_4000.poly"));
+    diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_8000.poly"));
 
     // Test.
     for(std::size_t index = 0; index < diagrams.size(); ++index) {

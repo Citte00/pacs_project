@@ -1,6 +1,6 @@
 .PHONY: all lib install tests examples domains testrun clean distclean debug
 CXXFLAGS = -Wall -Wno-sign-compare -pedantic -std=c++20 -march=native -fPIC -I./include -O2 -fno-unsafe-math-optimizations -fno-fast-math
-DEBUG_CXXFLAGS = -g -O0 -fkeep-inline-functions -Wall -Wno-sign-compare -pedantic -std=c++20 -march=native -fPIC -I./include -O2 -fno-unsafe-math-optimizations -fno-fast-math
+DEBUG_CXXFLAGS = -g -O2 -fkeep-inline-functions -Wall -Wno-sign-compare -pedantic -std=c++20 -march=native -fPIC -I./include -O2 -fno-unsafe-math-optimizations -fno-fast-math -v
 
 ifeq ($(shell uname), Darwin) # Apple's clang.
 CXXFLAGS += -ffp-model=precise
@@ -30,17 +30,20 @@ CPPFLAGS += -DNDEBUG
 # Parallel computing using OpenMP. Enabled by default.
 ifneq ($(OpenMP),) # $(OpenMP) set to /path/to/libomp. Apple's clang.
 CXXFLAGS += -Xclang -fopenmp
+DEBUG_CXXFLAGS += -fopenmp
 CPPFLAGS += -I$(OpenMP)/include
 LDFLAGS += -L$(OpenMP)/lib
 LDLIBS += -lomp
 else
 ifneq ($(mkPrefix),) # Parallel computing using OpenMP with modules.
 CXXFLAGS += -fopenmp
+DEBUG_CXXFLAGS += -fopenmp
 LDFLAGS += -L$(mkToolchainPrefix)/lib
 LDLIBS += -lgomp
 else
 ifneq ($(shell g++ --version | grep GCC),) # Parallel computing using GCC's default OpenMP.
 CXXFLAGS += -fopenmp
+DEBUG_CXXFLAGS += -fopenmp
 LDLIBS += -lgomp
 else
 CXXFLAGS += -Wno-unknown-pragmas
@@ -88,10 +91,11 @@ TEST_OBJECTS = $(subst test/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find test -n
 # All.
 all: tests examples domains
 
-# Debug target.
+# Debug target for debugging with gdb.
 debug: CXXFLAGS = $(DEBUG_CXXFLAGS)
-debug: LDLIBS += -lstdc++fs
-debug: clean single_test
+#debug: LDFLAGS += -lstdc++fs
+#debug: LDLIBS += $(LDLIBS)
+debug: distclean examples
 	@echo "Build completed with debugging flags"
 
 # Library.
@@ -117,8 +121,8 @@ install: # Manual spacing for consistency between platforms.
 endif
 
 # Test.
-single_test: $(EXEC_DIR) $(OUTPUT_DIR) executables/$(TEST_FILE).out
-	@echo "Compiled test $(TEST_FILE)!"
+#single_test: $(EXEC_DIR) $(OUTPUT_DIR) executables/$(TEST_FILE).out
+#	@echo "Compiled test $(TEST_FILE)!"
 
 tests: $(EXEC_DIR) $(OUTPUT_DIR) $(TEST_EXECS)
 	@echo "Compiled tests!"
@@ -138,13 +142,13 @@ $(TEST_OBJECTS): $(OBJECT_DIR)/%.o: test/%.cpp $(HEADERS) $(OBJECT_DIR)
 	@echo "Compiling $< using $(CXX) with: $(CXXFLAGS) $(CPPFLAGS)"
 	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-executables/$(TEST_FILE).out: $(OBJECT_DIR)/$(TEST_FILE).o $(OBJECTS)
-	@if [ "$(LDLIBS) $(LDFLAGS)" = " " ]; then echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@"; else echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@ with: $(LDLIBS) $(LDFLAGS)"; fi
-	@$(CXX) $(LDLIBS) $(LDFLAGS) $^ -o $@
+#executables/$(TEST_FILE).out: $(OBJECT_DIR)/$(TEST_FILE).o $(OBJECTS)
+#	@if [ "$(LDLIBS) $(LDFLAGS)" = " " ]; then echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@"; else echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@ with: $(LDLIBS) $(LDFLAGS)"; fi
+#	@$(CXX) $(LDLIBS) $(LDFLAGS) $^ -o $@
 
-$(OBJECT_DIR)/$(TEST_FILE).o: test/$(TEST_FILE).cpp $(HEADERS)
-	@echo "Compiling $< using $(CXX) with: $(CXXFLAGS) $(CPPFLAGS)"
-	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+#$(OBJECT_DIR)/$(TEST_FILE).o: test/$(TEST_FILE).cpp $(HEADERS)
+#	@echo "Compiling $< using $(CXX) with: $(CXXFLAGS) $(CPPFLAGS)"
+#	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 # Examples.
 examples: $(OBJECT_DIR) $(EXEC_DIR) $(OUTPUT_DIR) $(EXAMPLE_EXECS)

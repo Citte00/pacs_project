@@ -7,10 +7,6 @@ report/output
 **/*.out
 lib
 
-# Meshes files.
-meshes
-**/*.poly
-
 # Makefile's output.
 **/executables
 **/objects
