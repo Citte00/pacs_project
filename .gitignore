@@ -1,0 +1,58 @@
+# VSCode
+.vscode
+report/output
+
+# C++
+**/*.o
+**/*.out
+lib
+
+# Meshes files.
+meshes
+**/*.poly
+
+# Makefile's output.
+**/executables
+**/objects
+
+# Executables' output.
+**/output
+
+# Python
+**/__pycache__
+
+# polyplot.py
+/*.poly
+
+# solplot.py
+/*.sol
+
+# Others
+**/*.DS_Store
+**/.DS_Store
+
+# Latex.
+report/*.pdf
+presentation/*.pdf
+**/*.aux
+**/*.lof
+**/*.log
+**/*.lot
+**/*.fls
+**/*.out
+**/*.toc
+**/*.fmt
+**/*.fot
+**/*.cb
+**/*.cb2
+**/.*.lb
+**/*.bbl
+**/*.bcf
+**/*.blg
+**/*.nav
+**/*.snm
+**/*.vrb
+**/*-blx.aux
+**/*-blx.bib
+**/*.run.xml
+**/*.fdb_latexmk
