@@ -1,44 +1,44 @@
 /**
- * @file ForcingFKPP.cpp
+ * @file Heat.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
  * @brief 
- * @date 2024-12-03
+ * @date 2024-12-16
  * 
  * @copyright Copyright (c) 2024
  * 
  */
 
+#ifndef SRC_HEAT_CPP
+#define SRC_HEAT_CPP
+
 #include <PacsHPDG.hpp>
 
 namespace pacs {
 
-    /**
-     * @brief Assembly of the RHS.
-     * 
-     * @param mesh 
-     * @param Alpha 
-     * @param D 
-     * @param source 
-     * @param dirichlet 
-     * @param penalty_coefficient 
-     * @param t 
-     * @return Vector<Real> 
-     */
-    Vector<Real> forcingFKPP(const Mesh &mesh, const TriFunctor &Alpha, const TriFunctor &D, const FKPPSource &source, const TriFunctor &dirichlet, const Real &t, const Real &penalty_coefficient) {
+    std::array<Sparse<Real>, 3> heat(const Mesh &mesh, const std::size_t &degree, const TriFunctor &D, const Real &penalty_coefficient) {
 
-        #ifndef NVERBOSE
-        std::cout << "Computing the forcing term." << std::endl;
+         #ifndef NVERBOSE
+        std::cout << "Computing the Heat equation matrices." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t degree = GAUSS_ORDER;
+        std::size_t nqn = 2*degree + 1;
 
         // Quadrature nodes.
-        auto [nodes_1d, weights_1d] = quadrature_1d(degree);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+        auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
+        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
         // Degrees of freedom.
         std::size_t dofs = mesh.dofs();
+
+        // Neighbours.
+        std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+
+        // Matrices.
+        Sparse<Real> M{dofs, dofs};
+        Sparse<Real> A{dofs, dofs};
+        Sparse<Real> IA{dofs, dofs};
+        Sparse<Real> SA{dofs, dofs};
 
         // Starting indices.
         std::vector<std::size_t> starts;
@@ -46,12 +46,6 @@ namespace pacs {
 
         for(std::size_t j = 1; j < mesh.elements.size(); ++j)
             starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
-
-        // Neighbours.
-        std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
-
-        // Forcing term.
-        Vector<Real> forcing{dofs};
 
         // Volume integrals.
 
@@ -73,8 +67,9 @@ namespace pacs {
             // Element sub-triangulation.
             std::vector<Polygon> triangles = triangulate(polygon);
 
-            // Local forcing term.
-            Vector<Real> local_f{element_dofs};
+            // Local matrices.
+            Matrix<Real> local_M{element_dofs, element_dofs};
+            Matrix<Real> local_A{element_dofs, element_dofs};
 
             // Loop over the sub-triangulation.
             for(std::size_t k = 0; k < triangles.size(); ++k) {
@@ -118,26 +113,44 @@ namespace pacs {
                 // Weights scaling.
                 Vector<Real> scaled = jacobian_det * weights_2d;
 
-                // Local source evaluation.
-                Vector<Real> Dext = D(physical_x, physical_y, t);
-                Vector<Real> alpha = Alpha(physical_x, physical_y, t);
-                Vector<Real> local_source = source(physical_x, physical_y, t, Dext, alpha);
+                // Param initialization.
+                Vector<Real> Dext = D(physical_x, physical_y, 0.0);
 
                 // Basis functions.
-                auto phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
+                auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
+
+                // Some products.
                 Matrix<Real> scaled_phi{phi};
+                Matrix<Real> scaled_gradx{gradx_phi};
+                Matrix<Real> scaled_grady{grady_phi};
 
-                for(std::size_t l = 0; l < scaled_phi.columns; ++l)
+                for(std::size_t l = 0; l < scaled_gradx.columns; ++l) {
                     scaled_phi.column(l, scaled_phi.column(l) * scaled);
+                    scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
+                    scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
+                }
 
-                // Local forcing term.
-                local_f += scaled_phi.transpose() * local_source;
+                // Local matrix assembly.
+                local_M += scaled_phi.transpose() * phi;
+                local_A += scaled_gradx.transpose() * gradx_phi + scaled_grady.transpose() * grady_phi;
             }
+
+            // Global matrix assembly.
+            M.insert(indices, indices, local_M);
+            A.insert(indices, indices, local_A);
 
             // Face integrals.
 
+            // Local matrices.
+            Matrix<Real> local_IA{element_dofs, element_dofs};
+            Matrix<Real> local_SA{element_dofs, element_dofs};
+
             // Element's neighbours.
             std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
+
+            // Local matrices for neighbours.
+            std::vector<Matrix<Real>> local_IAN;
+            std::vector<Matrix<Real>> local_SAN;
 
             // Penalties.
             Vector<Real> penalties = penalty(mesh, j, penalty_coefficient);
@@ -151,23 +164,14 @@ namespace pacs {
                 // Neighbour information.
                 auto [edge, neighbour, n_edge] = element_neighbours[k];
 
-                // Only domain's border,
-                if(neighbour != -1)
-                    continue;
-
                 // Edge geometry.
-                Segment segment{edges[k]}; // Mesh's edges to be fixed. [!]
+                Segment segment{edges[k]};
 
-                // Edge's normal. Check the order. [!]
-                Vector<Real> edge_vector{2};
-
-                edge_vector[0] = segment[1][0] - segment[0][0];
-                edge_vector[1] = segment[1][1] - segment[0][1];
-
+                // Edge's normal.
                 Vector<Real> normal_vector{2};
 
-                normal_vector[0] = edge_vector[1];
-                normal_vector[1] = -edge_vector[0];
+                normal_vector[0] = segment[1][1] - segment[0][1];
+                normal_vector[1] = segment[0][0] - segment[1][0];
 
                 normal_vector /= norm(normal_vector);
 
@@ -203,11 +207,11 @@ namespace pacs {
                 // Weights scaling.
                 Vector<Real> scaled = std::abs(segment) * weights_1d;
 
+                // Param initialization.
+                Vector<Real> Dext = D(physical_x, physical_y, 0.0);
+
                 // Basis functions.
                 auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
-
-                // Param initialisation.
-                Vector<Real> Dext = D(physical_x, physical_y, t);
 
                 // Local matrix assembly.
                 Matrix<Real> scaled_gradx{gradx_phi};
@@ -222,21 +226,63 @@ namespace pacs {
 
                 Matrix<Real> scaled_grad = normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
 
-                // Boundary conditions.
-                Vector<Real> boundary = dirichlet(physical_x, physical_y, t);
+                if(neighbour == -1) { // Boundary edge.
 
-                // Local forcing term.
-                local_f -= scaled_grad.transpose() * boundary;
-                local_f += penalties[k] * scaled_phi.transpose() * boundary;
+                    local_IA += scaled_grad.transpose() * phi;
+                    local_SA += (penalties[k] * scaled_phi).transpose() * phi;
+
+                    // Empty small matrices.
+                    local_IAN.emplace_back(Matrix<Real>{1, 1});
+                    local_SAN.emplace_back(Matrix<Real>{1, 1});
+
+                } else {
+
+                    local_IA += 0.5 * scaled_grad.transpose() * phi;
+                    local_SA += (penalties[k] * scaled_phi).transpose() * phi;
+
+                    // Neighbour's basis function.
+                    Matrix<Real> n_phi = basis_2d(mesh, neighbour, {physical_x, physical_y})[0];
+
+                    // Neighbour's local matrix.
+                    local_IAN.emplace_back(- 0.5 * scaled_grad.transpose() * n_phi);
+                    local_SAN.emplace_back(- (penalties[k] * scaled_phi).transpose() * n_phi);
+                }
             }
 
-            // Global forcing term.
-            forcing(indices, local_f);
+            IA.insert(indices, indices, local_IA);
+            SA.insert(indices, indices, local_SA);
 
+            // Neighbouring DG matrices assembly.
+            for(std::size_t k = 0; k < element_neighbours.size(); ++k) {
+                if(element_neighbours[k][1] == -1)
+                    continue;
+
+                std::vector<std::size_t> n_indices;
+                std::size_t n_index = element_neighbours[k][1];
+                std::size_t n_dofs = mesh.elements[n_index].dofs(); // Neighbour's dofs.
+
+                for(std::size_t h = 0; h < n_dofs; ++h)
+                    n_indices.emplace_back(starts[n_index] + h);
+
+                IA.add(indices, n_indices, local_IAN[k]);
+                SA.add(indices, n_indices, local_SAN[k]);
+            }
         }
 
-        return forcing;
+        // Matrices.
+        Sparse<Real> mass = M;
+        Sparse<Real> dg_stiffness = A + SA;
+        Sparse<Real> stiffness = dg_stiffness - IA - IA.transpose();
+
+        // Compression.
+        mass.compress();
+        dg_stiffness.compress();
+        stiffness.compress();
+        
+        return {mass, stiffness, dg_stiffness};
 
     }
 
 }
+
+#endif

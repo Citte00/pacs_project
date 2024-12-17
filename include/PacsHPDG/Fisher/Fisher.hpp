@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef FISHER_MATRIX_PACS
-#define FISHER_MATRIX_PACS
+#ifndef INCLUDE_PACSHPDG_FISHER_FISHER_HPP
+#define INCLUDE_PACSHPDG_FISHER_FISHER_HPP
 
 #include "../Base.hpp"
 #include "../Algebra.hpp"
@@ -22,7 +22,6 @@ namespace pacs {
     std::array<Sparse<Real>, 4> fisher(const Mesh &, const size_t &, const TriFunctor&, const TriFunctor&, const Real &penalty_coefficient = 10.0);
 
     // Non-linear Fisher matrix. 
-
     Sparse<Real> NLfisher(const Mesh &, const size_t &, const TriFunctor&, const Vector<Real> &, const Real &penalty_coefficient = 10.0);
 
 }

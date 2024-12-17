@@ -12,19 +12,31 @@
 
 namespace pacs {
 
+    /**
+     * @brief Fisher-KPP equation solver
+     * 
+     * @param mesh Mesh.
+     * @param degree Polynomial degree.
+     * @param alpha Non-linear term coefficient. 
+     * @param Matrices [M_prj, M, A, DG] system matrices. 
+     * @param ch [c_h^n, c_h^(n-1)] solutions at previous time steps.
+     * @param F_old forcing term at time step n
+     * @param F_new forcing term at time step n+1
+     * @param t Time step.
+     * @param theta Time discretization parameter (defaulted to 0.5 for CN method).
+     * @param TOL tolerance.
+     * @return Vector<Real> 
+     */
     Vector<Real> FKPPsolver(const Mesh &mesh, const size_t &degree, const TriFunctor &alpha, const std::array<Sparse<Real>, 4> &Matrices, const std::array<Vector<Real>, 2> &ch, const Vector<Real> &F_old, const Vector<Real> &F_new, const Real &t, const Real &theta, const Real &TOL) {
 
         // Mass blocks.
         auto blocks = block_mass(mesh);
 
         // Extract Matrices from tuple.
-        Sparse<Real> M_prj = Matrices[0];
-        Sparse<Real> M = Matrices[1];
-        Sparse<Real> A = Matrices[2];
+        auto [M_prj, M, A, DG] = Matrices;
 
         // Extract solutions.
-        Vector<Real> c_old = ch[0];
-        Vector<Real> c_oold = ch[1];
+        auto [c_old, c_oold] = ch;
 
         // Assembling the constant component of the matrices.
         Sparse<Real> LHS = M_prj + t * theta * A;

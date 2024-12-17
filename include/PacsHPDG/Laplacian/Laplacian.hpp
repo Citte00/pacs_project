@@ -18,15 +18,9 @@
 namespace pacs {
 
     // Laplacian matrix.
-
     std::array<Sparse<Real>, 3> laplacian(const Mesh &, const Real &penalty_coefficient = 10.0);
 
-    // Fisher matrix.
-
-    // std::array<Sparse<Real>, 4> fisher(const Mesh &, const Real &penalty_coefficient = 10.0);
-
     // Blocks.
-
     std::vector<std::array<std::vector<std::size_t>, 2>> block_mass(const Mesh &);
 }
 

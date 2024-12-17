@@ -1,6 +1,6 @@
 .PHONY: all lib install tests examples domains testrun clean distclean debug
 CXXFLAGS = -Wall -Wno-sign-compare -pedantic -std=c++20 -march=native -fPIC -I./include -O2 -fno-unsafe-math-optimizations -fno-fast-math
-DEBUG_CXXFLAGS = -g -O2 -fkeep-inline-functions -Wall -Wno-sign-compare -pedantic -std=c++20 -march=native -fPIC -I./include -O2 -fno-unsafe-math-optimizations -fno-fast-math -v
+DEBUG_CXXFLAGS = -g -O2 -fkeep-inline-functions -Wall -Wno-sign-compare -pedantic -std=c++20 -march=native -fPIC -I./include -O2 -fno-unsafe-math-optimizations -fno-fast-math
 
 ifeq ($(shell uname), Darwin) # Apple's clang.
 CXXFLAGS += -ffp-model=precise

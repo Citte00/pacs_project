@@ -7,8 +7,6 @@
  * @copyright Copyright (c) 2024
  * 
  */
-#define GAUSS_ORDER
-
 #include <PacsHPDG.hpp>
 
 #include <string>
@@ -23,14 +21,13 @@ pacs::Vector<pacs::Real> exact_t(const pacs::Vector<pacs::Real> &, const pacs::V
 pacs::Vector<pacs::Real> dirichlet(const pacs::Vector<pacs::Real> &, const pacs::Vector<pacs::Real> &, const pacs::Real &);
 
 pacs::Vector<pacs::Real> D(const pacs::Vector<pacs::Real> &, const pacs::Vector<pacs::Real> &, const pacs::Real &);
-pacs::Vector<pacs::Real> alpha(const pacs::Vector<pacs::Real> &, const pacs::Vector<pacs::Real> &, const pacs::Real &);
-pacs::Vector<pacs::Real> source(const pacs::Vector<pacs::Real> &, const pacs::Vector<pacs::Real> &, const pacs::Real &, const pacs::Vector<pacs::Real> &, const pacs::Vector<pacs::Real> &);
+pacs::Vector<pacs::Real> source(const pacs::Vector<pacs::Real> &, const pacs::Vector<pacs::Real> &, const pacs::Real &, const pacs::Vector<pacs::Real> &);
 
 int main(int argc, char **argv) {
 
     // Degree.
     if(argc <= 1) {
-        std::cout << "Usage: " << argv[0] << " DEGREE [ELEMENTS] [TIME]." << std::endl;
+        std::cout << "Usage: " << argv[0] << " DEGREE [TIME] [ELEMENTS]." << std::endl;
         std::exit(-1);
     }
 
@@ -43,11 +40,11 @@ int main(int argc, char **argv) {
     pacs::Real Time = 2;
 
     if(argc == 3)
-        elements = static_cast<std::size_t>(std::stoi(argv[2]));
+        Time = static_cast<pacs::Real>(std::stoi(argv[2]));;
 
     if(argc == 4) {
-        elements = static_cast<std::size_t>(std::stoi(argv[2]));
-        Time = static_cast<pacs::Real>(std::stoi(argv[3]));
+        Time = static_cast<pacs::Real>(std::stoi(argv[2]));
+        elements = static_cast<std::size_t>(std::stoi(argv[3]));
     }
     
     std::vector<pacs::Polygon> diagram = pacs::mesh_diagram("meshes/square/square_" + std::to_string(elements) + ".poly");
@@ -75,22 +72,21 @@ int main(int argc, char **argv) {
     mesh.write(polyfile, true);
 
     // Functor definition.
-    pacs::TriFunctor exactfunc(exact);
-    pacs::GeneralTwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Real> exactfunc2(exact_x, exact_y);
-    pacs::BiFunctor exactfunc_t(exact_t);
-    pacs::TriFunctor DirBC(dirichlet);
-    pacs::TriFunctor alphafunc(alpha);
-    pacs::TriFunctor Dextfunc(D);
-    pacs::FKPPSource Source(source);
+    pacs::TriFunctor c_ex(exact);
+    pacs::GeneralTwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Real> grad_exact(exact_x, exact_y);
+    pacs::BiFunctor dt_exact(exact_t);
+    pacs::TriFunctor g_D(dirichlet);
+    pacs::TriFunctor D_ext(D);
+    pacs::HeatSource Source(source);
 
     // Builds the Fisher-KPP matrices.
-    std::array<pacs::Sparse<pacs::Real>, 4> Matrices = pacs::fisher(mesh, degree, alphafunc, Dextfunc);
+    std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(mesh, degree, D_ext);
 
     // Get initial condition.
-    std::array<pacs::Vector<pacs::Real>, 2> ch_old = pacs::EvaluateICFKPP(mesh, Matrices[0], exactfunc, 0.0);
+    pacs::Vector<pacs::Real> ch_old = pacs::EvaluateICHeat(mesh, Matrices[0], c_ex);
 
     // Compute initial forcing.
-    pacs::Vector<pacs::Real> F_new = pacs::forcingFKPP(mesh, alphafunc, Dextfunc, Source, DirBC, 0.0);
+    pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, 0.0, degree);
 
     for(pacs::Real t = 0.01; t <= Time; t += 0.01) {
 
@@ -98,25 +94,25 @@ int main(int argc, char **argv) {
 
         // Update the forcing term.
         pacs::Vector<pacs::Real> F_old = F_new;
-        F_new = pacs::forcingFKPP(mesh, alphafunc, Dextfunc, Source, DirBC, t);
+        F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, t, degree);
 
-        pacs::Vector<pacs::Real> ch = pacs::FKPPsolver(mesh, degree, alphafunc, Matrices, ch_old, F_old, F_new, t);
+        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(mesh, degree, Matrices, ch_old, {F_old, F_new}, t);
 
         // Errors.
-        pacs::GeneralError error{mesh, {Matrices[0], Matrices[3]}, ch, exactfunc, exactfunc2, t};
+        pacs::GeneralError error{mesh, {Matrices[0], Matrices[3]}, ch, c_ex, grad_exact, t};
 
         // Solution structure (output).
-        pacs::Solution solution{mesh, ch, exactfunc, t};
+        pacs::Solution solution{mesh, ch, c_ex, t};
         std::string solfile = "output/square_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(t) + ".sol";
         solution.write(solfile);
 
         // Output.
         output << "\n" << error << "\n" << std::endl;
 
-        ch_old[1] = ch_old[0];
-        ch_old[0] = ch;
+        ch_old = ch;
 
     }
+    
 }
 
 /**
@@ -198,8 +194,6 @@ inline pacs::Vector<pacs::Real> exact_t(const pacs::Vector<pacs::Real> &x, const
     return result;
 }
 
-
-
 /**
  * @brief Dirichlet BC.
  * 
@@ -225,34 +219,21 @@ inline pacs::Vector<pacs::Real> D(const pacs::Vector<pacs::Real> &x, const pacs:
 }
 
 /**
- * @brief Definition of parameter in non linear term.
- * 
- * @param x 
- * @param y 
- * @param t 
- * @return pacs::Real 
- */
-inline pacs::Vector<pacs::Real> alpha(const pacs::Vector<pacs::Real> &x, const pacs::Vector<pacs::Real> &y, const pacs::Real &t) {
-    return 1.0 + 0.0 * x * y * t;
-}
-
-/**
  * @brief Test source.
  * 
  * @param x 
  * @param y 
  * @param t 
  * @param D 
- * @param alpha 
  * @return pacs::Real 
  */
-inline pacs::Vector<pacs::Real> source(const pacs::Vector<pacs::Real> &x, const pacs::Vector<pacs::Real> &y, const pacs::Real &t, const pacs::Vector<pacs::Real> &D, const pacs::Vector<pacs::Real> &alpha) 
+inline pacs::Vector<pacs::Real> source(const pacs::Vector<pacs::Real> &x, const pacs::Vector<pacs::Real> &y, const pacs::Real &t, const pacs::Vector<pacs::Real> &D) 
 {
     pacs::Vector<pacs::Real> result{x.size()};
 
     for (size_t i = 0; i < x.size(); i++)
     {
-        result[i] = - (std::cos(2.0*M_PI*x[i])*std::cos(2*M_PI*y[i])+2) + 8*M_PI*M_PI*D[i]*std::cos(2*M_PI*x[i])*std::cos(2*M_PI*y[i])*(1-t) - alpha[i]*(1-t)*(std::cos(2*M_PI*x[i])*std::cos(2*M_PI*y[i])+2)*(1-(1-t)*(std::cos(2*M_PI*x[i])*std::cos(2*M_PI*y[i])+2));
+        result[i] = - (std::cos(2.0*M_PI*x[i])*std::cos(2*M_PI*y[i])+2) + 8*M_PI*M_PI*D[i]*std::cos(2*M_PI*x[i])*std::cos(2*M_PI*y[i])*(1-t);
     }
     
     return result;

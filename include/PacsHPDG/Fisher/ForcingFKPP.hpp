@@ -8,18 +8,18 @@
  * 
  */
 
-#ifndef FORCING_FISHER_PACS
-#define FORCING_FISHER_PACS
+#ifndef INCLUDE_PACSHPDG_FISHER_FORCINGFKPP_HPP
+#define INCLUDE_PACSHPDG_FISHER_FORCINGFKPP_HPP
 
+#include "../Algebra.hpp"
 #include "../Base.hpp"
 #include "../Geometry.hpp"
 #include "../Fem.hpp"
 
 namespace pacs {
 
-    // RHS.
-
-    Vector<Real> forcingFKPP(const Mesh &, const TriFunctor &, const TriFunctor &, const SourceFunctor &, const TriFunctor &, const Real &, const Real &penalty_coefficient = 10.0);
+    // Fisher-KPP euation solver.
+    Vector<Real> forcingFKPP(const Mesh &, const TriFunctor &, const TriFunctor &, const FKPPSource &, const TriFunctor &, const Real &, const Real &penalty_coefficient = 10.0);
 }
 
 #endif

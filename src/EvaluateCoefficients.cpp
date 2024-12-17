@@ -22,6 +22,9 @@ namespace pacs {
      */
     Vector<Real> evaluateCoeff(const Mesh &mesh, const TriFunctor &function, const Real &t) {
 
+        if (!function.getFunction())
+            throw std::runtime_error("evaluateCoeff received an uninitialized function");
+
         // Number of quadrature nodes.
         std::size_t degree = GAUSS_ORDER;
 
@@ -132,7 +135,7 @@ namespace pacs {
      * @param D 
      * @return Vector<Real> 
      */
-    Vector<Real> evaluateSource(const Mesh &mesh, const SourceFunctor &function, const Real &t, const TriFunctor &Alpha, const TriFunctor &D) {
+    Vector<Real> evaluateSource(const Mesh &mesh, const FKPPSource &function, const Real &t, const TriFunctor &Alpha, const TriFunctor &D) {
 
         // Number of quadrature nodes.
         std::size_t degree = GAUSS_ORDER;
@@ -238,15 +241,15 @@ namespace pacs {
     }
 
     /**
-     * @brief Get the Initial Condition for the problem.
+     * @brief Get the initial condition for the Fisher-KPP equation.
      * 
-     * @param mesh 
+     * @param mesh MEsh.
      * @param mass Projection matrix.
      * @param ch Function to evaluate.
      * @param t Time step.
      * @return std::array<Vector<Real>, 2> 
      */
-    std::array<Vector<Real>, 2> getInitialCond(const Mesh &mesh, const Sparse<Real> &mass, const TriFunctor &ch, const Real &t) {
+    std::array<Vector<Real>, 2> EvaluateICFKPP(const Mesh &mesh, const Sparse<Real> &mass, const TriFunctor &ch, const Real &t) {
 
         // Mass blocks.
         auto blocks = block_mass(mesh);
@@ -260,6 +263,29 @@ namespace pacs {
         Vector<Real> c_oold = (norm(c_hh) > TOLERANCE) ? solve(mass, c_hh, blocks, DB) : Vector<Real>{mesh.dofs()};
 
         return {c_old, c_oold};
+
+    }
+
+    /**
+     * @brief Get the initial condition for the Heat equation.
+     * 
+     * @param mesh Mesh.
+     * @param mass Projection matrix.
+     * @param ch Function to evaluate.
+     * @return Vector<Real> 
+     */
+    Vector<Real> EvaluateICHeat(const Mesh &mesh, const Sparse<Real> &mass, const TriFunctor &ch) {
+
+        // Mass blocks.
+        auto blocks = block_mass(mesh);
+
+        // Initial condition.
+        Vector<Real> c_h = evaluateCoeff(mesh, ch, 0.0);
+
+        // Projection for modal coordinates.
+        Vector<Real> c_old = (norm(c_h) > TOLERANCE) ? solve(mass, c_h, blocks, DB) : Vector<Real>{mesh.dofs()};
+
+        return c_old;
 
     }
 

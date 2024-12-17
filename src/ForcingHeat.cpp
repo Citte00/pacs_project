@@ -1,41 +1,40 @@
 /**
- * @file ForcingFKPP.cpp
+ * @file ForcingHeat.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
  * @brief 
- * @date 2024-12-03
+ * @date 2024-12-16
  * 
  * @copyright Copyright (c) 2024
  * 
  */
-
 #include <PacsHPDG.hpp>
 
 namespace pacs {
 
     /**
-     * @brief Assembly of the RHS.
+     * @brief Assembly of the forcing term for the Heat eqaution.
      * 
-     * @param mesh 
-     * @param Alpha 
-     * @param D 
-     * @param source 
-     * @param dirichlet 
-     * @param penalty_coefficient 
-     * @param t 
-     * @return Vector<Real> 
+     * @param mesh Mesh.
+     * @param D Diffusion coefficient.
+     * @param source Source term.
+     * @param dirichlet Boundary condition in Dirichlet form.
+     * @param t Time step.
+     * @param degree Polynomial degree.
+     * @param penalty_coefficient DG penalty coefficient.
+     * @return Vector<Real> F
      */
-    Vector<Real> forcingFKPP(const Mesh &mesh, const TriFunctor &Alpha, const TriFunctor &D, const FKPPSource &source, const TriFunctor &dirichlet, const Real &t, const Real &penalty_coefficient) {
-
+    Vector<Real> forcingHeat(const Mesh &mesh, const TriFunctor &D, const HeatSource &source, const TriFunctor &dirichlet, const Real &t, const std::size_t &degree, const Real &penalty_coefficient) {
+        
         #ifndef NVERBOSE
         std::cout << "Computing the forcing term." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t degree = GAUSS_ORDER;
+        std::size_t nqn = 2*degree + 1;
 
         // Quadrature nodes.
-        auto [nodes_1d, weights_1d] = quadrature_1d(degree);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+        auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
+        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
         // Degrees of freedom.
         std::size_t dofs = mesh.dofs();
@@ -119,9 +118,8 @@ namespace pacs {
                 Vector<Real> scaled = jacobian_det * weights_2d;
 
                 // Local source evaluation.
-                Vector<Real> Dext = D(physical_x, physical_y, t);
-                Vector<Real> alpha = Alpha(physical_x, physical_y, t);
-                Vector<Real> local_source = source(physical_x, physical_y, t, Dext, alpha);
+                Vector<Real> D_ext = D(physical_x, physical_y, t);
+                Vector<Real> local_source = source(physical_x, physical_y, t, D_ext);
 
                 // Basis functions.
                 auto phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
@@ -206,24 +204,23 @@ namespace pacs {
                 // Basis functions.
                 auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
 
-                // Param initialisation.
-                Vector<Real> Dext = D(physical_x, physical_y, t);
-
                 // Local matrix assembly.
                 Matrix<Real> scaled_gradx{gradx_phi};
                 Matrix<Real> scaled_grady{grady_phi};
                 Matrix<Real> scaled_phi{phi};
 
+                // Boundary conditions.
+                Vector<Real> D_ext = D(physical_x, physical_y, t);
+                Vector<Real> boundary = dirichlet(physical_x, physical_y, t);
+
                 for(std::size_t l = 0; l < scaled_gradx.columns; ++l) {
-                    scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
-                    scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
+                    scaled_gradx.column(l, (D_ext * scaled_gradx.column(l)) * scaled);
+                    scaled_grady.column(l, (D_ext * scaled_grady.column(l)) * scaled);
                     scaled_phi.column(l, scaled_phi.column(l) * scaled);
                 }
 
                 Matrix<Real> scaled_grad = normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
 
-                // Boundary conditions.
-                Vector<Real> boundary = dirichlet(physical_x, physical_y, t);
 
                 // Local forcing term.
                 local_f -= scaled_grad.transpose() * boundary;

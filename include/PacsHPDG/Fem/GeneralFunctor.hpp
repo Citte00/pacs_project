@@ -33,11 +33,27 @@ namespace pacs {
         public:
 
             // CONSTRUCTORS.
-            GeneralFunctor() = default;
+            GeneralFunctor() : m_function{} {};
             explicit GeneralFunctor(const GenFunc<ResultType, Args...>& function_) : m_function{function_} {};
+
+            // SETEER and GETTER
+            void setFunction(const GenFunc<ResultType, Args...>& func_) {
+                this->m_function = func_;
+            }
+
+            GenFunc<ResultType, Args...> getFunction() const {
+                return this->m_function;
+            }
 
             // EVALUATION.
             ResultType operator()(const Args&... args) const {
+
+                #ifndef NDEBUG
+                if(!this->m_function) {
+                     throw std::bad_function_call();
+                }
+                #endif
+
                 return this->m_function(args...);
             };
     };
@@ -69,7 +85,8 @@ namespace pacs {
 
     using BiFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>>;
     using TriFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
-    using SourceFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>;
+    using FKPPSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>;
+    using HeatSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>;
 
 }
 
