@@ -88,6 +88,9 @@ int main(int argc, char **argv) {
     // Compute initial forcing.
     pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, 0.0, degree);
 
+    // Initializing counter for printing the solution.
+    int counter = 1;
+
     for(pacs::Real t = 0.01; t <= Time; t += 0.01) {
 
         std::cout << "TIME: " << t << std::endl;
@@ -96,20 +99,26 @@ int main(int argc, char **argv) {
         pacs::Vector<pacs::Real> F_old = F_new;
         F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, t, degree);
 
-        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(mesh, degree, Matrices, ch_old, {F_old, F_new}, t);
+        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(mesh, degree, Matrices, ch_old, {F_old, F_new}, 0.01);
 
         // Errors.
-        pacs::GeneralError error{mesh, {Matrices[0], Matrices[3]}, ch, c_ex, grad_exact, t};
+        pacs::GeneralError error{mesh, {Matrices[0], Matrices[2]}, ch, c_ex, grad_exact, t};
 
         // Solution structure (output).
-        pacs::Solution solution{mesh, ch, c_ex, t};
-        std::string solfile = "output/square_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(t) + ".sol";
-        solution.write(solfile);
+
+        if (counter % 10 == 0) { 
+            pacs::Solution solution{mesh, ch, c_ex, t};
+            std::string solfile = "output/square_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(t) + ".sol";
+            solution.write(solfile);
+        }
 
         // Output.
         output << "\n" << error << "\n" << std::endl;
 
+        // Update of the solution.
         ch_old = ch;
+
+        ++counter;
 
     }
     

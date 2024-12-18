@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
         pacs::Vector<pacs::Real> F_old = F_new;
         F_new = pacs::forcingFKPP(mesh, alphafunc, Dextfunc, Source, DirBC, t);
 
-        pacs::Vector<pacs::Real> ch = pacs::FKPPsolver(mesh, degree, alphafunc, Matrices, ch_old, F_old, F_new, t);
+        pacs::Vector<pacs::Real> ch = pacs::FKPPsolver(mesh, degree, alphafunc, Matrices, ch_old, F_old, F_new, 0.01);
 
         // Errors.
         pacs::GeneralError error{mesh, {Matrices[0], Matrices[3]}, ch, exactfunc, exactfunc2, t};

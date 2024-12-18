@@ -22,12 +22,12 @@ namespace pacs {
      * @param ch [c_h^n, c_h^(n-1)] solutions at previous time steps.
      * @param F_old forcing term at time step n
      * @param F_new forcing term at time step n+1
-     * @param t Time step.
+     * @param dt Time step.
      * @param theta Time discretization parameter (defaulted to 0.5 for CN method).
      * @param TOL tolerance.
      * @return Vector<Real> 
      */
-    Vector<Real> FKPPsolver(const Mesh &mesh, const size_t &degree, const TriFunctor &alpha, const std::array<Sparse<Real>, 4> &Matrices, const std::array<Vector<Real>, 2> &ch, const Vector<Real> &F_old, const Vector<Real> &F_new, const Real &t, const Real &theta, const Real &TOL) {
+    Vector<Real> FKPPsolver(const Mesh &mesh, const size_t &degree, const TriFunctor &alpha, const std::array<Sparse<Real>, 4> &Matrices, const std::array<Vector<Real>, 2> &ch, const Vector<Real> &F_old, const Vector<Real> &F_new, const Real &dt, const Real &theta, const Real &TOL) {
 
         // Mass blocks.
         auto blocks = block_mass(mesh);
@@ -39,34 +39,37 @@ namespace pacs {
         auto [c_old, c_oold] = ch;
 
         // Assembling the constant component of the matrices.
-        Sparse<Real> LHS = M_prj + t * theta * A;
-        Sparse<Real> RHS = M_prj - t * (1.0 - theta) * A;
+        Sparse<Real> LHS = M_prj + dt * theta * A;
+        Sparse<Real> RHS = M_prj - dt * (1.0 - theta) * A;
 
         // Assembling the dynamic componenet of the marices.
         if (theta == 0) {
             
             Sparse<Real> MN = NLfisher(mesh, degree, alpha, c_old);
-            RHS += t * (M - MN);
+            RHS += dt * (M - MN);
 
         } else if (theta == 1) {
             
             Sparse<Real> MN = NLfisher(mesh, degree, alpha, c_old);
-            LHS -= t * (M - MN);
+            LHS -= dt * (M - MN);
         
         } else if (theta == 0.5) {
 
             Vector<Real> c_star = 1.5*c_old - 0.5*c_oold;
             Sparse<Real> MN = NLfisher(mesh, degree, alpha, c_star);
-            LHS -= 0.5 * t * (M - MN);
-            RHS += 0.5 * t * (M - MN);
+            LHS -= 0.5 * dt * (M - MN);
+            RHS += 0.5 * dt * (M - MN);
 
         }
 
+        LHS.compress();
+        RHS.compress();
+
         // Construction of the complete RHS for the theta method.
-        Vector<Real> F = RHS * c_old + t * theta * F_new + t * (1-theta) * F_old;
+        Vector<Real> F = RHS * c_old + dt * theta * F_new + dt * (1-theta) * F_old;
 
         // Solves using GMRES.
-        return solve(LHS, F);
+        return solve(LHS, F, blocks, GMRES, DBI, TOL);
 
     }
 
