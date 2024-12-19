@@ -20,4 +20,7 @@
 // Solver.
 #include "./Heat/SolverHeat.hpp"
 
+// Estimator.
+#include "./Heat/EstimatorsHeat.hpp"
+
 #endif

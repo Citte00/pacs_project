@@ -27,7 +27,7 @@ namespace pacs {
      * @param TOL tolerance.
      * @return Vector<Real> 
      */
-    Vector<Real> FKPPsolver(const Mesh &mesh, const size_t &degree, const TriFunctor &alpha, const std::array<Sparse<Real>, 4> &Matrices, const std::array<Vector<Real>, 2> &ch, const Vector<Real> &F_old, const Vector<Real> &F_new, const Real &dt, const Real &theta, const Real &TOL) {
+    Vector<Real> FKPPsolver(const Mesh &mesh, const TriFunctor &alpha, const std::array<Sparse<Real>, 4> &Matrices, const std::array<Vector<Real>, 2> &ch, const Vector<Real> &F_old, const Vector<Real> &F_new, const Real &dt, const Real &theta, const Real &TOL) {
 
         // Mass blocks.
         auto blocks = block_mass(mesh);
@@ -45,18 +45,18 @@ namespace pacs {
         // Assembling the dynamic componenet of the marices.
         if (theta == 0) {
             
-            Sparse<Real> MN = NLfisher(mesh, degree, alpha, c_old);
+            Sparse<Real> MN = NLfisher(mesh, alpha, c_old);
             RHS += dt * (M - MN);
 
         } else if (theta == 1) {
             
-            Sparse<Real> MN = NLfisher(mesh, degree, alpha, c_old);
+            Sparse<Real> MN = NLfisher(mesh, alpha, c_old);
             LHS -= dt * (M - MN);
         
         } else if (theta == 0.5) {
 
             Vector<Real> c_star = 1.5*c_old - 0.5*c_oold;
-            Sparse<Real> MN = NLfisher(mesh, degree, alpha, c_star);
+            Sparse<Real> MN = NLfisher(mesh, alpha, c_star);
             LHS -= 0.5 * dt * (M - MN);
             RHS += 0.5 * dt * (M - MN);
 

@@ -18,7 +18,7 @@
 namespace pacs {
 
     // Heat equation solver. 
-    Vector<Real> HeatSolver(const Mesh &, const size_t &, const std::array<Sparse<Real>, 3> &, const Vector<Real> &, const std::array<Vector<Real>, 2> &, const Real &, const Real &theta = 0.5, const Real &TOL = 1E-15);    
+    Vector<Real> HeatSolver(const Mesh &, const std::array<Sparse<Real>, 3> &, const Vector<Real> &, const std::array<Vector<Real>, 2> &, const Real &, const Real &theta = 0.5, const Real &TOL = 1E-15);    
 
 }
 

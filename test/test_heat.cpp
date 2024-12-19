@@ -40,10 +40,10 @@ int main(int argc, char **argv) {
     pacs::Real Time = 2;
 
     if(argc == 3)
-        Time = static_cast<pacs::Real>(std::stoi(argv[2]));;
+        Time = static_cast<pacs::Real>(std::stod(argv[2]));;
 
     if(argc == 4) {
-        Time = static_cast<pacs::Real>(std::stoi(argv[2]));
+        Time = static_cast<pacs::Real>(std::stod(argv[2]));
         elements = static_cast<std::size_t>(std::stoi(argv[3]));
     }
     
@@ -73,20 +73,20 @@ int main(int argc, char **argv) {
 
     // Functor definition.
     pacs::TriFunctor c_ex(exact);
-    pacs::GeneralTwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Real> grad_exact(exact_x, exact_y);
+    pacs::TriTwoFunctor grad_exact(exact_x, exact_y);
     pacs::BiFunctor dt_exact(exact_t);
     pacs::TriFunctor g_D(dirichlet);
     pacs::TriFunctor D_ext(D);
     pacs::HeatSource Source(source);
 
     // Builds the Fisher-KPP matrices.
-    std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(mesh, degree, D_ext);
+    std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(mesh, D_ext);
 
     // Get initial condition.
     pacs::Vector<pacs::Real> ch_old = pacs::EvaluateICHeat(mesh, Matrices[0], c_ex);
 
     // Compute initial forcing.
-    pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, 0.0, degree);
+    pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, 0.0);
 
     // Initializing counter for printing the solution.
     int counter = 1;
@@ -97,9 +97,9 @@ int main(int argc, char **argv) {
 
         // Update the forcing term.
         pacs::Vector<pacs::Real> F_old = F_new;
-        F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, t, degree);
+        F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, t);
 
-        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(mesh, degree, Matrices, ch_old, {F_old, F_new}, 0.01);
+        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(mesh, Matrices, ch_old, {F_old, F_new}, 0.01);
 
         // Errors.
         pacs::GeneralError error{mesh, {Matrices[0], Matrices[2]}, ch, c_ex, grad_exact, t};
@@ -108,8 +108,8 @@ int main(int argc, char **argv) {
 
         if (counter % 10 == 0) { 
             pacs::Solution solution{mesh, ch, c_ex, t};
-            std::string solfile = "output/square_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(t) + ".sol";
-            solution.write(solfile);
+            std::string solfile = "output/square_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(t) + ".vtk";
+            solution.writeVTK(mesh, solfile);
         }
 
         // Output.

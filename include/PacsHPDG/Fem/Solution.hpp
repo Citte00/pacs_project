@@ -42,7 +42,7 @@ namespace pacs {
         // OUTPUT.
 
         void write(const std::string &);
-        // void writeVTK(const std::string &);
+        void writeVTK(const Mesh &, const std::string &);
 
     };
 

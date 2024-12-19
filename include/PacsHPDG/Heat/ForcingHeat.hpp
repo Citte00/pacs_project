@@ -19,7 +19,7 @@
 namespace pacs {
 
     // Forcing term of heat equation.
-    Vector<Real> forcingHeat(const Mesh&, const TriFunctor&, const HeatSource&, const TriFunctor&, const Real&, const std::size_t&, const Real &penalty_coefficient = 10.0);
+    Vector<Real> forcingHeat(const Mesh&, const TriFunctor&, const HeatSource&, const TriFunctor&, const Real&, const Real &penalty_coefficient = 10.0);
 }
 
 #endif

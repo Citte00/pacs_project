@@ -12,7 +12,7 @@ endif
 #CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
-#CPPFLAGS += -DNVERBOSE
+CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
 CPPFLAGS += -DNDEBUG
@@ -83,7 +83,7 @@ HEADERS += ./examples/*.hpp
 DOMAIN_EXECS = $(subst domains/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find domains -name "*.cpp")))
 DOMAIN_OBJECTS = $(subst domains/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find domains -name "*.cpp")))
 
-TEST_FILE = test_fisher
+TEST_FILE = test_heat
 TEST_RUN = $(subst .cpp,,$(shell ls ./test))
 TEST_EXECS = $(subst test/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find test -name "*.cpp")))
 TEST_OBJECTS = $(subst test/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find test -name "*.cpp")))
@@ -119,8 +119,8 @@ install: # Manual spacing for consistency between platforms.
 endif
 
 # Test.
-#single_test: $(EXEC_DIR) $(OUTPUT_DIR) executables/$(TEST_FILE).out
-#	@echo "Compiled test $(TEST_FILE)!"
+single_test: $(EXEC_DIR) $(OUTPUT_DIR) executables/$(TEST_FILE).out
+	@echo "Compiled test $(TEST_FILE)!"
 
 tests: $(EXEC_DIR) $(OUTPUT_DIR) $(TEST_EXECS)
 	@echo "Compiled tests!"
@@ -140,13 +140,13 @@ $(TEST_OBJECTS): $(OBJECT_DIR)/%.o: test/%.cpp $(HEADERS) $(OBJECT_DIR)
 	@echo "Compiling $< using $(CXX) with: $(CXXFLAGS) $(CPPFLAGS)"
 	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-#executables/$(TEST_FILE).out: $(OBJECT_DIR)/$(TEST_FILE).o $(OBJECTS)
-#	@if [ "$(LDLIBS) $(LDFLAGS)" = " " ]; then echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@"; else echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@ with: $(LDLIBS) $(LDFLAGS)"; fi
-#	@$(CXX) $(LDLIBS) $(LDFLAGS) $^ -o $@
+executables/$(TEST_FILE).out: $(OBJECT_DIR)/$(TEST_FILE).o $(OBJECTS)
+	@if [ "$(LDLIBS) $(LDFLAGS)" = " " ]; then echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@"; else echo "Linking $(subst $(OBJECT_DIR)/,,$<) and base objects to $@ with: $(LDLIBS) $(LDFLAGS)"; fi
+	@$(CXX) $(LDLIBS) $(LDFLAGS) $^ -o $@
 
-#$(OBJECT_DIR)/$(TEST_FILE).o: test/$(TEST_FILE).cpp $(HEADERS)
-#	@echo "Compiling $< using $(CXX) with: $(CXXFLAGS) $(CPPFLAGS)"
-#	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+$(OBJECT_DIR)/$(TEST_FILE).o: test/$(TEST_FILE).cpp $(HEADERS)
+	@echo "Compiling $< using $(CXX) with: $(CXXFLAGS) $(CPPFLAGS)"
+	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 # Examples.
 examples: $(OBJECT_DIR) $(EXEC_DIR) $(OUTPUT_DIR) $(EXAMPLE_EXECS)

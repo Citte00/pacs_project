@@ -19,7 +19,7 @@
 namespace pacs {
 
     // Heat matrices.
-    std::array<Sparse<Real>, 3> heat(const Mesh &, const size_t &, const TriFunctor&, const Real &penalty_coefficient = 10.0);
+    std::array<Sparse<Real>, 3> heat(const Mesh &, const TriFunctor&, const Real &penalty_coefficient = 10.0);
 
 }
 

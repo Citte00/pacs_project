@@ -87,6 +87,7 @@ namespace pacs {
     using TriFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
     using FKPPSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>;
     using HeatSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>;
+    using TriTwoFunctor = pacs::GeneralTwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>, pacs::Real>;
 
 }
 

@@ -15,14 +15,14 @@
 
 namespace pacs {
 
-    std::array<Sparse<Real>, 3> heat(const Mesh &mesh, const std::size_t &degree, const TriFunctor &D, const Real &penalty_coefficient) {
+    std::array<Sparse<Real>, 3> heat(const Mesh &mesh, const TriFunctor &D, const Real &penalty_coefficient) {
 
          #ifndef NVERBOSE
         std::cout << "Computing the Heat equation matrices." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2*degree + 1;
+        std::size_t nqn = 2*mesh.elements[0].degree + 1;
 
         // Quadrature nodes.
         auto [nodes_1d, weights_1d] = quadrature_1d(nqn);

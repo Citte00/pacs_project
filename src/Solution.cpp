@@ -230,7 +230,7 @@ namespace pacs {
     // OUTPUT.
 
     /**
-     * @brief Outputs the solution to a file.
+     * @brief Outputs the solution to a .sol file.
      * 
      * @param filename Filename.
      */
@@ -248,31 +248,75 @@ namespace pacs {
             file << this->numerical[j] << ",";
             file << this->exact[j] << "\n";
         }
+
+        file.close();
+
     }
 
-    /*
-    void Solution::writeVTK(const std::string &filename) {
+    /**
+     * @brief Outputs the solution to a .vtk file 
+     * 
+     * @param filename Output file name.
+     */
+    void Solution::writeVTK(const Mesh &mesh, const std::string &filename) {
 
         std::ofstream file{filename};
 
-        file << "# vtk DataFile " << filename << "\n";
-        file << "Comment\n";
+        // Headers.
+        file << "# vtk DataFile Version 1.0 \n";
         file << "ASCII\n";
         file << "DATASET UNSTRUCTURED_GRID\n";
 
-        // Points
-        file << "POINTS" << this->x.length << "float\n";
+        // Points.
+        file << "POINTS " << this->x.length << " float\n";
         for(std::size_t j = 0; j < this->x.length; ++j) {
             file << this->x[j] << " ";
             file << this->y[j] << " ";
             file << "0.0\n";
         }
 
-        // Cells
+        // Cells.
+        size_t numCells = mesh.elements.size();
+        size_t conn = 0;
+        
+        for(size_t i = 0; i < numCells; i++)
+            conn += mesh.neighbours[i].size();
+        
+        conn += numCells;
 
 
+        file << "CELLS " << numCells << " " << conn << "\n";
+
+        for(size_t i = 0; i < numCells; i++) {
+
+            auto neigh = mesh.neighbours[i];
+
+            file << neigh.size() << " ";
+
+            for(size_t j = 0; j < neigh.size(); j++)
+                file << neigh[j][1] << " ";
+
+            file << "\n";
+
+        }
 
 
-    }*/
+        // Cell types.
+        file << "CELL_TYPES " << numCells << "\n";
+        for(std::size_t j = 0; j < numCells; ++j) {
+            file << "7\n";
+        }
+
+        // Point data.
+        file << "POINT_DATA " << this->x.length << "\n";
+        file << "SCALARS " << "c_h " << "float 1\n";
+        file << "LOOKUP_TABLE default\n";
+        for(std::size_t j = 0; j < this->x.length; ++j)
+            file << this->numerical[j] << "\n";
+
+        // Closing the file.
+        file.close();
+
+    }
 
 }

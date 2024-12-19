@@ -23,14 +23,14 @@ namespace pacs {
      * @param penalty_coefficient DG penalty coefficient.
      * @return Vector<Real> F
      */
-    Vector<Real> forcingHeat(const Mesh &mesh, const TriFunctor &D, const HeatSource &source, const TriFunctor &dirichlet, const Real &t, const std::size_t &degree, const Real &penalty_coefficient) {
+    Vector<Real> forcingHeat(const Mesh &mesh, const TriFunctor &D, const HeatSource &source, const TriFunctor &dirichlet, const Real &t, const Real &penalty_coefficient) {
         
         #ifndef NVERBOSE
         std::cout << "Computing the forcing term." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2*degree + 1;
+        std::size_t nqn = 2*mesh.elements[0].degree + 1;
 
         // Quadrature nodes.
         auto [nodes_1d, weights_1d] = quadrature_1d(nqn);

@@ -20,14 +20,14 @@ namespace pacs{
      * @param penalty_coefficient 
      * @return std::array<Sparse<Real>, 4> 
      */
-    std::array<Sparse<Real>, 4> fisher(const Mesh &mesh, const size_t &degree, const TriFunctor &Alpha, const TriFunctor &D, const Real &penalty_coefficient)
+    std::array<Sparse<Real>, 4> fisher(const Mesh &mesh, const TriFunctor &Alpha, const TriFunctor &D, const Real &penalty_coefficient)
     {
         #ifndef NVERBOSE
         std::cout << "Computing the Fisher-KPP matrices." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2*degree + 1;
+        std::size_t nqn = 2*mesh.elements[0].degree + 1;
 
         // Quadrature nodes.
         auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
@@ -305,14 +305,14 @@ namespace pacs{
      * @param penalty_coefficient 
      * @return Sparse<Real> 
      */
-    Sparse<Real> NLfisher(const Mesh &mesh, const size_t &degree, const TriFunctor &Alpha, const Vector<Real> &uh, const Real &penalty_coefficient)
+    Sparse<Real> NLfisher(const Mesh &mesh, const TriFunctor &Alpha, const Vector<Real> &uh, const Real &penalty_coefficient)
     {
         #ifndef NVERBOSE
         std::cout << "Computing the Fisher-KPP matrices." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2*degree + 1;
+        std::size_t nqn = 2*mesh.elements[0].degree + 1;
 
         // Quadrature nodes.
         auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
