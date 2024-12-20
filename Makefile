@@ -12,7 +12,7 @@ endif
 #CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
-CPPFLAGS += -DNVERBOSE
+#CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
 CPPFLAGS += -DNDEBUG
@@ -93,7 +93,7 @@ all: tests examples domains
 
 # Debug target for debugging with gdb.
 debug: CXXFLAGS = $(DEBUG_CXXFLAGS)
-debug: distclean tests
+debug: distclean single_test
 	@echo "Build completed with debugging flags"
 
 # Library.

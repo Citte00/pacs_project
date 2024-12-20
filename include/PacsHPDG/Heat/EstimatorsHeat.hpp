@@ -33,10 +33,10 @@ namespace pacs {
         Vector<Real> fits;
 
         // CONSTRUCTORS.
-        HeatEstimator(const Mesh &, const Sparse<Real> &, const Vector<Real> &, const Vector<Real> &, const HeatSource &, const TriFunctor &dirichlet = TriFunctor{}, const TriTwoFunctor &dirichlet_gradient = TriTwoFunctor{}, const Real &, const TriFunctor &, const Real &penalty_coefficient = 10.0);
+        HeatEstimator(const Mesh &, const Sparse<Real> &, const Vector<Real> &, const Vector<Real> &, const HeatSource &, const Real &, const TriFunctor &, const TriFunctor &dirichlet = TriFunctor{}, const TriTwoFunctor &dirichlet_gradient = TriTwoFunctor{}, const Real &penalty_coefficient = 10.0);
 
         // OUTPUT.
-        friend std::ostream &operator <<(std::ostream &, const HeatEstimator &);
+        // friend std::ostream &operator <<(std::ostream &, const HeatEstimator &);
 
     };
 

@@ -17,10 +17,10 @@ namespace pacs {
                         const Vector<Real> &ch,
                         const Vector<Real> &ch_old,
                         const HeatSource &source,
-                        const TriFunctor &dirichlet,
-                        const TriTwoFunctor &dirichlet_gradient,
                         const Real &t,
                         const TriFunctor &D,
+                        const TriFunctor &dirichlet,
+                        const TriTwoFunctor &dirichlet_gradient,
                         const Real &penalty_coefficient) : 
                         estimates{mesh.elements.size()}, fits{mesh.elements.size()} {
         

@@ -13,6 +13,7 @@
 // Main headers.
 #include "./PacsHPDG/Algebra.hpp"
 #include "./PacsHPDG/Base.hpp"
+#include "./PacsHPDG/Data.hpp"
 #include "./PacsHPDG/Errors.hpp"
 #include "./PacsHPDG/Fem.hpp"
 #include "./PacsHPDG/Fisher.hpp"
