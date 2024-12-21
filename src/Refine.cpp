@@ -20,15 +20,15 @@ namespace pacs {
      * @param refine Refinement percentage.
      * @param speed Solution's smoothness.
      */
-    void mesh_refine(Mesh &mesh, const Estimator &estimator, const Real &refine, const Real &speed) {
+    void mesh_refine(Mesh &mesh, const BaseEstimator &estimator, const Real &refine, const Real &speed) {
         #ifndef NDEBUG // Integrity check.
         assert((refine > 0.0L) && (refine < 1.0L));
         assert(speed > 0.0L);
         #endif
 
         // Masks.
-        Mask p_mask = estimator.fits > speed;
-        Mask h_mask = (estimator.estimates * estimator.estimates) > refine * sum(estimator.estimates * estimator.estimates) / mesh.elements.size();
+        Mask p_mask = estimator.getFits() > speed;
+        Mask h_mask = (estimator.getEstimates() * estimator.getEstimates()) > refine * sum(estimator.getEstimates() * estimator.getEstimates()) / mesh.elements.size();
 
         // Strategy.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {

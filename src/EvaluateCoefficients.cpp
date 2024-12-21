@@ -15,7 +15,7 @@ namespace pacs {
     /**
      * @brief Evaluate the modal coefficients of a function.
      * 
-     * @param mesh 
+     * @param mesh Mesh.
      * @param function Function to evaluate.
      * @param t Time step.
      * @return Vector<Real> 
@@ -23,13 +23,11 @@ namespace pacs {
     Vector<Real> evaluateCoeff(const Mesh &mesh, const TriFunctor &function, const Real &t) {
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2 * mesh.elements[0].degree + 1;
+        std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+        std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(), [](const Element& elem) {return 2*elem.degree + 1;});
 
         // Coefficients.
         Vector<Real> coefficients{mesh.dofs()};
-
-        // Quadrature nodes.
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
         // Starting indices.
         std::vector<std::size_t> starts;
@@ -40,6 +38,9 @@ namespace pacs {
 
         // Loop over the elements.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+            // Quadrature nodes.
+            auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
             // Local dofs.
             std::size_t element_dofs = mesh.elements[j].dofs();
@@ -135,13 +136,11 @@ namespace pacs {
     Vector<Real> evaluateSourceFKPP(const Mesh &mesh, const FKPPSource &function, const Real &t, const TriFunctor &Alpha, const TriFunctor &D) {
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2 * mesh.elements[0].degree + 1;
+        std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+        std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(), [](const Element& elem) {return 2*elem.degree + 1;});
 
         // Coefficients.
         Vector<Real> coefficients{mesh.dofs()};
-
-        // Quadrature nodes.
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
         // Starting indices.
         std::vector<std::size_t> starts;
@@ -152,6 +151,9 @@ namespace pacs {
 
         // Loop over the elements.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+            // Quadrature nodes.
+            auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
             // Local dofs.
             std::size_t element_dofs = mesh.elements[j].dofs();
@@ -249,13 +251,11 @@ namespace pacs {
     Vector<Real> evaluateSourceHeat(const Mesh &mesh, const HeatSource &function, const Real &t, const TriFunctor &D) {
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2 * mesh.elements[0].degree + 1;
+        std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+        std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(), [](const Element& elem) {return 2*elem.degree + 1;});
 
         // Coefficients.
         Vector<Real> coefficients{mesh.dofs()};
-
-        // Quadrature nodes.
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
         // Starting indices.
         std::vector<std::size_t> starts;
@@ -266,6 +266,9 @@ namespace pacs {
 
         // Loop over the elements.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+            // Quadrature nodes.
+            auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
             // Local dofs.
             std::size_t element_dofs = mesh.elements[j].dofs();

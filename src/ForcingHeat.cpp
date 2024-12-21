@@ -30,11 +30,8 @@ namespace pacs {
         #endif
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2*mesh.elements[0].degree + 1;
-
-        // Quadrature nodes.
-        auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
+        std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+        std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(), [](const Element& elem) {return 2*elem.degree + 1;});
 
         // Degrees of freedom.
         std::size_t dofs = mesh.dofs();
@@ -56,6 +53,9 @@ namespace pacs {
 
         // Loop over the elements.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+            // 2D Local quadrature nodes and weights.
+            auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
             // Local dofs.
             std::size_t element_dofs = mesh.elements[j].dofs();
@@ -148,6 +148,9 @@ namespace pacs {
 
                 // Neighbour information.
                 auto [edge, neighbour, n_edge] = element_neighbours[k];
+
+                // 1D Quadrature nodes and weights.
+                auto [nodes_1d, weights_1d] = (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour])) : quadrature_1d(nqn[j]);
 
                 // Only domain's border,
                 if(neighbour != -1)

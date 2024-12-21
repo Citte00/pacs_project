@@ -83,6 +83,7 @@ namespace pacs {
 
     };
 
+    // Some functor.
     using BiFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>>;
     using TriFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
     using FKPPSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>;

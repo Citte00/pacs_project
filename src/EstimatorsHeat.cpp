@@ -21,8 +21,7 @@ namespace pacs {
                         const TriFunctor &D,
                         const TriFunctor &dirichlet,
                         const TriTwoFunctor &dirichlet_gradient,
-                        const Real &penalty_coefficient) : 
-                        estimates{mesh.elements.size()}, fits{mesh.elements.size()} {
+                        const Real &penalty_coefficient) : estimates{mesh.elements.size()}, fits{mesh.elements.size()} {
         
         #ifndef NVERBOSE
         std::cout << "Evaluating estimates." << std::endl;
@@ -39,9 +38,8 @@ namespace pacs {
             starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
 
         // Quadrature nodes.
-        size_t nqn = 2 * mesh.elements[0].degree + 1;
-        auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
+        std::vector<std::size_t> nqn{mesh.elements.size()};
+        std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(), [](const Element& elem) {return 2*elem.degree + 1;});
 
         // Neighbours.
         std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
@@ -69,6 +67,9 @@ namespace pacs {
 
         // Loop over the elements.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+            // Quadrature.
+            auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
             // Local dofs.
             std::size_t element_dofs = mesh.elements[j].dofs();
@@ -167,6 +168,9 @@ namespace pacs {
 
                 // Neighbour information.
                 auto [edge, neighbour, n_edge] = element_neighbours[k];
+
+                // 1D Quadrature nodes and weights.
+                auto [nodes_1d, weights_1d] = (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour])) : quadrature_1d(nqn[j]);
 
                 // Edge geometry.
                 Segment segment{edges[k]}; // Mesh's edges to be fixed. [!]
@@ -318,6 +322,14 @@ namespace pacs {
         this->estimate = std::sqrt(this->estimate);
     }
 
-    
+    /**
+     * @brief Estimate print.
+     * 
+     * @param ost 
+     */
+    void HeatEstimator::print(std::ostream &ost) const {
+        ost << "Dofs: " << this->dofs << std::endl;
+        ost << "Estimate: " << this->estimate << std::endl;
+    }
 
 }

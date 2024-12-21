@@ -13,7 +13,7 @@
 namespace pacs {
 
     /**
-     * @brief Construct a new Estimator structure.
+     * @brief Construct a new Estimator.
      * 
      * @param mesh Mesh.
      * @param numerical Numerical solution.
@@ -21,8 +21,13 @@ namespace pacs {
      * @param source Source.
      * @param dirichlet Dirichlet BC.
      */
-    Estimator::Estimator(const Mesh &mesh, const Sparse<Real> &mass, const Vector<Real> &numerical, const Functor &source, const Functor &dirichlet, const TwoFunctor &dirichlet_gradient, const Real &penalty_coefficient):
-    estimates{mesh.elements.size()}, fits{mesh.elements.size()} {
+    Estimator::Estimator(const Mesh &mesh, 
+                    const Sparse<Real> &mass, 
+                    const Vector<Real> &numerical, 
+                    const Functor &source, 
+                    const Functor &dirichlet, 
+                    const TwoFunctor &dirichlet_gradient, 
+                    const Real &penalty_coefficient) : estimates{mesh.elements.size()}, fits{mesh.elements.size()} {
         
         #ifndef NVERBOSE
         std::cout << "Evaluating estimates." << std::endl;
@@ -312,15 +317,13 @@ namespace pacs {
     }
 
     /**
-     * @brief Estimator output.
+     * @brief Estimate print.
      * 
      * @param ost 
-     * @param estimator 
-     * @return std::ostream& 
      */
-    std::ostream &operator <<(std::ostream &ost, const Estimator &estimator) {
-        ost << "Dofs: " << estimator.dofs << std::endl;
-        return ost << "Estimate: " << estimator.estimate << std::endl;
+    void Estimator::print(std::ostream &ost) const {
+        ost << "Dofs: " << this->dofs << std::endl;
+        ost << "Estimate: " << this->estimate << std::endl;
     }
 
 }
