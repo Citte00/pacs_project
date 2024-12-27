@@ -74,23 +74,23 @@ int main(int argc, char **argv) {
     for(pacs::Real t = (Data.t_0 + Data.dt); t <= Data.t_f; t += Data.dt) {
 
         // Builds the Fisher-KPP matrices.
-        std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(mesh, D_ext);
+        // std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(mesh, D_ext);
 
         // Get initial condition.
         // pacs::Vector<pacs::Real> ch_old = (counter == 1) ? pacs::EvaluateICHeat(mesh, Matrices[0], c_ex) : pacs::refine(mesh, ch);
 
         // Compute initial forcing.
-        pacs::Vector<pacs::Real> F_old = (counter == 1) ? pacs::forcingHeat(mesh, D_ext, Source, g_D, Data.t_0) : pacs::forcingHeat(mesh, D_ext, Source, g_D, t - Data.dt);
+        // pacs::Vector<pacs::Real> F_old = (counter == 1) ? pacs::forcingHeat(mesh, D_ext, Source, g_D, Data.t_0) : pacs::forcingHeat(mesh, D_ext, Source, g_D, t - Data.dt);
 
         std::cout << "TIME: " << t << std::endl;
 
         // Update the forcing term.
-        pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, t);
+        // pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(mesh, D_ext, Source, g_D, t);
 
         // pacs::Vector<pacs::Real> ch = pacs::HeatSolver(mesh, Matrices, ch_old, {F_old, F_new}, Data.dt);
 
         // Errors.
-        pacs::GeneralError error{mesh, {Matrices[0], Matrices[2]}, ch, c_ex, grad_exact, t};
+        // pacs::GeneralError error{mesh, {Matrices[0], Matrices[2]}, ch, c_ex, grad_exact, t};
 
         // Solution structure (output).
         #ifndef NSOLUTIONS
@@ -102,13 +102,13 @@ int main(int argc, char **argv) {
         #endif
 
         // Output.
-        output << "\n" << error << "\n" << std::endl;
+        // output << "\n" << error << "\n" << std::endl;
 
         // Estimator.
-        pacs::HeatEstimator estimator{mesh, Matrices[0], ch, ch_old, Source, t, D_ext, c_ex, grad_exact};
+        // pacs::HeatEstimator estimator{mesh, Matrices[0], ch, ch_old, Source, t, D_ext, c_ex, grad_exact};
 
         // Refinement.
-        pacs::mesh_refine(mesh, estimator);
+        // pacs::mesh_refine(mesh, estimator);
 
         // Update of the solution.
         // ch_old = pacs::refine(c_h);

@@ -1,201 +1,180 @@
 /**
- * @file GeneralErrors.cpp
+ * @file HeatErrors.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief 
+ * @brief
  * @date 2024-12-05
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <PacsHPDG.hpp>
 
 namespace pacs {
 
-    // CONSTRUCTORS.
+/**
+ * @brief Construct a new Heat Error object.
+ *
+ * @param data Data struct.
+ * @param mesh Mesh struct.
+ * @param matrices Matrices for the l2- and dg-error computation [mass,
+ * dg_stiff].
+ * @param numerical Numerical solution.
+ * @param t Time step.
+ */
+HeatError::HeatError(const DataHeat &data, const Mesh &mesh,
+                     const std::array<Sparse<Real>, 2> &matrices,
+                     const Vector<Real> &numerical, const Real &t)
+    : Error{mesh.elements.size()} {
+#ifndef NVERBOSE
+  std::cout << "Evaluating errors." << std::endl;
+#endif
 
-    /**
-     * @brief Constructs a new Error structure.
-     * 
-     * @param mesh Mesh.
-     * @param matrices Needed matrices (A, M).
-     * @param numerical Numerical solution.
-     * @param exact Exact solution.
-     */
-    GeneralError::GeneralError(const Mesh &mesh,
-                                const std::array<Sparse<Real>, 2> &matrices,
-                                const Vector<Real> &numerical,
-                                const TriFunctor &exact,
-                                const GeneralTwoFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real> &exact_gradient,
-                                const Real &t) 
-                                : elements{mesh.elements.size()}, l2_errors{mesh.elements.size()}, h1_errors{mesh.elements.size()} 
-    {
+  // Matrices.
+  auto [mass, dg_stiff] = matrices;
 
-        #ifndef NVERBOSE
-        std::cout << "Evaluating errors." << std::endl;
-        #endif
+  // Mass blocks.
+  auto blocks = block_mass(mesh);
 
-        // Matrices.
-        auto [mass, dg_stiff] = matrices;
+  // Error vector.
+  Vector<Real> u_modals = evaluateCoeff(mesh, data.c_ex, t);
+  Vector<Real> u_coeff = solve(mass, u_modals, blocks, DB);
 
-        // Mass blocks.
-        auto blocks = block_mass(mesh);
+  Vector<Real> error = u_coeff - numerical;
 
-        // Error vector.
-        Vector<Real> u_modals = evaluateCoeff(mesh, exact, t);
-        Vector<Real> u_coeff = solve(mass, u_modals, blocks, DB);
+  // DG Error.
+  this->dg_error = std::sqrt(dot(error, dg_stiff * error));
 
-        Vector<Real> error = u_coeff - numerical;
+  // L2 Error.
+  this->l2_error = std::sqrt(dot(error, mass * error));
 
-        // DG Error.
-        this->dg_error = std::sqrt(dot(error, dg_stiff * error));
+  // Dofs.
+  this->dofs = mesh.dofs();
 
-        // L2 Error.
-        this->l2_error = std::sqrt(dot(error, mass * error));
+  // Starting indices.
+  std::vector<std::size_t> starts;
+  starts.emplace_back(0);
 
-        // Dofs.
-        this->dofs = mesh.dofs();
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
 
-        // Starting indices.
-        std::vector<std::size_t> starts;
-        starts.emplace_back(0);
+  // Quadrature nodes.
+  auto [nodes_1d, weights_1d] = quadrature_1d(GAUSS_ORDER);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(GAUSS_ORDER);
 
-        for(std::size_t j = 1; j < mesh.elements.size(); ++j)
-            starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-        // Quadrature nodes.
-        auto [nodes_1d, weights_1d] = quadrature_1d(GAUSS_ORDER);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(GAUSS_ORDER);
+  // Sizes.
+  Vector<Real> sizes{mesh.elements.size()};
 
-        // Neighbours.
-        std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+  for (std::size_t j = 0; j < sizes.length; ++j) {
+    Element element{mesh.elements[j]};
 
-        // Sizes.
-        Vector<Real> sizes{mesh.elements.size()};
+    for (const auto &p : element.element.points)
+      for (const auto &q : element.element.points)
+        sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
+  }
 
-        for(std::size_t j = 0; j < sizes.length; ++j) {
-            Element element{mesh.elements[j]};
+  // Loop over the elements.
+  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+    // Local dofs.
+    std::size_t element_dofs = mesh.elements[j].dofs();
 
-            for(const auto &p: element.element.points)
-                for(const auto &q: element.element.points)
-                    sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
-        }
+    // Global matrix indices.
+    std::vector<std::size_t> indices;
 
-        // Loop over the elements.
-        for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+    for (std::size_t k = 0; k < element_dofs; ++k)
+      indices.emplace_back(starts[j] + k);
 
-            // Local dofs.
-            std::size_t element_dofs = mesh.elements[j].dofs();
+    // Polygon.
+    Polygon polygon = mesh.element(j);
 
-            // Global matrix indices.
-            std::vector<std::size_t> indices;
+    // Element sub-triangulation.
+    std::vector<Polygon> triangles = triangulate(polygon);
 
-            for(std::size_t k = 0; k < element_dofs; ++k)
-                indices.emplace_back(starts[j] + k);
+    // Loop over the sub-triangulation.
+    for (std::size_t k = 0; k < triangles.size(); ++k) {
+      // Triangle.
+      Polygon triangle = triangles[k];
 
-            // Polygon.
-            Polygon polygon = mesh.element(j);
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
 
-            // Element sub-triangulation.
-            std::vector<Polygon> triangles = triangulate(polygon);
+      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
 
-            // Loop over the sub-triangulation.
-            for(std::size_t k = 0; k < triangles.size(); ++k) {
+      // Jacobian's determinant.
+      Real jacobian_det =
+          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
 
-                // Triangle.
-                Polygon triangle = triangles[k];
+      // Translation.
+      Vector<Real> translation{2};
 
-                // Jacobian.
-                Matrix<Real> jacobian{2, 2};
+      translation[0] = triangle.points[0][0];
+      translation[1] = triangle.points[0][1];
 
-                jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-                jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-                jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-                jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_x_2d.length};
+      Vector<Real> physical_y{nodes_y_2d.length};
 
-                // Jacobian's determinant.
-                Real jacobian_det = jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+      for (std::size_t l = 0; l < physical_x.length; ++l) {
+        Vector<Real> node{2};
 
-                // Translation.
-                Vector<Real> translation{2};
+        node[0] = nodes_x_2d[l];
+        node[1] = nodes_y_2d[l];
 
-                translation[0] = triangle.points[0][0];
-                translation[1] = triangle.points[0][1];
+        Vector<Real> transformed = jacobian * node + translation;
 
-                // Physical nodes.
-                Vector<Real> physical_x{nodes_x_2d.length};
-                Vector<Real> physical_y{nodes_y_2d.length};
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
 
-                for(std::size_t l = 0; l < physical_x.length; ++l) {
-                    Vector<Real> node{2};
+      // Weights scaling.
+      Vector<Real> scaled = jacobian_det * weights_2d;
 
-                    node[0] = nodes_x_2d[l];
-                    node[1] = nodes_y_2d[l];
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
 
-                    Vector<Real> transformed = jacobian * node + translation;
+      // Solutions.
+      Vector<Real> u = data.c_ex(physical_x, physical_y, t);
+      Vector<Real> uh = phi * numerical(indices);
 
-                    physical_x[l] = transformed[0];
-                    physical_y[l] = transformed[1];
-                }
+      // Gradients.
+      Vector<Real> grad_x = data.dc_dx_ex(physical_x, physical_y, t);
+      Vector<Real> grad_y = data.dc_dy_ex(physical_x, physical_y, t);
+      Vector<Real> grad_u = grad_x + grad_y;
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * numerical(indices);
 
-                // Weights scaling.
-                Vector<Real> scaled = jacobian_det * weights_2d;
+      // Local L2 error.
+      this->l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
 
-                // Basis functions.
-                auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
-
-
-                // Solutions.
-                Vector<Real> u = exact(physical_x, physical_y, t);
-                Vector<Real> uh = phi * numerical(indices);
-
-                auto [grad_x, grad_y] = exact_gradient(physical_x, physical_y, t);
-                Vector<Real> grad_u = grad_x + grad_y;
-                Vector<Real> grad_uh = (gradx_phi + grady_phi) * numerical(indices);
-
-                // Local L2 error.
-                this->l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
-
-                // Local H1 error.
-                this->h1_errors[j] += dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
-            }
-
-            this->l2_errors[j] = std::sqrt(this->l2_errors[j]);
-            this->h1_errors[j] = std::sqrt(this->h1_errors[j]);
-
-        }
-
-        // Data.
-        this->degree = 0;
-
-        for(const auto &element: mesh.elements)
-            this->degree = (element.degree > this->degree) ? element.degree : this->degree;
-
-        this->size = 0.0;
-        this->elements = mesh.elements.size();
-
-        for(const auto &element: mesh.elements)
-            for(const auto &p: element.element.points)
-                for(const auto &q: element.element.points)
-                    this->size = (distance(p, q) > this->size) ? distance(p, q) : this->size;
+      // Local H1 error.
+      this->h1_errors[j] +=
+          dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
     }
 
-    // OUTPUT.
-    
-    /**
-     * @brief Error output.
-     * 
-     * @param ost 
-     * @param error 
-     * @return std::ostream& 
-     */
-    std::ostream &operator <<(std::ostream &ost, const GeneralError &error) {
-        ost << "Elements: " << error.elements << "\n";
-        ost << "Dofs: " << error.dofs << "\n";
-        ost << "Degree (p): " << error.degree << "\n";
-        ost << "Size (h): " << error.size << "\n";
-        ost << "L2 Error: " << error.l2_error << "\n";
-        return ost << "DG Error: " << error.dg_error << std::endl;
-    }
+    this->l2_errors[j] = std::sqrt(this->l2_errors[j]);
+    this->h1_errors[j] = std::sqrt(this->h1_errors[j]);
+  }
 
+  // Data.
+  this->degree = 0;
+
+  for (const auto &element : mesh.elements)
+    this->degree =
+        (element.degree > this->degree) ? element.degree : this->degree;
+
+  this->size = 0.0;
+  this->elements = mesh.elements.size();
+
+  for (const auto &element : mesh.elements)
+    for (const auto &p : element.element.points)
+      for (const auto &q : element.element.points)
+        this->size =
+            (distance(p, q) > this->size) ? distance(p, q) : this->size;
+}
 }

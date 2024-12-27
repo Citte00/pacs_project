@@ -11,28 +11,43 @@
 
 namespace pacs {
 
-    Vector<Real> HeatSolver(const Mesh &mesh, const std::array<Sparse<Real>, 3> &Matrices, const Vector<Real> &c_old, const std::array<Vector<Real>, 2> &forcing, const Real &dt, const Real &theta, const Real &TOL) {
-        // Mass blocks.
-        auto blocks = block_mass(mesh);
+/**
+ * @brief Solver of the heat equation matricial system.
+ *
+ * @param data Data struct.
+ * @param mesh Mesh struct.
+ * @param Matrices System matrices, [mass, stiff, dg_stiff].
+ * @param c_old Soltuion at previous time step.
+ * @param forcing Array of forcing terms.
+ * @param TOL Tolerance.
+ * @return Vector<Real>
+ */
+Vector<Real> HeatSolver(const DataHeat &data, const Mesh &mesh,
+                        const std::array<Sparse<Real>, 3> &Matrices,
+                        const Vector<Real> &c_old,
+                        const std::array<Vector<Real>, 2> &forcing,
+                        const Real &TOL) {
+  // Mass blocks.
+  auto blocks = block_mass(mesh);
 
-        // Extract Matrices from tuple.
-        auto [M, A, DG] = Matrices;
+  // Extract Matrices from tuple.
+  auto [M, A, DG] = Matrices;
 
-        // Extract forcing term.
-        auto [F_old, F_new] = forcing;
+  // Extract forcing term.
+  auto [F_old, F_new] = forcing;
 
-        // Assembling the constant component of the matrices.
-        Sparse<Real> LHS = M + dt * theta * A;
-        Sparse<Real> RHS = M - dt * (1.0 - theta) * A;
+  // Assembling the constant component of the matrices.
+  Sparse<Real> LHS = M + data.dt * data.theta * A;
+  Sparse<Real> RHS = M - data.dt * (1.0 - data.theta) * A;
 
-        LHS.compress();
-        RHS.compress();
+  LHS.compress();
+  RHS.compress();
 
-        // Construction of the complete RHS for the theta method.
-        Vector<Real> F = RHS * c_old + dt * theta * F_new + dt * (1-theta) * F_old;
+  // Construction of the complete RHS for the theta method.
+  Vector<Real> F = RHS * c_old + data.dt * data.theta * F_new +
+                   data.dt * (1 - data.theta) * F_old;
 
-        // Solves using GMRES.
-        return solve(LHS, F, blocks, GMRES, DBI, TOL);
-    }    
-
+  // Solves using GMRES.
+  return solve(LHS, F, blocks, GMRES, DBI, TOL);
+}
 }

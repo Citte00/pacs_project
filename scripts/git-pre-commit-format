@@ -3,7 +3,6 @@
 # Copyright 2018 Undo Ltd.
 #
 # https://github.com/barisione/clang-format-hooks
-
 # Force variable declaration before access.
 set -u
 # Make any failure in piped commands be reflected in the exit code.
@@ -265,6 +264,8 @@ apply_format_opts=(
     --cached
     )
 
+echo "Running apply-format with options: ${apply_format_opts[@]}"
+
 readonly exclusions_file="$top_dir/.clang-format-hook-exclude"
 if [ -e "$exclusions_file" ]; then
     while IFS= read -r line; do
@@ -276,7 +277,7 @@ fi
 
 readonly patch=$(mktemp)
 trap '{ rm -f "$patch"; }' EXIT
-"$apply_format" --style="$style" --cached "${apply_format_opts[@]}" > "$patch" || \
+"$apply_format" --style="$style" --cached > "$patch" || \
     error_exit $'\nThe apply-format script failed.'
 
 if [ "$(wc -l < "$patch")" -eq 0 ]; then

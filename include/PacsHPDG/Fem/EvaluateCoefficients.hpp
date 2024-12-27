@@ -8,14 +8,13 @@
  * 
  */
 
-#ifndef COEFF_PACS
-#define COEFF_PACS
+#ifndef INCLUDE_PACSHPDG_FEM_EVALUATE_COEFFICIENT_HPP
+#define INCLUDE_PACSHPDG_FEM_EVALUATE_COEFFICIENT_HPP
 
-#include "../Base.hpp"
-#include "../Geometry.hpp"
 #include "../Algebra.hpp"
-
-#include "./GeneralFunctor.hpp"
+#include "../Base.hpp"
+#include "../Data.hpp"
+#include "../Geometry.hpp"
 
 namespace pacs {
 
@@ -26,7 +25,8 @@ namespace pacs {
     Vector<Real> evaluateSourceFKPP(const Mesh &, const FKPPSource &, const Real &, const TriFunctor &, const TriFunctor &);
 
     // Modal coefficients of Heat source function.
-    Vector<Real> evaluateSourceHeat(const Mesh &, const HeatSource &, const Real &, const TriFunctor &);
+    Vector<Real> evaluateSourceHeat(const DataHeat &, const Mesh &,
+                                    const Real &);
 
     // Get Fisher-KPP equation initial condition.
     std::array<Vector<Real>, 2> EvaluateICFKPP(const Mesh &, const Sparse<Real> &, const TriFunctor &, const Real &);

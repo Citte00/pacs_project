@@ -16,47 +16,45 @@
 
 namespace pacs {
 
-    template<typename ResultType, typename... Params>
-    using GenFunc = std::function<ResultType(Params...)>;
+/**
+ * @brief Function template alias.
+ *
+ * @tparam ResultType
+ * @tparam Params
+ */
+template <typename ResultType, typename... Params>
+using GenFunc = std::function<ResultType(Params...)>;
 
-    /**
-     * @brief General Functor class.
-     * 
-     */
-    template<typename ResultType, typename... Args>
-    class GeneralFunctor {
-        private:
-            
-            // Function.
-            GenFunc<ResultType, Args...> m_function;
+/**
+ * @brief General Functor class.
+ *
+ */
+template <typename ResultType, typename... Args> class GeneralFunctor {
+private:
+  // Function.
+  GenFunc<ResultType, Args...> m_function;
 
-        public:
+public:
+  // CONSTRUCTORS.
+  GeneralFunctor() : m_function{} {};
+  explicit GeneralFunctor(const GenFunc<ResultType, Args...> &function_)
+      : m_function{function_} {};
+  template <typename Callable, typename = std::enable_if_t<!std::is_same_v<
+                                   std::decay_t<Callable>, GeneralFunctor>>>
+  GeneralFunctor(Callable &&callable)
+      : m_function{std::forward<Callable>(callable)} {}
 
-            // CONSTRUCTORS.
-            GeneralFunctor() : m_function{} {};
-            explicit GeneralFunctor(const GenFunc<ResultType, Args...>& function_) : m_function{function_} {};
+  // EVALUATION.
+  ResultType operator()(const Args &...args) const {
+#ifndef NDEBUG
+    if (!this->m_function) {
+      throw std::bad_function_call();
+    }
+#endif
 
-            // SETEER and GETTER
-            void setFunction(const GenFunc<ResultType, Args...>& func_) {
-                this->m_function = func_;
-            }
-
-            GenFunc<ResultType, Args...> getFunction() const {
-                return this->m_function;
-            }
-
-            // EVALUATION.
-            ResultType operator()(const Args&... args) const {
-
-                #ifndef NDEBUG
-                if(!this->m_function) {
-                     throw std::bad_function_call();
-                }
-                #endif
-
-                return this->m_function(args...);
-            };
-    };
+    return this->m_function(args...);
+  };
+};
 
     /**
      * @brief General TwoFunctor class.
@@ -73,14 +71,28 @@ namespace pacs {
         public:
 
             // CONSTRUCTORS.
-            GeneralTwoFunctor() = default;
-            explicit GeneralTwoFunctor(const GenFunc<ResultType, Args...>& first_, const GenFunc<ResultType, Args...>& second_) : m_first{first_}, m_second{second_} {};
+          GeneralTwoFunctor() : m_first{}, m_second{} {};
+          explicit GeneralTwoFunctor(
+              const GenFunc<ResultType, Args...> &first_,
+              const GenFunc<ResultType, Args...> &second_)
+              : m_first{first_}, m_second{second_} {};
+          template <typename Callable,
+                    typename = std::enable_if_t<!std::is_same_v<
+                        std::decay_t<Callable>, GeneralTwoFunctor>>>
+          GeneralTwoFunctor(Callable &&callable_f, Callable &&callable_s)
+              : m_first{std::forward<Callable>(callable_f)},
+                m_second{std::forward<Callable>(callable_s)} {}
 
-            // EVALUATION.
-            std::array<ResultType, 2> operator() (const Args&... args) const {
-                return {this->m_first(args...), this->m_second(args...)};
-            };
+          // EVALUATION.
+          std::array<ResultType, 2> operator()(const Args &...args) const {
+#ifndef NDEBUG
+            if (!this->m_first || !this->m_second) {
+              throw std::bad_function_call();
+            }
+#endif
 
+            return {this->m_first(args...), this->m_second(args...)};
+          };
     };
 
     // Some functor.

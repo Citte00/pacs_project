@@ -7,8 +7,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-#ifndef INCLUDE_PACSHPDG_ESTIMATORS.HPP
-#define INCLUDE_PACSHPDG_ESTIMATORS.HPP
+#ifndef INCLUDE_PACSHPDG_ESTIMATORS_HPP
+#define INCLUDE_PACSHPDG_ESTIMATORS_HPP
 
 // Estimators.
 #include "./Estimators/Estimators.hpp"
