@@ -158,6 +158,47 @@ public:
     os << "DG Error: " << dg_error << std::endl;
   };
 };
+
+/**
+ * @brief Heat equation error class.
+ *
+ */
+class FKPPError : public Error {
+public:
+  // CONSTRUCTORS.
+  FKPPError(const DataFKPP &, const Mesh &, const std::array<Sparse<Real>, 2> &,
+            const Vector<Real> &, const Real &);
+
+  // Getters.
+  std::size_t getDofs() const { return dofs; };
+  Real getElements() const { return elements; };
+  Vector<Real> getDegree() const { return degree; };
+  Vector<Real> getSize() const { return size; };
+  Real getL2Error() const { return l2_error; };
+  Real getDGError() const { return dg_error; };
+  Vector<Real> getl2Error() const { return l2_errors; };
+  Vector<Real> getH1Error() const { return h1_errors; };
+
+  // Setters.
+  void setDofs(const size_t &dofs_) { dofs = dofs_; };
+  void setElements(const size_t &elements_) { elements = elements_; };
+  void setDegree(const size_t &degree_) { degree = degree_; };
+  void setSize(const Real &size_) { size = size_; };
+  void setL2Error(const Real &error_) { l2_error = error_; };
+  void setDGError(const Real &error_) { dg_error = error_; };
+  void setl2Error(const Vector<Real> &errors_) { l2_errors = errors_; };
+  void setH1Error(const Vector<Real> &errors_) { h1_errors = errors_; };
+
+  // Output
+  void print(std::ostream &os) const {
+    os << "Elements: " << elements << "\n";
+    os << "Dofs: " << dofs << "\n";
+    os << "Degree (p): " << degree << "\n";
+    os << "Size (h): " << size << "\n";
+    os << "L2 Error: " << l2_error << "\n";
+    os << "DG Error: " << dg_error << std::endl;
+  };
+};
 }
 
 #endif

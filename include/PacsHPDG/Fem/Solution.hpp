@@ -14,8 +14,7 @@
 #include "../Base.hpp"
 #include "../Geometry.hpp"
 #include "../Algebra.hpp"
-
-#include "./Functor.hpp"
+#include "../Data.hpp"
 
 #include <string>
 
@@ -36,8 +35,9 @@ namespace pacs {
         // CONSTRUCTORS.
 
         Solution() = delete;
-        Solution(const Mesh &, const Vector<Real> &, const Functor &);
-        Solution(const Mesh &, const Vector<Real> &, const TriFunctor &, const Real &);
+        Solution(const Mesh &, const Vector<Real> &, const BiFunctor &);
+        Solution(const DataHeat &, const Mesh &, const Vector<Real> &, const Real &);
+        Solution(const DataFKPP &, const Mesh &, const Vector<Real> &, const Real &);
 
         // OUTPUT.
 

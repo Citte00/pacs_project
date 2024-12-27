@@ -131,6 +131,37 @@ namespace pacs {
           void print(std::ostream &) const override;
     };
 
+    /**
+     * @brief Fisher-KPP equation error estimator class.
+     * 
+     */
+    class FKPPEstimator : public BaseEstimator {
+        public:
+          // CONSTRUCTOR.
+          FKPPEstimator(const DataFKPP &, const Mesh &, const Sparse<Real> &,
+                        const Vector<Real> &, const Vector<Real> &,
+                        const Real &);
+
+          // Getters.
+          std::size_t getDofs() const override { return dofs; };
+          Real getEstimate() const override { return estimate; };
+          Vector<Real> getEstimates() const override { return estimates; };
+          Vector<Real> getFits() const override { return fits; };
+
+          // Setters.
+          void setDofs(const size_t &dofs_) override { dofs = dofs; };
+          void setEstimate(const Real &estimate_) override {
+            estimate = estimate_;
+          };
+          void setEstimates(const Vector<Real> &estimates_) override {
+            estimates = estimates_;
+          };
+          void setFits(const Vector<Real> &fits_) override { fits = fits_; };
+
+          // Output.
+          void print(std::ostream &) const override;
+    };
+
 }
 
 #endif

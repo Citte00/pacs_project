@@ -133,7 +133,7 @@ namespace pacs {
      * @param D Diffusion coefficient.
      * @return Vector<Real> 
      */
-    Vector<Real> evaluateSourceFKPP(const Mesh &mesh, const FKPPSource &function, const Real &t, const TriFunctor &Alpha, const TriFunctor &D) {
+    Vector<Real> evaluateSourceFKPP(const DataFKPP &data, const Mesh &mesh, const Real &t) {
 
         // Number of quadrature nodes.
         std::vector<std::size_t> nqn(mesh.elements.size(), 0);
@@ -223,9 +223,9 @@ namespace pacs {
                     scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
                 // function solution.
-                Vector<Real> Dext = D(physical_x, physical_y, t);
-                Vector<Real> alpha = Alpha(physical_x, physical_y, t);
-                Vector<Real> local_function = function(physical_x, physical_y, t, alpha, Dext);
+                Vector<Real> Dext = data.D_ext(physical_x, physical_y, t);
+                Vector<Real> alpha = data.alpha(physical_x, physical_y, t);
+                Vector<Real> local_function = data.source_f(physical_x, physical_y, t, alpha, Dext);
 
                 // Local coefficients.
                 local_coefficients += scaled_phi.transpose() * local_function;

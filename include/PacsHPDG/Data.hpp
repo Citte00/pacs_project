@@ -14,6 +14,6 @@
 #include "./Data/DataHeat.hpp"
 
 // Data struct for the Fisher-KPP equation.
-//#include "./Data/DataFKPP.hpp"
+#include "./Data/DataFKPP.hpp"
 
 #endif

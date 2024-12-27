@@ -22,7 +22,7 @@ namespace pacs {
     Vector<Real> evaluateCoeff(const Mesh &, const TriFunctor &, const Real &);
 
     // Modal coefficients of Fisher-KPP source function.
-    Vector<Real> evaluateSourceFKPP(const Mesh &, const FKPPSource &, const Real &, const TriFunctor &, const TriFunctor &);
+    Vector<Real> evaluateSourceFKPP(const DataFKPP &, const Mesh &, const Real &);
 
     // Modal coefficients of Heat source function.
     Vector<Real> evaluateSourceHeat(const DataHeat &, const Mesh &,
