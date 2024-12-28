@@ -182,7 +182,7 @@ fi
 # clang-format.
 declare format="${CLANG_FORMAT:-}"
 if [ -z "$format" ]; then
-    format=$(type -p clang-format-18)
+    format=$(type -p clang-format)
 fi
 
 if [ -z "$format" ]; then
