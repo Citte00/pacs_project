@@ -1,5 +1,5 @@
 /**
- * @file HeatErrors.cpp
+ * @file ErrorsHeat.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
  * @brief
  * @date 2024-12-05
