@@ -9,7 +9,7 @@ endif
 # FLAGS.
 
 # Disables solution output.
-CPPFLAGS += -DNSOLUTIONS
+#CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
 #CPPFLAGS += -DNVERBOSE

@@ -30,10 +30,10 @@ Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
       exact{mesh.entries} {
 
   // Number of quadrature nodes.
-  std::size_t degree = GAUSS_ORDER;
+  std::size_t nqn = GAUSS_ORDER;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
   // Starting indices.
   std::vector<std::size_t> starts;
@@ -45,7 +45,7 @@ Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
   // Local vectors indices.
   std::vector<std::size_t> local_indices;
 
-  for (std::size_t h = 0; h < degree * degree; ++h)
+  for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices.emplace_back(h);
 
   // Loop over the elements.
@@ -119,7 +119,7 @@ Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 }
@@ -134,14 +134,16 @@ Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
  */
 Solution::Solution(const DataHeat &data, const Mesh &mesh,
                    const Vector<Real> &numerical, const Real &t)
-    : x{mesh.entries}, y{mesh.entries}, numerical{mesh.entries},
-      exact{mesh.entries} {
+    : x{data.NqnVisualization * data.NqnVisualization * mesh.entries},
+      y{data.NqnVisualization * data.NqnVisualization * mesh.entries},
+      numerical{data.NqnVisualization * data.NqnVisualization * mesh.entries},
+      exact{data.NqnVisualization * data.NqnVisualization * mesh.entries} {
 
   // Number of quadrature nodes.
-  std::size_t degree = GAUSS_ORDER;
+  std::size_t nqn = data.NqnVisualization;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
   // Starting indices.
   std::vector<std::size_t> starts;
@@ -153,7 +155,7 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
   // Local vectors indices.
   std::vector<std::size_t> local_indices;
 
-  for (std::size_t h = 0; h < degree * degree; ++h)
+  for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices.emplace_back(h);
 
   // Loop over the elements.
@@ -173,6 +175,7 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
 
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
+
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -227,7 +230,7 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 }
@@ -242,14 +245,17 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
  */
 Solution::Solution(const DataFKPP &data, const Mesh &mesh,
                    const Vector<Real> &numerical, const Real &t)
-    : x{mesh.entries}, y{mesh.entries}, numerical{mesh.entries},
-      exact{mesh.entries} {
+    : x{data.NqnVisualization * data.NqnVisualization * mesh.entries},
+      y{data.NqnVisualization * data.NqnVisualization * mesh.entries},
+      numerical{data.NqnVisualization * data.NqnVisualization * mesh.entries},
+      exact{data.NqnVisualization * data.NqnVisualization * mesh.entries} {
 
   // Number of quadrature nodes.
-  std::size_t degree = GAUSS_ORDER;
+  std::size_t nqn = data.NqnVisualization;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
+  auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
 
   // Starting indices.
   std::vector<std::size_t> starts;
@@ -261,7 +267,7 @@ Solution::Solution(const DataFKPP &data, const Mesh &mesh,
   // Local vectors indices.
   std::vector<std::size_t> local_indices;
 
-  for (std::size_t h = 0; h < degree * degree; ++h)
+  for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices.emplace_back(h);
 
   // Loop over the elements.
@@ -335,7 +341,7 @@ Solution::Solution(const DataFKPP &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 }

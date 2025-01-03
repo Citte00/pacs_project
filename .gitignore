@@ -13,6 +13,7 @@ lib
 
 # Executables' output.
 **/output
+**/include/PacsHPDG/Heat/heat.hpp
 
 # Python
 **/__pycache__

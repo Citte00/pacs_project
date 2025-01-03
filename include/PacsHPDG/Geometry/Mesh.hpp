@@ -93,6 +93,7 @@ namespace pacs {
         // OUTPUT.
 
         void write(const std::string &, const bool &degrees = false);
+        void exportVTK(const std::string &);
     };
 
     // METHODS.

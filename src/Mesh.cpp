@@ -44,9 +44,9 @@ Mesh::Mesh(const Polygon &domain, const std::vector<Polygon> &diagram,
   std::size_t entries = 0;
 
   for (const auto &element : this->elements)
-    entries += element.element.points.size();
+    entries += element.edges.size();
 
-  this->entries = entries * GAUSS_ORDER * GAUSS_ORDER;
+  this->entries = entries;
 }
 
 /**
