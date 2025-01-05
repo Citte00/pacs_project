@@ -15,14 +15,15 @@
 #include "../Algebra.hpp"
 #include "../Geometry.hpp"
 #include "../Fem.hpp"
+#include "../Data.hpp"
 
 namespace pacs {
 
     // Fisher matrices.
-    std::array<Sparse<Real>, 4> fisher(const Mesh &, const TriFunctor&, const TriFunctor&, const Real &penalty_coefficient = 10.0);
+    std::array<Sparse<Real>, 4> fisher(const DataFKPP &, const Mesh &);
 
     // Non-linear Fisher matrix. 
-    Sparse<Real> NLfisher(const Mesh &, const TriFunctor&, const Vector<Real> &, const Real &penalty_coefficient = 10.0);
+    Sparse<Real> NLfisher(const DataFKPP &, const Mesh &, const Vector<Real> &);
 
 }
 

@@ -11,312 +11,319 @@
 
 namespace pacs{
 
-    /**
-     * @brief Assembly of matrices for Fisher-KPP equation
-     * 
-     * @param mesh 
-     * @param Alpha alpha
-     * @param D D_ext
-     * @param penalty_coefficient 
-     * @return std::array<Sparse<Real>, 4> 
-     */
-    std::array<Sparse<Real>, 4> fisher(const Mesh &mesh, const TriFunctor &Alpha, const TriFunctor &D, const Real &penalty_coefficient)
-    {
-        #ifndef NVERBOSE
-        std::cout << "Computing the Fisher-KPP matrices." << std::endl;
-        #endif
+/**
+ * @brief Assembly of matrices for Fisher-KPP equation.
+ *
+ * @param data Data struct.
+ * @param mesh Mesh struct.
+ * @return std::array<Sparse<Real>, 4>
+ */
+std::array<Sparse<Real>, 4> fisher(const DataFKPP &data, const Mesh &mesh) {
+#ifndef NVERBOSE
+  std::cout << "Computing the Fisher-KPP matrices." << std::endl;
+#endif
 
-        // Number of quadrature nodes.
-        std::size_t nqn = 2*mesh.elements[0].degree + 1;
+  // Number of quadrature nodes.
+  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                 [](const Element &elem) { return 2 * elem.degree + 1; });
 
-        // Quadrature nodes.
-        auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
+  // Degrees of freedom.
+  std::size_t dofs = mesh.dofs();
 
-        // Degrees of freedom.
-        std::size_t dofs = mesh.dofs();
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-        // Neighbours.
-        std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+  // Matrices.
+  Sparse<Real> M_prj{dofs, dofs};
+  Sparse<Real> M{dofs, dofs};
+  Sparse<Real> A{dofs, dofs};
+  Sparse<Real> IA{dofs, dofs};
+  Sparse<Real> SA{dofs, dofs};
+
+  // Starting indices.
+  std::vector<std::size_t> starts;
+  starts.emplace_back(0);
+
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+
+  // Volume integrals.
+
+  // Loop over the elements.
+  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+    // 2D Quadrature nodes and weights.
+    auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+
+    // Local dofs.
+    std::size_t element_dofs = mesh.elements[j].dofs();
+
+    // Global matrix indices.
+    std::vector<std::size_t> indices;
+
+    for (std::size_t k = 0; k < element_dofs; ++k)
+      indices.emplace_back(starts[j] + k);
+
+    // Polygon.
+    Polygon polygon = mesh.element(j);
+
+    // Element sub-triangulation.
+    std::vector<Polygon> triangles = triangulate(polygon);
+
+    // Local matrices.
+    Matrix<Real> local_M_prj{element_dofs, element_dofs};
+    Matrix<Real> local_M{element_dofs, element_dofs};
+    Matrix<Real> local_A{element_dofs, element_dofs};
 
-        // Matrices.
-        Sparse<Real> M_prj{dofs, dofs};
-        Sparse<Real> M{dofs, dofs};
-        Sparse<Real> A{dofs, dofs};
-        Sparse<Real> IA{dofs, dofs};
-        Sparse<Real> SA{dofs, dofs};
-
-        // Starting indices.
-        std::vector<std::size_t> starts;
-        starts.emplace_back(0);
-
-        for(std::size_t j = 1; j < mesh.elements.size(); ++j)
-            starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
-
-        // Volume integrals.
+    // Loop over the sub-triangulation.
+    for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-        // Loop over the elements.
-        for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+      // Triangle.
+      Polygon triangle = triangles[k];
+
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
 
-            // Local dofs.
-            std::size_t element_dofs = mesh.elements[j].dofs();
+      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
 
-            // Global matrix indices.
-            std::vector<std::size_t> indices;
+      // Jacobian's determinant.
+      Real jacobian_det =
+          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
 
-            for(std::size_t k = 0; k < element_dofs; ++k)
-                indices.emplace_back(starts[j] + k);
+      // Translation.
+      Vector<Real> translation{2};
 
-            // Polygon.
-            Polygon polygon = mesh.element(j);
+      translation[0] = triangle.points[0][0];
+      translation[1] = triangle.points[0][1];
 
-            // Element sub-triangulation.
-            std::vector<Polygon> triangles = triangulate(polygon);
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_x_2d.length};
+      Vector<Real> physical_y{nodes_y_2d.length};
 
-            // Local matrices.
-            Matrix<Real> local_M_prj{element_dofs, element_dofs};
-            Matrix<Real> local_M{element_dofs, element_dofs};
-            Matrix<Real> local_A{element_dofs, element_dofs};
+      for (std::size_t l = 0; l < physical_x.length; ++l) {
+        Vector<Real> node{2};
 
-            // Loop over the sub-triangulation.
-            for(std::size_t k = 0; k < triangles.size(); ++k) {
+        node[0] = nodes_x_2d[l];
+        node[1] = nodes_y_2d[l];
 
-                // Triangle.
-                Polygon triangle = triangles[k];
+        Vector<Real> transformed = jacobian * node + translation;
 
-                // Jacobian.
-                Matrix<Real> jacobian{2, 2};
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
 
-                jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-                jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-                jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-                jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+      // Weights scaling.
+      Vector<Real> scaled = jacobian_det * weights_2d;
 
-                // Jacobian's determinant.
-                Real jacobian_det = jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+      // Param initialization.
+      Vector<Real> Dext = data.D_ext(physical_x, physical_y, 0.0);
+      Vector<Real> alpha = data.alpha(physical_x, physical_y, 0.0);
 
-                // Translation.
-                Vector<Real> translation{2};
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
 
-                translation[0] = triangle.points[0][0];
-                translation[1] = triangle.points[0][1];
+      // Some products.
+      Matrix<Real> scaled_phi{phi};
+      Matrix<Real> scaled_phi_alpha{phi};
+      Matrix<Real> scaled_gradx{gradx_phi};
+      Matrix<Real> scaled_grady{grady_phi};
 
-                // Physical nodes.
-                Vector<Real> physical_x{nodes_x_2d.length};
-                Vector<Real> physical_y{nodes_y_2d.length};
+      for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        scaled_phi.column(l, scaled_phi.column(l) * scaled);
+        scaled_phi_alpha.column(l,
+                                (alpha * scaled_phi_alpha.column(l)) * scaled);
+        scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
+        scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
+      }
 
-                for(std::size_t l = 0; l < physical_x.length; ++l) {
-                    Vector<Real> node{2};
+      // Local matrix assembly.
+      local_M_prj += scaled_phi.transpose() * phi;
+      local_M += scaled_phi_alpha.transpose() * phi;
+      local_A += scaled_gradx.transpose() * gradx_phi +
+                 scaled_grady.transpose() * grady_phi;
+    }
 
-                    node[0] = nodes_x_2d[l];
-                    node[1] = nodes_y_2d[l];
+    // Global matrix assembly.
+    M_prj.insert(indices, indices, local_M_prj);
+    M.insert(indices, indices, local_M);
+    A.insert(indices, indices, local_A);
 
-                    Vector<Real> transformed = jacobian * node + translation;
+    // Face integrals.
 
-                    physical_x[l] = transformed[0];
-                    physical_y[l] = transformed[1];
-                }
+    // Local matrices.
+    Matrix<Real> local_IA{element_dofs, element_dofs};
+    Matrix<Real> local_SA{element_dofs, element_dofs};
 
-                // Weights scaling.
-                Vector<Real> scaled = jacobian_det * weights_2d;
+    // Element's neighbours.
+    std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
 
-                // Param initialization.
-                Vector<Real> Dext = D(physical_x, physical_y, 0.0);
-                Vector<Real> alpha = Alpha(physical_x, physical_y, 0.0);
+    // Local matrices for neighbours.
+    std::vector<Matrix<Real>> local_IAN;
+    std::vector<Matrix<Real>> local_SAN;
 
-                // Basis functions.
-                auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
+    // Penalties.
+    Vector<Real> penalties = penalty(mesh, j, data.penalty_coeff);
 
-                // Some products.
-                Matrix<Real> scaled_phi{phi};
-                Matrix<Real> scaled_phi_alpha{phi};
-                Matrix<Real> scaled_gradx{gradx_phi};
-                Matrix<Real> scaled_grady{grady_phi};
+    // Edges.
+    std::vector<Segment> edges{polygon.edges()};
 
-                for(std::size_t l = 0; l < scaled_gradx.columns; ++l) {
-                    scaled_phi.column(l, scaled_phi.column(l) * scaled);
-                    scaled_phi_alpha.column(l, (alpha * scaled_phi_alpha.column(l)) * scaled);
-                    scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
-                    scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
-                }
+    // Loop over faces.
+    for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
 
-                // Local matrix assembly.
-                local_M_prj += scaled_phi.transpose() * phi;
-                local_M += scaled_phi_alpha.transpose() * phi;
-                local_A += scaled_gradx.transpose() * gradx_phi + scaled_grady.transpose() * grady_phi;
-            }
+      // Neighbour information.
+      auto [edge, neighbour, n_edge] = element_neighbours[k];
 
-            // Global matrix assembly.
-            M_prj.insert(indices, indices, local_M_prj);
-            M.insert(indices, indices, local_M);
-            A.insert(indices, indices, local_A);
+      // 1D Quadrature nodes and weights.
+      auto [nodes_1d, weights_1d] =
+          (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour]))
+                          : quadrature_1d(nqn[j]);
 
-            // Face integrals.
+      // Edge geometry.
+      Segment segment{edges[k]};
 
-            // Local matrices.
-            Matrix<Real> local_IA{element_dofs, element_dofs};
-            Matrix<Real> local_SA{element_dofs, element_dofs};
+      // Edge's normal.
+      Vector<Real> normal_vector{2};
 
-            // Element's neighbours.
-            std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
+      normal_vector[0] = segment[1][1] - segment[0][1];
+      normal_vector[1] = segment[0][0] - segment[1][0];
 
-            // Local matrices for neighbours.
-            std::vector<Matrix<Real>> local_IAN;
-            std::vector<Matrix<Real>> local_SAN;
+      normal_vector /= norm(normal_vector);
 
-            // Penalties.
-            Vector<Real> penalties = penalty(mesh, j, penalty_coefficient);
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
 
-            // Edges.
-            std::vector<Segment> edges{polygon.edges()};
+      jacobian(0, 0) = segment[1][0] - segment[0][0];
+      jacobian(0, 1) = 0.5 * (segment[1][0] - segment[0][0]);
+      jacobian(1, 0) = segment[1][1] - segment[0][1];
+      jacobian(1, 1) = 0.5 * (segment[1][1] - segment[0][1]);
 
-            // Loop over faces.
-            for(std::size_t k = 0; k < element_neighbours.size(); ++k) {
+      // Translation.
+      Vector<Real> translation{2};
 
-                // Neighbour information.
-                auto [edge, neighbour, n_edge] = element_neighbours[k];
+      translation[0] = segment[0][0];
+      translation[1] = segment[0][1];
 
-                // Edge geometry.
-                Segment segment{edges[k]};
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_1d.length};
+      Vector<Real> physical_y{nodes_1d.length};
 
-                // Edge's normal.
-                Vector<Real> normal_vector{2};
+      for (std::size_t l = 0; l < nodes_1d.length; ++l) {
+        Vector<Real> node{2};
 
-                normal_vector[0] = segment[1][1] - segment[0][1];
-                normal_vector[1] = segment[0][0] - segment[1][0];
+        node[0] = nodes_1d[l];
 
-                normal_vector /= norm(normal_vector);
+        Vector<Real> transformed = jacobian * node + translation;
 
-                // Jacobian.
-                Matrix<Real> jacobian{2, 2};
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
 
-                jacobian(0, 0) = segment[1][0] - segment[0][0];
-                jacobian(0, 1) = 0.5 * (segment[1][0] - segment[0][0]);
-                jacobian(1, 0) = segment[1][1] - segment[0][1];
-                jacobian(1, 1) = 0.5 * (segment[1][1] - segment[0][1]);
+      // Weights scaling.
+      Vector<Real> scaled = std::abs(segment) * weights_1d;
 
-                // Translation.
-                Vector<Real> translation{2};
+      // Param initialization.
+      Vector<Real> Dext = data.D_ext(physical_x, physical_y, 0.0);
 
-                translation[0] = segment[0][0];
-                translation[1] = segment[0][1];
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
 
-                // Physical nodes.
-                Vector<Real> physical_x{nodes_1d.length};
-                Vector<Real> physical_y{nodes_1d.length};
+      // Local matrix assembly.
+      Matrix<Real> scaled_gradx{gradx_phi};
+      Matrix<Real> scaled_grady{grady_phi};
+      Matrix<Real> scaled_phi{phi};
 
-                for(std::size_t l = 0; l < nodes_1d.length; ++l) {
-                    Vector<Real> node{2};
+      for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
+        scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
+        scaled_phi.column(l, scaled_phi.column(l) * scaled);
+      }
 
-                    node[0] = nodes_1d[l];
+      Matrix<Real> scaled_grad =
+          normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
 
-                    Vector<Real> transformed = jacobian * node + translation;
+      if (neighbour == -1) { // Boundary edge.
 
-                    physical_x[l] = transformed[0];
-                    physical_y[l] = transformed[1];
-                }
+        local_IA += scaled_grad.transpose() * phi;
+        local_SA += (penalties[k] * scaled_phi).transpose() * phi;
 
-                // Weights scaling.
-                Vector<Real> scaled = std::abs(segment) * weights_1d;
+        // Empty small matrices.
+        local_IAN.emplace_back(Matrix<Real>{1, 1});
+        local_SAN.emplace_back(Matrix<Real>{1, 1});
 
-                // Param initialization.
-                Vector<Real> Dext = D(physical_x, physical_y, 0.0);
+      } else {
 
-                // Basis functions.
-                auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
+        local_IA += 0.5 * scaled_grad.transpose() * phi;
+        local_SA += (penalties[k] * scaled_phi).transpose() * phi;
 
-                // Local matrix assembly.
-                Matrix<Real> scaled_gradx{gradx_phi};
-                Matrix<Real> scaled_grady{grady_phi};
-                Matrix<Real> scaled_phi{phi};
+        // Neighbour's basis function.
+        Matrix<Real> n_phi =
+            basis_2d(mesh, neighbour, {physical_x, physical_y})[0];
 
-                for(std::size_t l = 0; l < scaled_gradx.columns; ++l) {
-                    scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
-                    scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
-                    scaled_phi.column(l, scaled_phi.column(l) * scaled);
-                }
+        // Neighbour's local matrix.
+        local_IAN.emplace_back(-0.5 * scaled_grad.transpose() * n_phi);
+        local_SAN.emplace_back(-(penalties[k] * scaled_phi).transpose() *
+                               n_phi);
+      }
+    }
 
-                Matrix<Real> scaled_grad = normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
+    IA.insert(indices, indices, local_IA);
+    SA.insert(indices, indices, local_SA);
 
-                if(neighbour == -1) { // Boundary edge.
+    // Neighbouring DG matrices assembly.
+    for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
+      if (element_neighbours[k][1] == -1)
+        continue;
 
-                    local_IA += scaled_grad.transpose() * phi;
-                    local_SA += (penalties[k] * scaled_phi).transpose() * phi;
+      std::vector<std::size_t> n_indices;
+      std::size_t n_index = element_neighbours[k][1];
+      std::size_t n_dofs = mesh.elements[n_index].dofs(); // Neighbour's dofs.
 
-                    // Empty small matrices.
-                    local_IAN.emplace_back(Matrix<Real>{1, 1});
-                    local_SAN.emplace_back(Matrix<Real>{1, 1});
+      for (std::size_t h = 0; h < n_dofs; ++h)
+        n_indices.emplace_back(starts[n_index] + h);
 
-                } else {
+      IA.add(indices, n_indices, local_IAN[k]);
+      SA.add(indices, n_indices, local_SAN[k]);
+    }
+  }
 
-                    local_IA += 0.5 * scaled_grad.transpose() * phi;
-                    local_SA += (penalties[k] * scaled_phi).transpose() * phi;
+  // Matrices.
+  Sparse<Real> mass_prj = M_prj;
+  Sparse<Real> mass = M;
+  Sparse<Real> dg_stiffness = A + SA;
+  Sparse<Real> stiffness = dg_stiffness - IA - IA.transpose();
 
-                    // Neighbour's basis function.
-                    Matrix<Real> n_phi = basis_2d(mesh, neighbour, {physical_x, physical_y})[0];
+  // Compression.
+  mass_prj.compress();
+  mass.compress();
+  dg_stiffness.compress();
+  stiffness.compress();
 
-                    // Neighbour's local matrix.
-                    local_IAN.emplace_back(- 0.5 * scaled_grad.transpose() * n_phi);
-                    local_SAN.emplace_back(- (penalties[k] * scaled_phi).transpose() * n_phi);
-                }
-            }
-
-            IA.insert(indices, indices, local_IA);
-            SA.insert(indices, indices, local_SA);
-
-            // Neighbouring DG matrices assembly.
-            for(std::size_t k = 0; k < element_neighbours.size(); ++k) {
-                if(element_neighbours[k][1] == -1)
-                    continue;
-
-                std::vector<std::size_t> n_indices;
-                std::size_t n_index = element_neighbours[k][1];
-                std::size_t n_dofs = mesh.elements[n_index].dofs(); // Neighbour's dofs.
-
-                for(std::size_t h = 0; h < n_dofs; ++h)
-                    n_indices.emplace_back(starts[n_index] + h);
-
-                IA.add(indices, n_indices, local_IAN[k]);
-                SA.add(indices, n_indices, local_SAN[k]);
-            }
-        }
-
-        // Matrices.
-        Sparse<Real> mass_prj = M_prj;
-        Sparse<Real> mass = M;
-        Sparse<Real> dg_stiffness = A + SA;
-        Sparse<Real> stiffness = dg_stiffness - IA - IA.transpose();
-
-        // Compression.
-        mass_prj.compress();
-        mass.compress();
-        dg_stiffness.compress();
-        stiffness.compress();
-        
-        return {mass_prj, mass, stiffness, dg_stiffness};
+  return {mass_prj, mass, stiffness, dg_stiffness};
     }
 
     /**
-     * @brief Assembly of the non-linear matrix for Fisher-KPP equation
-     * 
-     * @param mesh 
-     * @param Alpha 
-     * @param uh 
-     * @param penalty_coefficient 
-     * @return Sparse<Real> 
+     * @brief Assembly of the non-linear matrix for Fisher-KPP equation.
+     *
+     * @param data Data struct.
+     * @param mesh Mesh struct.
+     * @param uh Numerical solution.
+     * @return Sparse<Real>
      */
-    Sparse<Real> NLfisher(const Mesh &mesh, const TriFunctor &Alpha, const Vector<Real> &uh, const Real &penalty_coefficient)
+    Sparse<Real> NLfisher(const DataFKPP &data, const Mesh &mesh, const Vector<Real> &uh)
     {
         #ifndef NVERBOSE
         std::cout << "Computing the Fisher-KPP matrices." << std::endl;
         #endif
 
         // Number of quadrature nodes.
-        std::size_t nqn = 2*mesh.elements[0].degree + 1;
-
-        // Quadrature nodes.
-        auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
-        auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
+        std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+        std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                       [](const Element &elem) { return 2 * elem.degree + 1; });
 
         // Degrees of freedom.
         std::size_t dofs = mesh.dofs();
@@ -338,84 +345,89 @@ namespace pacs{
 
         // Loop over the elements.
         for(std::size_t j = 0; j < mesh.elements.size(); ++j) {
+          // 2D Quadrature nodes and weights.
+          auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-            // Local dofs.
-            std::size_t element_dofs = mesh.elements[j].dofs();
+          // Local dofs.
+          std::size_t element_dofs = mesh.elements[j].dofs();
 
-            // Global matrix indices.
-            std::vector<std::size_t> indices;
+          // Global matrix indices.
+          std::vector<std::size_t> indices;
 
-            for(std::size_t k = 0; k < element_dofs; ++k)
-                indices.emplace_back(starts[j] + k);
+          for (std::size_t k = 0; k < element_dofs; ++k)
+            indices.emplace_back(starts[j] + k);
 
-            // Polygon.
-            Polygon polygon = mesh.element(j);
+          // Polygon.
+          Polygon polygon = mesh.element(j);
 
-            // Element sub-triangulation.
-            std::vector<Polygon> triangles = triangulate(polygon);
+          // Element sub-triangulation.
+          std::vector<Polygon> triangles = triangulate(polygon);
 
-            // Local matrices.
-            Matrix<Real> local_M{element_dofs, element_dofs};
+          // Local matrices.
+          Matrix<Real> local_M{element_dofs, element_dofs};
 
-            // Loop over the sub-triangulation.
-            for(std::size_t k = 0; k < triangles.size(); ++k) {
+          // Loop over the sub-triangulation.
+          for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-                // Triangle.
-                Polygon triangle = triangles[k];
+            // Triangle.
+            Polygon triangle = triangles[k];
 
-                // Jacobian.
-                Matrix<Real> jacobian{2, 2};
+            // Jacobian.
+            Matrix<Real> jacobian{2, 2};
 
-                jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-                jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-                jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-                jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+            jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+            jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+            jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+            jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
 
-                // Jacobian's determinant.
-                Real jacobian_det = jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+            // Jacobian's determinant.
+            Real jacobian_det = jacobian(0, 0) * jacobian(1, 1) -
+                                jacobian(0, 1) * jacobian(1, 0);
 
-                // Translation.
-                Vector<Real> translation{2};
+            // Translation.
+            Vector<Real> translation{2};
 
-                translation[0] = triangle.points[0][0];
-                translation[1] = triangle.points[0][1];
+            translation[0] = triangle.points[0][0];
+            translation[1] = triangle.points[0][1];
 
-                // Physical nodes.
-                Vector<Real> physical_x{nodes_x_2d.length};
-                Vector<Real> physical_y{nodes_y_2d.length};
+            // Physical nodes.
+            Vector<Real> physical_x{nodes_x_2d.length};
+            Vector<Real> physical_y{nodes_y_2d.length};
 
-                for(std::size_t l = 0; l < physical_x.length; ++l) {
-                    Vector<Real> node{2};
+            for (std::size_t l = 0; l < physical_x.length; ++l) {
+              Vector<Real> node{2};
 
-                    node[0] = nodes_x_2d[l];
-                    node[1] = nodes_y_2d[l];
+              node[0] = nodes_x_2d[l];
+              node[1] = nodes_y_2d[l];
 
-                    Vector<Real> transformed = jacobian * node + translation;
+              Vector<Real> transformed = jacobian * node + translation;
 
-                    physical_x[l] = transformed[0];
-                    physical_y[l] = transformed[1];
-                }
+              physical_x[l] = transformed[0];
+              physical_y[l] = transformed[1];
+            }
 
-                // Weights scaling.
-                Vector<Real> scaled = jacobian_det * weights_2d;
+            // Weights scaling.
+            Vector<Real> scaled = jacobian_det * weights_2d;
 
-                // Param initialization.
-                Vector<Real> alpha = Alpha(physical_x, physical_y, 0.0);
-                Vector<Real> c_star = uh(indices);
+            // Param initialization.
+            Vector<Real> alpha = data.alpha(physical_x, physical_y, 0.0);
+            Vector<Real> c_star = uh(indices);
 
-                // Basis functions.
-                auto [phi, gradx_phi, grady_phi] = basis_2d(mesh, j, {physical_x, physical_y});
+            // Basis functions.
+            auto [phi, gradx_phi, grady_phi] =
+                basis_2d(mesh, j, {physical_x, physical_y});
 
-                // Some products.
-                Matrix<Real> scaled_phi{phi};
-                Vector<Real> c_star_loc = phi * c_star;
+            // Some products.
+            Matrix<Real> scaled_phi{phi};
+            Vector<Real> c_star_loc = phi * c_star;
 
-                for(std::size_t l = 0; l < scaled_phi.columns; ++l) {
-                    scaled_phi.column(l, (alpha * scaled_phi.column(l)) * c_star_loc * scaled);
-                }
+            for (std::size_t l = 0; l < scaled_phi.columns; ++l) {
+              scaled_phi.column(l, (alpha * scaled_phi.column(l)) * c_star_loc *
+                                       scaled);
+            }
 
-                // Local matrix assembly.
-                local_M += scaled_phi.transpose() * phi;
+            // Local matrix assembly.
+            local_M += scaled_phi.transpose() * phi;
 
             }
 

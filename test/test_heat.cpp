@@ -58,19 +58,21 @@ int main(int argc, char **argv) {
 
     // Writes mesh informations to a file.
     std::string polyfile = "output/square_" + std::to_string(Data.N) + "@" + std::to_string(Data.degree) + ".poly";
-    // mesh.exportVTK(polyfile);
+    mesh.write(polyfile);
 
     // Initializing counter for printing the solution.
     int counter = 1;
 
     // Builds the Fisher-KPP matrices.
     std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(Data, mesh);
+    std::ofstream matrixfile{"output/square_" + std::to_string(Data.N) + "@" + std::to_string(Data.degree) + ".mat"};
+    matrixfile << Matrices[1];
 
     // Get initial condition.
     pacs::Vector<pacs::Real> ch_old = pacs::EvaluateICHeat(mesh, Matrices[0], Data.c_ex);
 
     // Compute initial forcing.
-    pacs::Vector<pacs::Real> F_old = pacs::forcingHeat(Data, mesh, Data.t_0);
+    pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(Data, mesh, Data.t_0);
 
     for(pacs::Real t = (Data.t_0 + Data.dt); t <= Data.t_f; t += Data.dt) {
 
@@ -86,24 +88,25 @@ int main(int argc, char **argv) {
         std::cout << "TIME: " << t << std::endl;
 
         // Update the forcing term.
-        pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(Data, mesh, t);
+        pacs::Vector<pacs::Real> F_old = F_new;
+        F_new = pacs::forcingHeat(Data, mesh, t);
 
-        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(Data, mesh, Matrices, ch_old, {F_old, F_new}, Data.dt);
+        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(Data, mesh, Matrices, ch_old, {F_old, F_new});
 
         // Errors.
-        //pacs::GeneralError error{mesh, {Matrices[0], Matrices[2]}, ch, c_ex, grad_exact, t};
+        pacs::HeatError error{Data, mesh, {Matrices[0], Matrices[2]}, ch, t};
 
         // Solution structure (output).
         #ifndef NSOLUTIONS
         if (counter % Data.VisualizationStep == 0) { 
             pacs::Solution solution{Data, mesh, ch, t};
-            std::string solfile = "output/square_" + std::to_string(mesh.elements.size()) + "@" + std::to_string(Data.degree) + "_" + std::to_string(t) + ".vtk";
-            solution.writeVTK(mesh, solfile);
+            std::string solfile = "output/square_" + std::to_string(mesh.elements.size()) + "@" + std::to_string(Data.degree) + "_" + std::to_string(t) + ".sol";
+            solution.write(solfile);
         }
         #endif
 
         // Output.
-        //output << "\n" << error << "\n" << std::endl;
+        output << "\n" << error << "\n" << std::endl;
 
         // Estimator.
         //pacs::HeatEstimator estimator{mesh, Matrices[0], ch, ch_old, Source, t, D_ext, c_ex, grad_exact};

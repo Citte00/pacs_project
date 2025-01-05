@@ -11,16 +11,19 @@
 #ifndef FKPP_SOLVERS_PACS
 #define FKPP_SOLVERS_PACS
 
-#include "../Base.hpp"
 #include "../Algebra.hpp"
-
-#include "./Fisher.hpp"
+#include "../Base.hpp"
+#include "../Data.hpp"
+#include "../Fem.hpp"
+#include "../Geometry.hpp"
 
 namespace pacs {
 
     // Custom Fisher-KPP solver.
-    Vector<Real> FKPPsolver(const Mesh &, const TriFunctor &, const std::array<Sparse<Real>, 4> &, const std::array<Vector<Real>, 2> &, const Vector<Real> &, const Vector<Real> &, const Real &, const Real &theta=0.5, const Real &TOL = 1E-15);
-
+Vector<Real> FKPPsolver(const DataFKPP &, const Mesh &, const std::array<Sparse<Real>, 4> &,
+                        const std::array<Vector<Real>, 2> &,
+                        const std::array<Vector<Real>, 2> &,
+                        const Real &, const Real &TOL = 1E-15);
 }
 
 #endif

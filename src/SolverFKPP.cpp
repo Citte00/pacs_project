@@ -12,65 +12,65 @@
 
 namespace pacs {
 
-    /**
-     * @brief Fisher-KPP equation solver
-     * 
-     * @param mesh Mesh.
-     * @param degree Polynomial degree.
-     * @param alpha Non-linear term coefficient. 
-     * @param Matrices [M_prj, M, A, DG] system matrices. 
-     * @param ch [c_h^n, c_h^(n-1)] solutions at previous time steps.
-     * @param F_old forcing term at time step n
-     * @param F_new forcing term at time step n+1
-     * @param dt Time step.
-     * @param theta Time discretization parameter (defaulted to 0.5 for CN method).
-     * @param TOL tolerance.
-     * @return Vector<Real> 
-     */
-    Vector<Real> FKPPsolver(const Mesh &mesh, const TriFunctor &alpha, const std::array<Sparse<Real>, 4> &Matrices, const std::array<Vector<Real>, 2> &ch, const Vector<Real> &F_old, const Vector<Real> &F_new, const Real &dt, const Real &theta, const Real &TOL) {
+/**
+ * @brief Fisher-KPP equation solver.
+ *
+ * @param data Data struct.
+ * @param mesh Mesh struct.
+ * @param Matrices System matrices, [mass, non_lin_mass, stiff, dg_stiff].
+ * @param ch Solution vector at previous time step, [c_old, c_oold].
+ * @param forcing Forcing temrs, [F_old, F_new].
+ * @param TOL Tolerance.
+ * @return Vector<Real>
+ */
+Vector<Real> FKPPsolver(const DataFKPP &data, const Mesh &mesh,
+                        const std::array<Sparse<Real>, 4> &Matrices,
+                        const std::array<Vector<Real>, 2> &ch,
+                        const std::array<Vector<Real>, 2> &forcing,
+                        const Real &dt, const Real &TOL) {
 
-        // Mass blocks.
-        auto blocks = block_mass(mesh);
+  // Mass blocks.
+  auto blocks = block_mass(mesh);
 
-        // Extract Matrices from tuple.
-        auto [M_prj, M, A, DG] = Matrices;
+  // Extract Matrices from tuple.
+  auto [M_prj, M, A, DG] = Matrices;
 
-        // Extract solutions.
-        auto [c_old, c_oold] = ch;
+  // Extract forcing term.
+  auto [F_old, F_new] = forcing;
 
-        // Assembling the constant component of the matrices.
-        Sparse<Real> LHS = M_prj + dt * theta * A;
-        Sparse<Real> RHS = M_prj - dt * (1.0 - theta) * A;
+  // Extract solutions.
+  auto [c_old, c_oold] = ch;
 
-        // Assembling the dynamic componenet of the marices.
-        if (theta == 0) {
-            
-            Sparse<Real> MN = NLfisher(mesh, alpha, c_old);
-            RHS += dt * (M - MN);
+  // Assembling the constant component of the matrices.
+  Sparse<Real> LHS = M_prj + data.dt * data.theta * A;
+  Sparse<Real> RHS = M_prj - data.dt * (1.0 - data.theta) * A;
 
-        } else if (theta == 1) {
-            
-            Sparse<Real> MN = NLfisher(mesh, alpha, c_old);
-            LHS -= dt * (M - MN);
-        
-        } else if (theta == 0.5) {
+  // Assembling the dynamic componenet of the marices.
+  if (data.theta == 0) {
 
-            Vector<Real> c_star = 1.5*c_old - 0.5*c_oold;
-            Sparse<Real> MN = NLfisher(mesh, alpha, c_star);
-            LHS -= 0.5 * dt * (M - MN);
-            RHS += 0.5 * dt * (M - MN);
+    Sparse<Real> MN = NLfisher(data, mesh, c_old);
+    RHS += data.dt * (M - MN);
 
-        }
+  } else if (data.theta == 1) {
 
-        LHS.compress();
-        RHS.compress();
+    Sparse<Real> MN = NLfisher(data, mesh, c_old);
+    LHS -= data.dt * (M - MN);
 
-        // Construction of the complete RHS for the theta method.
-        Vector<Real> F = RHS * c_old + dt * theta * F_new + dt * (1-theta) * F_old;
+  } else if (data.theta == 0.5) {
 
-        // Solves using GMRES.
-        return solve(LHS, F, blocks, GMRES, DBI, TOL);
+    Vector<Real> c_star = 1.5 * c_old - 0.5 * c_oold;
+    Sparse<Real> MN = NLfisher(data, mesh, c_star);
+    LHS -= 0.5 * data.dt * (M - MN);
+    RHS += 0.5 * data.dt * (M - MN);
+  }
 
-    }
+  LHS.compress();
+  RHS.compress();
 
+  // Construction of the complete RHS for the theta method.
+  Vector<Real> F = RHS * c_old + data.dt * data.theta * F_new + data.dt * (1 - data.theta) * F_old;
+
+  // Solves using GMRES.
+  return solve(LHS, F, blocks, GMRES, DBI, TOL);
+}
 }

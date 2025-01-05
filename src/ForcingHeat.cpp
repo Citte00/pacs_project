@@ -146,9 +146,7 @@ Vector<Real> forcingHeat(const DataHeat &data, const Mesh &mesh,
       auto [edge, neighbour, n_edge] = element_neighbours[k];
 
       // 1D Quadrature nodes and weights.
-      auto [nodes_1d, weights_1d] =
-          (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour]))
-                          : quadrature_1d(nqn[j]);
+      auto [nodes_1d, weights_1d] = quadrature_1d(nqn[j]);
 
       // Only domain's border,
       if (neighbour != -1)

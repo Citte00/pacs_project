@@ -15,11 +15,12 @@
 #include "../Base.hpp"
 #include "../Geometry.hpp"
 #include "../Fem.hpp"
+#include "../Data.hpp"
 
 namespace pacs {
 
-    // Fisher-KPP euation solver.
-    Vector<Real> forcingFKPP(const Mesh &, const TriFunctor &, const TriFunctor &, const FKPPSource &, const TriFunctor &, const Real &, const Real &penalty_coefficient = 10.0);
+    // Fisher-KPP equation solver.
+    Vector<Real> forcingFKPP(const DataFKPP &, const Mesh &,  const Real &);
 }
 
 #endif
