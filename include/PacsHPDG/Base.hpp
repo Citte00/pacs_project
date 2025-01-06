@@ -165,63 +165,6 @@ namespace pacs {
     concept Conjugable = requires(T value) {
         {std::conj(value)} -> std::convertible_to<T>;
     };
-
-    //  Scalar or Vector type.
-
-    /**
-     * @brief Scalar type.
-     * 
-     */
-    template<typename T>
-    concept Scalar = std::is_floating_point<std::decay_t<T>>::value;
-
-    /**
-     * @brief ScalarMultiplicable types.
-     * 
-     * @tparam T 
-     */
-    template<typename T>
-    concept ScalarMultiplicable = requires (T first) {
-        {1.0  * first} -> std::convertible_to<T>;
-        {1.0f * first} -> std::convertible_to<T>;
-    };
-
-    /**
-     * @brief Normable types.
-     * 
-     * @tparam T 
-     */
-    template<typename T>
-    concept Normable = requires(T x) {
-        { norm(x) } -> Scalar;
-    };
-
-    /**
-     * @brief Subscriptable types.
-     * 
-     * @tparam T 
-     */
-    template<typename T>
-    concept Subscriptable = requires(T x) {
-        { x[0] } -> Scalar;
-        { x.size() } -> std::integral;
-    };
-
-    /**
-     * @brief Vector types.
-     * 
-     * @tparam T 
-     */
-    template<typename T>
-    concept IsVector = Normable<T> && Addable<T> && ScalarMultiplicable<T> && Subscriptable<T>;
-
-    /**
-     * @brief Scalar or Vector types.
-     * 
-     * @tparam T 
-     */
-    template<typename T>
-    concept ScalarOrVector = Scalar<T> || IsVector<T>;
 }
 
 #endif

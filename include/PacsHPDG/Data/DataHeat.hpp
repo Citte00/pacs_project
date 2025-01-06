@@ -37,9 +37,9 @@ struct DataHeat {
   bool homog_source_f = false;
   GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>
       source_f = [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D) {
-        Vector<Real> result{x.size()};
+        Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.size(); i++)
+        for (size_t i = 0; i < x.length; i++)
           result[i] =
               -(std::cos(2.0 * M_PI * x[i]) * std::cos(2 * M_PI * y[i]) + 2) +
               8 * M_PI * M_PI * D[i] * std::cos(2 * M_PI * x[i]) *
@@ -51,9 +51,9 @@ struct DataHeat {
   // Boundary Conditions
   GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
-        Vector<Real> result{x.size()};
+        Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.size(); i++)
+        for (size_t i = 0; i < x.length; i++)
           result[i] =
               (std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]) +
                2.0) *
@@ -65,9 +65,9 @@ struct DataHeat {
   // Gradients of the Boundary Conditions
   GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
       [](Vector<Real> x, Vector<Real> y, Real t) {
-        Vector<Real> result{x.size()};
+        Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.size(); i++)
+        for (size_t i = 0; i < x.length; i++)
           result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
                       std::cos(2.0 * M_PI * y[i]) * (1 - t);
 
@@ -76,9 +76,9 @@ struct DataHeat {
 
   GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
       [](Vector<Real> x, Vector<Real> y, Real t) {
-        Vector<Real> result{x.size()};
+        Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.size(); i++)
+        for (size_t i = 0; i < x.length; i++)
           result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
                       std::sin(2.0 * M_PI * y[i]) * (1 - t);
 
@@ -87,9 +87,9 @@ struct DataHeat {
 
   GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
-        Vector<Real> result{x.size()};
+        Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.size(); i++)
+        for (size_t i = 0; i < x.length; i++)
           result[i] = -(
               std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]) + 2.0);
 
@@ -120,13 +120,6 @@ struct DataHeat {
   bool PlotIniCond = true;
   int VisualizationStep = 10;
   int NqnVisualization = 5;
-
-  // p-adaptivity
-  bool isAdaptive = true;
-  std::string p_adaptive = "eta";
-  double grad_threshold = -INFINITY;
-  double eta_threshold = -INFINITY;
-  double error_threshold = -INFINITY;
 
   // Save solution settings
   double SaveSolutionStep = 0.05;

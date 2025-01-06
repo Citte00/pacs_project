@@ -748,12 +748,6 @@ namespace pacs {
 
             return *this;
         }
-
-        // SIZE operator
-
-        std::size_t size() const {
-            return this->length;
-        }
         
         // OUTPUT.
 
