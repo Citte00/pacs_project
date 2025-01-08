@@ -1,125 +1,116 @@
 /**
- * @file test_fisher.cpp
+ * @file test_heat.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief 
+ * @brief
  * @date 2024-11-26
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
+#include "../include/PacsHPDG/Heat/heat.hpp"
 #include <PacsHPDG.hpp>
 
-#include <string>
-#include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <string>
 
 int main(int argc, char **argv) {
 
-    /*
-    // Degree.
-    if(argc <= 1) {
-        std::cout << "Usage: " << argv[0] << " DEGREE [TIME] [ELEMENTS]." << std::endl;
-        std::exit(-1);
-    }
+  // Retrieve data from struct.
+  pacs::DataHeat Data;
 
-    std::size_t degree = static_cast<std::size_t>(std::stoi(argv[1]));
+  std::vector<pacs::Polygon> diagram = pacs::mesh_diagram(Data.meshFileSeq);
 
-    // Initial diagram.
-    std::size_t elements = 300;
+  // "Splash".
+  std::ofstream output{"output/square_hp_" + std::to_string(Data.N) + "@" +
+                       std::to_string(Data.degree) + ".error"};
+  output << "Square domain - hp-adaptive refinement with estimator." << "\n";
 
-    // Fina time.
-    pacs::Real Time = 2;
+  std::cout << "Square domain - hp-adaptive refinement with estimator."
+            << std::endl;
+  std::cout << "Output under output/square_hp_" + std::to_string(Data.degree) +
+                   ".error."
+            << std::endl;
 
-    if(argc == 3)
-        Time = static_cast<pacs::Real>(std::stod(argv[2]));;
+  pacs::Polygon domain{Data.domain};
 
-    if(argc == 4) {
-        Time = static_cast<pacs::Real>(std::stod(argv[2]));
-        elements = static_cast<std::size_t>(std::stoi(argv[3]));
-    }*/
-    
-    // Retrieve data from struct.
-    pacs::DataHeat Data;
+  // Mesh.
+  pacs::Mesh mesh{domain, diagram, Data.degree};
 
-    std::vector<pacs::Polygon> diagram = pacs::mesh_diagram(Data.meshFileSeq);
+  // Writes mesh informations to a file.
+  std::string polyfile = "output/square_" + std::to_string(Data.N) + "@" +
+                         std::to_string(Data.degree) + ".poly";
+  mesh.write(polyfile);
 
-    // "Splash".
-    std::ofstream output{"output/square_hp_" + std::to_string(Data.N) + "@" + std::to_string(Data.degree) + ".error"};
-    output << "Square domain - hp-adaptive refinement with estimator." << "\n";
+  // Initializing counter for printing the solution.
+  int counter = 1;
 
-    std::cout << "Square domain - hp-adaptive refinement with estimator." << std::endl;
-    std::cout << "Output under output/square_hp_" + std::to_string(Data.degree) + ".error." << std::endl;
+  // Build the Heat equation object.
+  pacs::Heat equation(mesh);
 
-    pacs::Polygon domain{Data.domain};
+  // Builds the Fisher-KPP matrices.
+  equation.assembly(Data, mesh);
 
-    // Mesh.
-    pacs::Mesh mesh{domain, diagram, Data.degree};
+  // Get initial condition.
+  equation.evaluateIC(mesh, Data.c_ex);
 
-    // Writes mesh informations to a file.
-    std::string polyfile = "output/square_" + std::to_string(Data.N) + "@" + std::to_string(Data.degree) + ".poly";
-    mesh.write(polyfile);
+  // Compute initial forcing.
+  equation.m_forcing_old = equation.forcing(Data, mesh, Data.t_0);
 
-    // Initializing counter for printing the solution.
-    int counter = 1;
+  for (pacs::Real t = (Data.t_0 + Data.dt); t <= Data.t_f; t += Data.dt) {
 
     // Builds the Fisher-KPP matrices.
-    std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(Data, mesh);
-    std::ofstream matrixfile{"output/square_" + std::to_string(Data.N) + "@" + std::to_string(Data.degree) + ".mat"};
-    matrixfile << Matrices[1];
+    // std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(Data,
+    // mesh);
 
     // Get initial condition.
-    pacs::Vector<pacs::Real> ch_old = pacs::EvaluateICHeat(mesh, Matrices[0], Data.c_ex);
+    // pacs::Vector<pacs::Real> ch_old = (counter == 1) ?
+    // pacs::EvaluateICHeat(mesh, Matrices[0], Data.c_ex) : pacs::refine(mesh,
+    // ch);
 
     // Compute initial forcing.
-    pacs::Vector<pacs::Real> F_new = pacs::forcingHeat(Data, mesh, Data.t_0);
+    // pacs::Vector<pacs::Real> F_old = (counter == 1) ?
+    // pacs::forcingHeat(mesh, D_ext, Source, g_D, Data.t_0) :
+    // pacs::forcingHeat(mesh, D_ext, Source, g_D, t - Data.dt);
 
-    for(pacs::Real t = (Data.t_0 + Data.dt); t <= Data.t_f; t += Data.dt) {
+    std::cout << "TIME: " << t << std::endl;
 
-        // Builds the Fisher-KPP matrices.
-        //std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(Data, mesh);
+    // Update the forcing term.
+    equation.m_forcing_new = equation.forcing(Data, mesh, t);
 
-        // Get initial condition.
-        //pacs::Vector<pacs::Real> ch_old = (counter == 1) ? pacs::EvaluateICHeat(mesh, Matrices[0], Data.c_ex) : pacs::refine(mesh, ch);
+    // Solve the equation.
+    equation.solver(Data, mesh);
 
-        // Compute initial forcing.
-        //pacs::Vector<pacs::Real> F_old = (counter == 1) ? pacs::forcingHeat(mesh, D_ext, Source, g_D, Data.t_0) : pacs::forcingHeat(mesh, D_ext, Source, g_D, t - Data.dt);
+    // Errors.
+    pacs::HeatError error{
+        Data, mesh, {equation.m_mass, equation.m_DG_stiff}, equation.m_ch, t};
 
-        std::cout << "TIME: " << t << std::endl;
-
-        // Update the forcing term.
-        pacs::Vector<pacs::Real> F_old = F_new;
-        F_new = pacs::forcingHeat(Data, mesh, t);
-
-        pacs::Vector<pacs::Real> ch = pacs::HeatSolver(Data, mesh, Matrices, ch_old, {F_old, F_new});
-
-        // Errors.
-        pacs::HeatError error{Data, mesh, {Matrices[0], Matrices[2]}, ch, t};
-
-        // Solution structure (output).
-        #ifndef NSOLUTIONS
-        if (counter % Data.VisualizationStep == 0) { 
-            pacs::Solution solution{Data, mesh, ch, t};
-            std::string solfile = "output/square_" + std::to_string(mesh.elements.size()) + "@" + std::to_string(Data.degree) + "_" + std::to_string(t) + ".sol";
-            solution.write(solfile);
-        }
-        #endif
-
-        // Output.
-        output << "\n" << error << "\n" << std::endl;
-
-        // Estimator.
-        //pacs::HeatEstimator estimator{mesh, Matrices[0], ch, ch_old, Source, t, D_ext, c_ex, grad_exact};
-
-        // Refinement.
-       // pacs::mesh_refine(mesh, estimator);
-
-        // Update of the solution.
-        //ch_old = pacs::refine(ch);
-        ch_old = ch;
-
-        ++counter;
-
+// Solution structure (output).
+#ifndef NSOLUTIONS
+    if (counter % Data.VisualizationStep == 0) {
+      pacs::Solution solution{Data, mesh, ch, t};
+      std::string solfile =
+          "output/square_" + std::to_string(mesh.elements.size()) + "@" +
+          std::to_string(Data.degree) + "_" + std::to_string(t) + ".sol";
+      solution.write(solfile);
     }
-    
+#endif
+
+    // Output.
+    output << "\n" << error << "\n" << std::endl;
+
+    // Estimator.
+    // pacs::HeatEstimator estimator{mesh, Matrices[0], ch, ch_old, Source, t,
+    // D_ext, c_ex, grad_exact};
+
+    // Refinement.
+    // pacs::mesh_refine(mesh, estimator);
+
+    // Update of the solution.
+    // ch_old = pacs::refine(ch);
+    equation.m_ch_old = equation.m_ch;
+
+    ++counter;
+  }
 }

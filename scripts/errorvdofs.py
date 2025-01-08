@@ -12,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 import sys
+import os
 
 # Font.
 matplotlib.rcParams.update({'font.size': 18})
@@ -103,4 +104,9 @@ axes.yaxis.set_minor_formatter(NullFormatter())
 axes.legend(loc="best")
 
 # Output.
-plt.show()
+if matplotlib.get_backend() == "agg":
+    name = f"{os.path.splitext(sys.argv[1])[0]}.png"
+    print(f"No interactive backend available. Plot will be saved as {name}.")
+    plt.savefig(name)
+else:
+    plt.show()

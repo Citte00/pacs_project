@@ -37,6 +37,7 @@ namespace pacs {
         std::vector<T> elements;
 
         // CONSTRUCTORS.
+        Vector() = default;
 
         /**
          * @brief Constructs a new empty Vector.
@@ -127,6 +128,12 @@ namespace pacs {
         operator std::vector<T>() const {
             return this->elements;
         }
+
+        /* RESIZE THE VECTOR.
+        void resize(const std::size_t &new_len){
+            length = new_len;
+            elements.resize(new_len);
+        }*/
 
         // READ AND WRITE.
 

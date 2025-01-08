@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 import numpy
 import sys
+import os
 
 # Font.
 matplotlib.rcParams.update({'font.size': 18})
@@ -133,4 +134,9 @@ axes[1].yaxis.tick_right()
 axes[1].yaxis.set_label_position("right")
 
 # Output.
-plt.show()
+if matplotlib.get_backend() == "agg":
+    name = f"{os.path.splitext(sys.argv[1])[0]}.png"
+    print(f"No interactive backend available. Plot will be saved as {name}.")
+    plt.savefig(name)
+else:
+    plt.show()

@@ -9,13 +9,13 @@ endif
 # FLAGS.
 
 # Disables solution output.
-#CPPFLAGS += -DNSOLUTIONS
+CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
 CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
-#CPPFLAGS += -DNDEBUG
+CPPFLAGS += -DNDEBUG
 
 # PARALLEL COMPUTING.
 
@@ -83,7 +83,7 @@ HEADERS += ./examples/*.hpp
 DOMAIN_EXECS = $(subst domains/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find domains -name "*.cpp")))
 DOMAIN_OBJECTS = $(subst domains/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find domains -name "*.cpp")))
 
-TEST_FILE = test_fisher
+TEST_FILE = test_heat_conv
 TEST_RUN = $(subst .cpp,,$(shell ls ./test))
 TEST_EXECS = $(subst test/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find test -name "*.cpp")))
 TEST_OBJECTS = $(subst test/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find test -name "*.cpp")))
