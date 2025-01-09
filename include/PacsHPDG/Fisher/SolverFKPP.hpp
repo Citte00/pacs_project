@@ -23,7 +23,7 @@ namespace pacs {
 Vector<Real> FKPPsolver(const DataFKPP &, const Mesh &, const std::array<Sparse<Real>, 4> &,
                         const std::array<Vector<Real>, 2> &,
                         const std::array<Vector<Real>, 2> &,
-                        const Real &, const Real &TOL = 1E-15);
+                        const Real &TOL = 1E-15);
 }
 
 #endif

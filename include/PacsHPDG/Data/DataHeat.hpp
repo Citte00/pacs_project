@@ -22,6 +22,11 @@ namespace pacs {
 
 struct DataHeat {
 
+  // Definition.
+  using SpatialTemporalFunction = GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+  using SpatialFunction =
+      GenFunc<Vector<Real>, Vector<Real>, Vector<Real>>;
+
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int N = 300;
@@ -30,7 +35,7 @@ struct DataHeat {
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Material properties
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
+  SpatialTemporalFunction D_ext =
       [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
 
   // Forcing Term
@@ -49,7 +54,7 @@ struct DataHeat {
       };
 
   // Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
+  SpatialTemporalFunction DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -63,29 +68,27 @@ struct DataHeat {
       };
 
   // Gradients of the Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
-      [](Vector<Real> x, Vector<Real> y, Real t) {
-        Vector<Real> result{x.length};
+  SpatialTemporalFunction DirBC_dx = [](Vector<Real> x, Vector<Real> y, Real t) {
+    Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.length; i++)
-          result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
-                      std::cos(2.0 * M_PI * y[i]) * (1 - t);
+    for (size_t i = 0; i < x.length; i++)
+      result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
+                  std::cos(2.0 * M_PI * y[i]) * (1 - t);
 
-        return result;
-      };
+    return result;
+  };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
-      [](Vector<Real> x, Vector<Real> y, Real t) {
-        Vector<Real> result{x.length};
+  SpatialTemporalFunction DirBC_dy = [](Vector<Real> x, Vector<Real> y, Real t) {
+    Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.length; i++)
-          result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
-                      std::sin(2.0 * M_PI * y[i]) * (1 - t);
+    for (size_t i = 0; i < x.length; i++)
+      result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
+                  std::sin(2.0 * M_PI * y[i]) * (1 - t);
 
-        return result;
-      };
+    return result;
+  };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
+  SpatialFunction DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.length};
 
@@ -97,11 +100,11 @@ struct DataHeat {
       };
 
   // Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
+  SpatialTemporalFunction c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
+  SpatialTemporalFunction dc_dx_ex = DirBC_dx;
+  SpatialTemporalFunction dc_dy_ex = DirBC_dy;
   GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
 
   // Time discretization

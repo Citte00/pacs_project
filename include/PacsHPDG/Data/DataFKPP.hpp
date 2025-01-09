@@ -22,6 +22,11 @@ namespace pacs {
 
 struct DataFKPP {
 
+  // Definition.
+  using SpatialTemporalFunction =
+      GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+  using SpatialFunction = GenFunc<Vector<Real>, Vector<Real>, Vector<Real>>;
+
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int N = 300;
@@ -30,10 +35,12 @@ struct DataFKPP {
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Material properties
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
-      [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
-    GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> alpha =
-      [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
+  SpatialTemporalFunction D_ext = [](Vector<Real> x, Vector<Real> y, Real t) {
+    return 1.0 + 0.0 * x;
+  };
+  SpatialTemporalFunction alpha = [](Vector<Real> x, Vector<Real> y, Real t) {
+    return 1.0 + 0.0 * x;
+  };
 
   // Forcing Term
   bool homog_source_f = false;
@@ -53,7 +60,7 @@ struct DataFKPP {
       };
 
   // Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
+  SpatialTemporalFunction DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -67,7 +74,7 @@ struct DataFKPP {
       };
 
   // Gradients of the Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
+  SpatialTemporalFunction DirBC_dx =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -78,7 +85,7 @@ struct DataFKPP {
         return result;
       };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
+  SpatialTemporalFunction DirBC_dy =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -89,24 +96,23 @@ struct DataFKPP {
         return result;
       };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
-      [](Vector<Real> x, Vector<Real> y) {
-        Vector<Real> result{x.length};
+  SpatialFunction DirBC_dt = [](Vector<Real> x, Vector<Real> y) {
+    Vector<Real> result{x.length};
 
-        for (size_t i = 0; i < x.length; i++)
-          result[i] = -(
-              std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]) + 2.0);
+    for (size_t i = 0; i < x.length; i++)
+      result[i] =
+          -(std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]) + 2.0);
 
-        return result;
-      };
+    return result;
+  };
 
   // Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
+  SpatialTemporalFunction c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
+  SpatialTemporalFunction dc_dx_ex = DirBC_dx;
+  SpatialTemporalFunction dc_dy_ex = DirBC_dy;
+  SpatialFunction dc_dt_ex = DirBC_dt;
 
   // Time discretization
   Real t_0 = 0.0;

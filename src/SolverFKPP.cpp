@@ -27,7 +27,7 @@ Vector<Real> FKPPsolver(const DataFKPP &data, const Mesh &mesh,
                         const std::array<Sparse<Real>, 4> &Matrices,
                         const std::array<Vector<Real>, 2> &ch,
                         const std::array<Vector<Real>, 2> &forcing,
-                        const Real &dt, const Real &TOL) {
+                        const Real &TOL) {
 
   // Mass blocks.
   auto blocks = block_mass(mesh);
