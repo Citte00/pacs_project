@@ -129,11 +129,10 @@ namespace pacs {
             return this->elements;
         }
 
-        /* RESIZE THE VECTOR.
-        void resize(const std::size_t &new_len){
-            length = new_len;
-            elements.resize(new_len);
-        }*/
+        // RESIZE THE VECTOR.
+        Vector resize(const std::size_t &new_len){
+            return Vector{new_len, this->elements};
+        }
 
         // READ AND WRITE.
 

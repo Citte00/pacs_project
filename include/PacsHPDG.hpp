@@ -17,10 +17,8 @@
 #include "./PacsHPDG/Errors.hpp"
 #include "./PacsHPDG/Estimators.hpp"
 #include "./PacsHPDG/Fem.hpp"
-#include "./PacsHPDG/Fisher.hpp"
 #include "./PacsHPDG/Geometry.hpp"
-#include "./PacsHPDG/Heat.hpp"
-#include "./PacsHPDG/Laplacian.hpp"
+#include "./PacsHPDG/Solvers.hpp"
 #include "./PacsHPDG/Statistics.hpp"
 
 #endif

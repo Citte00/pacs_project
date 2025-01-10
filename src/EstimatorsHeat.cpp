@@ -50,7 +50,8 @@ HeatEstimator::HeatEstimator(const DataHeat &data, const Mesh &mesh,
   }
 
   // Mass blocks.
-  auto blocks = block_mass(mesh);
+  Laplace eq{mesh};
+  auto blocks = eq.block_mass(mesh);
 
   // Coefficients.
   Vector<Real> f_modals = evaluateSourceHeat(data, mesh, t);

@@ -20,17 +20,11 @@
 // Basis functions.
 #include "./Fem/Basis.hpp"
 
-// Evaluate function.
-#include "./Fem/EvaluateCoefficients.hpp"
-
 // Functors.
 #include "./Fem/Functor.hpp"
 
 // General functors.
 #include "./Fem/GeneralFunctor.hpp"
-
-// Modal coefficients.
-#include "./Fem/Modal.hpp"
 
 // Penalty coefficients.
 #include "./Fem/Penalty.hpp"

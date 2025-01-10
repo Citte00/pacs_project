@@ -10,6 +10,9 @@
 #ifndef INCLUDE_PACSHPDG_DATA_HPP
 #define INCLUDE_PACSHPDG_DATA_HPP
 
+// Data struct for the Laplace equation.
+#include "./Data/DataLap.hpp"
+
 // Data struct for the heat equation.
 #include "./Data/DataHeat.hpp"
 

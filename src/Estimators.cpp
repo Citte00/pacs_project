@@ -60,7 +60,8 @@ Estimator::Estimator(const Mesh &mesh, const Sparse<Real> &mass,
   }
 
   // Mass blocks.
-  auto blocks = block_mass(mesh);
+  Laplace eq{mesh};
+  auto blocks = eq.block_mass(mesh);
 
   // Coefficients.
   Vector<Real> f_modals = modal(mesh, source);

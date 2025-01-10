@@ -73,7 +73,7 @@ HEADERS += ./include/PacsHPDG/Algebra/*.hpp
 HEADERS += ./include/PacsHPDG/Algebra/Methods/*.hpp
 HEADERS += ./include/PacsHPDG/Geometry/*.hpp
 HEADERS += ./include/PacsHPDG/Fem/*.hpp
-HEADERS += ./include/PacsHPDG/Laplacian/*.hpp
+HEADERS += ./include/PacsHPDG/Solvers/*.hpp
 HEADERS += ./include/PacsHPDG/Statistics/*.hpp
 
 EXAMPLE_EXECS = $(subst examples/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find examples -name "*.cpp")))
@@ -83,7 +83,7 @@ HEADERS += ./examples/*.hpp
 DOMAIN_EXECS = $(subst domains/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find domains -name "*.cpp")))
 DOMAIN_OBJECTS = $(subst domains/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find domains -name "*.cpp")))
 
-TEST_FILE = test_fisher_conv
+TEST_FILE = test_heat
 TEST_RUN = $(subst .cpp,,$(shell ls ./test))
 TEST_EXECS = $(subst test/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find test -name "*.cpp")))
 TEST_OBJECTS = $(subst test/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find test -name "*.cpp")))

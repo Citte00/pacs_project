@@ -35,7 +35,8 @@ LapError::LapError(const Mesh &mesh,
   auto [mass, dg_laplacian] = matrices;
 
   // Mass blocks.
-  auto blocks = block_mass(mesh);
+  Laplace eq{mesh};
+  auto blocks = eq.block_mass(mesh);
 
   // Error vector.
   Vector<Real> u_modals = modal(mesh, exact);

@@ -7,7 +7,6 @@
  * @copyright Copyright (c) 2024
  *
  */
-#include "../include/PacsHPDG/Heat/heat.hpp"
 #include <PacsHPDG.hpp>
 
 #include <fstream>
@@ -56,9 +55,9 @@ int main(int argc, char **argv) {
   equation.evaluateIC(mesh, Data.c_ex);
 
   // Compute initial forcing.
-  equation.m_forcing_old = equation.forcing(Data, mesh, Data.t_0);
+  equation.assemblyforce(Data, mesh);
 
-  for (pacs::Real t = (Data.t_0 + Data.dt); t <= Data.t_f; t += Data.dt) {
+  for (int i = 1; i <= 100*Data.t_f; i++) {
 
     // Builds the Fisher-KPP matrices.
     // std::array<pacs::Sparse<pacs::Real>, 3> Matrices = pacs::heat(Data,
@@ -74,17 +73,15 @@ int main(int argc, char **argv) {
     // pacs::forcingHeat(mesh, D_ext, Source, g_D, Data.t_0) :
     // pacs::forcingHeat(mesh, D_ext, Source, g_D, t - Data.dt);
 
-    std::cout << "TIME: " << t << std::endl;
-
-    // Update the forcing term.
-    equation.m_forcing_new = equation.forcing(Data, mesh, t);
+    equation.t() += Data.dt;
+    std::cout << "TIME: " << equation.t() << std::endl;
 
     // Solve the equation.
     equation.solver(Data, mesh);
 
     // Errors.
     pacs::HeatError error{
-        Data, mesh, {equation.m_mass, equation.m_DG_stiff}, equation.m_ch, t};
+        Data, mesh, {equation.matrices()[0], equation.matrices()[2]}, equation.ch(), equation.t()};
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
@@ -109,7 +106,6 @@ int main(int argc, char **argv) {
 
     // Update of the solution.
     // ch_old = pacs::refine(ch);
-    equation.m_ch_old = equation.m_ch;
 
     ++counter;
   }
