@@ -36,14 +36,14 @@ public:
   void computeErrors(const DataFKPP &, const Mesh &, const Fisher &);
 
   // Print to stream file for plotting.
-  void print(std::ostream &os, const Mesh &mesh_) const override {
-    os << "Elements: " << mesh_.elements.size() << "\n";
-    os << "Dofs: " << mesh_.dofs() << "\n";
-    os << "Degree (p): " << this->p() << "\n";
-    os << "Size (h): " << this->h() << "\n";
-    os << "L2 Error: " << this->L2error() << "\n";
-    os << "DG Error: " << this->DGerror() << "\n";
-    os << "Energy Error: " << this->energy() << std::endl;
+  void print(std::ostream &ost, const Mesh &mesh_) const override {
+    ost << "Elements: " << mesh_.elements.size() << std::endl;
+    ost << "Dofs: " << mesh_.dofs() << std::endl;
+    ost << "Degree (p): " << this->p() << std::endl;
+    ost << "Size (h): " << this->h() << std::endl;
+    ost << "L2 Error: " << this->L2error() << std::endl;
+    ost << "DG Error: " << this->DGerror() << std::endl;
+    ost << "Energy Error: " << this->energy() << std::endl;
   };
 };
 

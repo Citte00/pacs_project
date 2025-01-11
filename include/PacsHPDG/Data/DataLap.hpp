@@ -34,19 +34,14 @@ struct DataLap {
   std::string VTKMeshFileName = "Mesh.vtk";
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
-  // Material properties
-  SpatialFunction D_ext = [](Vector<Real> x, Vector<Real> y) {
-    return 0.0 + 0.0 * x;
-  };
-
   // Forcing Term
   bool homog_source_f = false;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Vector<Real>>
-      source_f = [](Vector<Real> x, Vector<Real> y, Vector<Real> D) {
+  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>>
+      source_f = [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.length};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] = 8 * M_PI * M_PI * D[i] * std::cos(2 * M_PI * x[i]) *
+          result[i] = 8 * M_PI * M_PI * std::cos(2 * M_PI * x[i]) *
                       std::cos(2 * M_PI * y[i]);
 
         return result;

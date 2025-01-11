@@ -70,11 +70,11 @@ public:
 
   // Print to stream file for plotting.
   virtual void print(std::ostream &os, const Mesh &mesh_) const {
-    os << "Elements: " << mesh_.elements.size() << "\n";
-    os << "Dofs: " << mesh_.dofs() << "\n";
-    os << "Degree (p): " << this->p() << "\n";
-    os << "Size (h): " << this->h() << "\n";
-    os << "L2 Error: " << this->L2error() << "\n";
+    os << "Elements: " << mesh_.elements.size() << std::endl;
+    os << "Dofs: " << mesh_.dofs() << std::endl;
+    os << "Degree (p): " << this->p() << std::endl;
+    os << "Size (h): " << this->h() << std::endl;
+    os << "L2 Error: " << this->L2error() << std::endl;
     os << "DG Error: " << this->DGerror() << std::endl;
   };
 };

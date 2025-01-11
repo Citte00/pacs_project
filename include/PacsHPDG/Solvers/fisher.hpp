@@ -17,16 +17,13 @@ namespace pacs {
 class Fisher : public Heat {
 private:
   Sparse<Real> m_nl_mass;
-  Vector<Real> m_ch_old;
 
 public:
-    // CONSTRUCTOR.
+  // CONSTRUCTOR.
   Fisher(const Mesh &mesh_)
-      : Heat(mesh_), m_nl_mass{mesh_.dofs(), mesh_.dofs()},
-        m_ch_old{mesh_.dofs()} {};
+      : Heat(mesh_), m_nl_mass{mesh_.dofs(), mesh_.dofs()} {};
 
   // GETTER.
-  Vector<Real> ch_old() const { return m_ch_old; };
   Sparse<Real> nl_mass() const { return m_nl_mass; };
 
   // METHODS.
@@ -43,7 +40,8 @@ public:
   void solver(const DataFKPP &, const Mesh &, const Real &TOL = 1E-15);
 
   // Get coefficients of source function.
-  Vector<Real> evaluateSource(const DataFKPP &, const Mesh &, const Real &) const;
+  Vector<Real> evaluateSource(const DataFKPP &, const Mesh &,
+                              const Real &) const;
 
   // Get initial condition.
   void evaluateIC(const DataFKPP &, const Mesh &);

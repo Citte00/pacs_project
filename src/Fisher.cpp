@@ -530,7 +530,8 @@ void Fisher::assemblyforce(const DataFKPP &data, const Mesh &mesh) {
  * @param data Fisher equation data struct.
  * @param mesh Mesh Struct.
  */
-Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh, const TriFunctor &c_star) {
+Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh,
+                                const TriFunctor &c_star) {
 
 #ifndef NVERBOSE
   std::cout << "Computing the Fisher-KPP matrices." << std::endl;
@@ -667,7 +668,7 @@ Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh, const Tr
  * @param TOL Tolerance.
  */
 void Fisher::solver(const DataFKPP &data, const Mesh &mesh, const Real &TOL) {
-  
+
   // Mass blocks.
   auto blocks = block_mass(mesh);
 
@@ -840,9 +841,9 @@ void Fisher::evaluateIC(const DataFKPP &data, const Mesh &mesh) {
 
   // Projection for modal coordinates.
   m_ch = (norm(c_h) > TOLERANCE) ? solve(this->m_mass, c_h, blocks, DB)
-                                               : Vector<Real>{mesh.dofs()};
+                                 : Vector<Real>{mesh.dofs()};
   m_ch_old = (norm(c_hh) > TOLERANCE) ? solve(this->m_mass, c_hh, blocks, DB)
-                                                 : Vector<Real>{mesh.dofs()};
+                                      : Vector<Real>{mesh.dofs()};
 };
 
 /*
@@ -857,7 +858,8 @@ prolong solution;
  * @param mesh Mesh struct.
  * @param fisher Fisher equation object.
  */
-void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh, const Fisher &fisher) {
+void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
+                                const Fisher &fisher) {
 
   // Compute the L2 and DG errors.
   this->computeError(mesh, fisher, data.c_ex);
@@ -984,4 +986,338 @@ void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh, const Fi
   }
 };
 
+/**
+ * @brief Compute Fisher-KPP equation error estimator.
+ *
+ * @param data Fisher-KPP equation data struct.
+ * @param mesh Mesh struct.
+ * @param fisher Fisher-KPP equation object.
+ */
+void FisherEstimator::computeEstimate(const DataFKPP &data, const Mesh &mesh,
+                                      const Fisher &fisher) {
+#ifndef NVERBOSE
+  std::cout << "Evaluating estimates." << std::endl;
+#endif
+
+  // Number of quadrature nodes.
+  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                 [](const Element &elem) { return 2 * elem.degree + 1; });
+
+  // Starting indices.
+  std::vector<std::size_t> starts;
+  starts.emplace_back(0);
+
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+
+  // Sizes.
+  Vector<Real> sizes{mesh.elements.size()};
+
+  for (std::size_t j = 0; j < sizes.length; ++j) {
+    Element element{mesh.elements[j]};
+
+    for (const auto &p : element.element.points)
+      for (const auto &q : element.element.points)
+        sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
+  }
+
+  // Mass blocks.
+  auto blocks = fisher.block_mass(mesh);
+
+  // Coefficients.
+  Vector<Real> f_coeff = fisher.evaluateSource(data, mesh, fisher.t());
+  Vector<Real> g_coeff = fisher.evaluateCoeff(mesh, data.DirBC, fisher.t());
+
+  Vector<Real> f_modals = (norm(f_coeff) > TOLERANCE)
+                              ? solve(fisher.matrices()[0], f_coeff, blocks, DB)
+                              : Vector<Real>{mesh.dofs()};
+  Vector<Real> g_modals = (norm(g_coeff) > TOLERANCE)
+                              ? solve(fisher.matrices()[0], g_coeff, blocks, DB)
+                              : Vector<Real>{mesh.dofs()};
+
+  // Loop over the elements.
+  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+    // 2D Quadrature nodes and weights.
+    auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+
+    // Local dofs.
+    std::size_t element_dofs = mesh.elements[j].dofs();
+
+    // Global matrix indices.
+    std::vector<std::size_t> indices;
+
+    for (std::size_t k = 0; k < element_dofs; ++k)
+      indices.emplace_back(starts[j] + k);
+
+    // Polygon.
+    Polygon polygon = mesh.element(j);
+
+    // Element sub-triangulation.
+    std::vector<Polygon> triangles = triangulate(polygon);
+
+    // Loop over the sub-triangulation.
+    for (std::size_t k = 0; k < triangles.size(); ++k) {
+      // Triangle.
+      Polygon triangle = triangles[k];
+
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
+
+      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+
+      // Jacobian's determinant.
+      Real jacobian_det =
+          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+
+      // Translation.
+      Vector<Real> translation{2};
+
+      translation[0] = triangle.points[0][0];
+      translation[1] = triangle.points[0][1];
+
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_x_2d.length};
+      Vector<Real> physical_y{nodes_y_2d.length};
+
+      for (std::size_t l = 0; l < physical_x.length; ++l) {
+        Vector<Real> node{2};
+
+        node[0] = nodes_x_2d[l];
+        node[1] = nodes_y_2d[l];
+
+        Vector<Real> transformed = jacobian * node + translation;
+
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
+
+      // Weights scaling.
+      Vector<Real> scaled = jacobian_det * weights_2d;
+
+      // Basis functions.
+      Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
+      Matrix<Real> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
+
+      // Local numerical time derivative.
+      Vector<Real> local_uh = phi * fisher.ch()(indices);
+      Vector<Real> local_uh_old = phi * fisher.ch_old()(indices);
+      Vector<Real> partial_uh = (local_uh - local_uh_old) / data.dt;
+
+      // Local numerical laplacian.
+      Vector<Real> lap_uh = lap_phi * fisher.ch()(indices);
+
+      // Local exact source.
+      Vector<Real> D_ext = data.D_ext(physical_x, physical_y, fisher.t());
+      Vector<Real> alpha = data.alpha(physical_x, physical_y, fisher.t());
+      Vector<Real> f =
+          data.source_f(physical_x, physical_y, fisher.t(), D_ext, alpha);
+
+      // Local source approximation.
+      Vector<Real> f_bar = phi * f_modals(indices);
+
+      // Local non-linear term approx.
+      Vector<Real> non_lin_uh = alpha * local_uh * (1.0 - local_uh);
+
+      // Local estimator, R_{K, E}^2.
+      this->m_estimates[j] +=
+          sizes[j] * sizes[j] *
+          dot(scaled, (f_bar + lap_uh - partial_uh + non_lin_uh) *
+                          (f_bar + lap_uh - partial_uh + non_lin_uh));
+
+      // Local data oscillation, O_{K, E}^2.
+      this->m_estimates[j] +=
+          sizes[j] * sizes[j] * dot(scaled, (f - f_bar) * (f - f_bar));
+    }
+
+    // Element's neighbours.
+    std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
+
+    // Penalties.
+    Vector<Real> penalties = penalty(mesh, j, data.penalty_coeff);
+
+    // Edges.
+    std::vector<Segment> edges{polygon.edges()};
+
+    // Loop over faces.
+    for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
+      // Neighbour information.
+      auto [edge, neighbour, n_edge] = element_neighbours[k];
+
+      // 1D Quadrature nodes and weights.
+      auto [nodes_1d, weights_1d] =
+          (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour]))
+                          : quadrature_1d(nqn[j]);
+
+      // Edge geometry.
+      Segment segment{edges[k]};
+
+      // Edge's normal.
+      Vector<Real> edge_vector{2};
+
+      edge_vector[0] = segment[1][0] - segment[0][0];
+      edge_vector[1] = segment[1][1] - segment[0][1];
+
+      Vector<Real> normal_vector{2};
+
+      normal_vector[0] = edge_vector[1];
+      normal_vector[1] = -edge_vector[0];
+
+      normal_vector /= norm(normal_vector);
+      edge_vector /= norm(edge_vector);
+
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
+
+      jacobian(0, 0) = segment[1][0] - segment[0][0];
+      jacobian(0, 1) = 0.5 * (segment[1][0] - segment[0][0]);
+      jacobian(1, 0) = segment[1][1] - segment[0][1];
+      jacobian(1, 1) = 0.5 * (segment[1][1] - segment[0][1]);
+
+      // Translation.
+      Vector<Real> translation{2};
+
+      translation[0] = segment[0][0];
+      translation[1] = segment[0][1];
+
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_1d.length};
+      Vector<Real> physical_y{nodes_1d.length};
+
+      for (std::size_t l = 0; l < nodes_1d.length; ++l) {
+        Vector<Real> node{2};
+
+        node[0] = nodes_1d[l];
+
+        Vector<Real> transformed = jacobian * node + translation;
+
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
+
+      // Weights scaling.
+      Vector<Real> scaled = std::abs(segment) * weights_1d;
+
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
+
+      Matrix<Real> scaled_phi{phi};
+
+      for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        scaled_phi.column(l, scaled_phi.column(l) * scaled);
+
+      // Local numerical solution and gradients.
+      Vector<Real> uh = phi * fisher.ch()(indices);
+
+      Matrix<Real> grad =
+          normal_vector[0] * gradx_phi + normal_vector[1] * grady_phi;
+      Vector<Real> grad_uh = grad * fisher.ch()(indices);
+
+      Matrix<Real> grad_t =
+          edge_vector[0] * gradx_phi + edge_vector[1] * grady_phi;
+      Vector<Real> grad_uh_t = grad_t * fisher.ch()(indices);
+
+      if (neighbour == -1) { // Boundary edge.
+
+        // Local exact Dirichlet and gradient.
+        Vector<Real> g = data.DirBC(physical_x, physical_y, fisher.t());
+        Vector<Real> grad_g_t =
+            edge_vector[0] * data.dc_dx_ex(physical_x, physical_y, fisher.t()) +
+            edge_vector[1] * data.dc_dy_ex(physical_x, physical_y, fisher.t());
+
+        // Approximate Dirichlet and gradient.
+        Vector<Real> g_bar = phi * g_modals(indices);
+        Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
+
+        // Local estimator, R_{K, J}^2.
+        this->m_estimates[j] +=
+            penalties[k] * dot(scaled, (uh - g_bar) * (uh - g_bar));
+
+        // Local estimator, R_{K, T}^2.
+        this->m_estimates[j] +=
+            sizes[j] * dot(scaled, (grad_uh_t - grad_g_t_bar) *
+                                       (grad_uh_t - grad_g_t_bar));
+
+        // Local data oscillation, O_{K, J}^2.
+        this->m_estimates[j] +=
+            penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
+
+        // Local data oscillation, O_{K, T}^2.
+        this->m_estimates[j] +=
+            sizes[j] *
+            dot(scaled, (grad_g_t - grad_g_t_bar) * (grad_g_t - grad_g_t_bar));
+
+      } else {
+        // Neighbour's basis function.
+        auto [n_phi, n_gradx_phi, n_grady_phi] =
+            basis_2d(mesh, neighbour, {physical_x, physical_y});
+
+        std::vector<std::size_t> n_indices;
+        std::size_t n_index = element_neighbours[k][1];
+        std::size_t n_dofs = mesh.elements[n_index].dofs(); // Neighbour's dofs.
+
+        for (std::size_t h = 0; h < n_dofs; ++h)
+          n_indices.emplace_back(starts[n_index] + h);
+
+        // Neighbour's numerical solution and gradients.
+        Vector<Real> n_uh = n_phi * fisher.ch()(n_indices);
+
+        Matrix<Real> n_grad =
+            normal_vector[0] * n_gradx_phi + normal_vector[1] * n_grady_phi;
+        Vector<Real> n_grad_uh = n_grad * fisher.ch()(n_indices);
+
+        Matrix<Real> n_grad_t =
+            edge_vector[0] * n_gradx_phi + edge_vector[1] * n_grady_phi;
+        Vector<Real> n_grad_uh_t = n_grad_t * fisher.ch()(n_indices);
+
+        // Local estimator, R_{K, J}^2.
+        this->m_estimates[j] +=
+            penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
+
+        // Local estimator, R_{K, N}^2.
+        this->m_estimates[j] +=
+            sizes[j] *
+            dot(scaled, (grad_uh - n_grad_uh) * (grad_uh - n_grad_uh));
+
+        // Local estimator, R_{K, T}^2.
+        this->m_estimates[j] +=
+            sizes[j] *
+            dot(scaled, (grad_uh_t - n_grad_uh_t) * (grad_uh_t - n_grad_uh_t));
+      }
+    }
+
+    this->m_estimate += this->m_estimates[j];
+    this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
+
+    // Degrees.
+    Vector<Real> degrees{element_dofs};
+    std::size_t counter = 0;
+
+    for (std::size_t i = 0; i < mesh.elements[j].degree + 1; ++i)
+      for (std::size_t k = 0; k < mesh.elements[j].degree + 1 - i; ++k) {
+        degrees[counter] = static_cast<Real>(i + k);
+        ++counter;
+      }
+
+    // Coefficients.
+    Vector<Real> coefficients = fisher.ch()(indices);
+
+    for (auto &coefficient : coefficients.elements)
+      coefficient = std::log(std::abs(coefficient));
+
+    // Fit.
+    Vector<Real> fit = polyfit(degrees, coefficients, 1);
+    this->m_fits[j] = -fit[1];
+  }
+
+  this->m_estimate = std::sqrt(this->m_estimate);
+};
 } // namespace pacs

@@ -10,10 +10,13 @@
 #ifndef INCLUDE_PACSHPDG_ESTIMATORS_HPP
 #define INCLUDE_PACSHPDG_ESTIMATORS_HPP
 
-// Estimators.
-#include "./Estimators/Estimators.hpp"
+// Laplace equation error estimator class.
+#include "./Estimators/LaplaceEstimator.hpp"
 
-// Refine.
-#include "./Estimators/Refine.hpp"
+// Heat equation error estimator class.
+#include "./Estimators/HeatEstimator.hpp"
+
+// Fisher-KPP equation error estimator class.
+#include "./Estimators/FisherEstimator.hpp"
 
 #endif

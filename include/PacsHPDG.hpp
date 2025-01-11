@@ -19,6 +19,5 @@
 #include "./PacsHPDG/Fem.hpp"
 #include "./PacsHPDG/Geometry.hpp"
 #include "./PacsHPDG/Solvers.hpp"
-#include "./PacsHPDG/Statistics.hpp"
 
 #endif
