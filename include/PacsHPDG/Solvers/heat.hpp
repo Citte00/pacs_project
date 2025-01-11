@@ -19,18 +19,12 @@ class Heat : public Laplace {
     // Time istant.
     Real m_t;
 
-    // Solution.
-    Vector<Real> m_ch;
-
   public:
     // CONSTRUCTOR.
-    Heat(const Mesh &mesh_) : Laplace{mesh_}, m_t{0.0}, m_ch{mesh_.dofs()} {};
+    Heat(const Mesh &mesh_) : Laplace{mesh_}, m_t{0.0} {};
 
     // GETTER.
     Real t() const { return m_t; };
-    Vector<Real> ch() const { return m_ch; };
-
-    // SETTER.
     Real &t() { return m_t; };
 
     // METHODS.
@@ -44,10 +38,10 @@ class Heat : public Laplace {
     void solver(const DataHeat &, const Mesh &, const Real &TOL = 1E-15);
 
     // Get coefficient of a function.
-    Vector<Real> evaluateCoeff(const Mesh &, const TriFunctor &, const Real &);
+    Vector<Real> evaluateCoeff(const Mesh &, const TriFunctor &, const Real &) const;
 
     // Get coefficients of source function.
-    Vector<Real> evaluateSource(const DataHeat &, const Mesh &, const Real &);
+    Vector<Real> evaluateSource(const DataHeat &, const Mesh &, const Real &) const;
 
     // Get initial condition.
     void evaluateIC(const DataHeat &, const Mesh &);

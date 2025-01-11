@@ -37,13 +37,13 @@ public:
   void assemblyforce(const DataFKPP &, const Mesh &);
 
   // Assembly of the non-linear matrix.
-  Sparse<Real> assemblyNL(const DataFKPP &, const Mesh &);
+  Sparse<Real> assemblyNL(const DataFKPP &, const Mesh &, const TriFunctor &);
 
   // Solve the heat equation system.
   void solver(const DataFKPP &, const Mesh &, const Real &TOL = 1E-15);
 
   // Get coefficients of source function.
-  Vector<Real> evaluateSource(const DataFKPP &, const Mesh &, const Real &);
+  Vector<Real> evaluateSource(const DataFKPP &, const Mesh &, const Real &) const;
 
   // Get initial condition.
   void evaluateIC(const DataFKPP &, const Mesh &);

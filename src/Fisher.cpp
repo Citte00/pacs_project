@@ -12,9 +12,9 @@
 namespace pacs {
 
 /**
- * @brief Assembly System matrices assembler.
+ * @brief System matrices assembler.
  *
- * @param data Data Struct.
+ * @param data Fisher equation data struct.
  * @param mesh Mesh Struct.
  */
 void pacs::Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
@@ -308,7 +308,7 @@ void pacs::Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
 /**
  * @brief Forcing term assembler.
  *
- * @param data Data Struct.
+ * @param data Fisher equation data struct.
  * @param mesh Mesh struct.
  */
 void Fisher::assemblyforce(const DataFKPP &data, const Mesh &mesh) {
@@ -526,11 +526,11 @@ void Fisher::assemblyforce(const DataFKPP &data, const Mesh &mesh) {
 
 /**
  * @brief Non-linear matrix assmbler.
- * 
- * @param data Data Struct.
+ *
+ * @param data Fisher equation data struct.
  * @param mesh Mesh Struct.
  */
-Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh) {
+Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh, const TriFunctor &c_star) {
 
 #ifndef NVERBOSE
   std::cout << "Computing the Fisher-KPP matrices." << std::endl;
@@ -627,7 +627,7 @@ Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh) {
 
       // Param initialization.
       Vector<Real> alpha = data.alpha(physical_x, physical_y, 0.0);
-      Vector<Real> c_star = this->m_ch(indices);
+      Vector<Real> c_star = c_star(indices);
 
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
@@ -662,7 +662,7 @@ Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh) {
 /**
  * @brief Solver method for the Fisher-KPP equation.
  *
- * @param data Data Struct.
+ * @param data Fisher equation data struct.
  * @param mesh Mesh Struct.
  * @param TOL Tolerance.
  */
@@ -679,18 +679,18 @@ void Fisher::solver(const DataFKPP &data, const Mesh &mesh, const Real &TOL) {
   // Assembling the dynamic componenet of the marices.
   if (data.theta == 0) {
 
-    Sparse<Real> MN = NLfisher(data, mesh, this->m_ch);
+    Sparse<Real> MN = assemblyNL(data, mesh, this->m_ch);
     RHS += data.dt * (this->m_nl_mass - MN);
 
   } else if (data.theta == 1) {
 
-    Sparse<Real> MN = NLfisher(data, mesh, this->m_ch);
+    Sparse<Real> MN = assemblyNL(data, mesh, this->m_ch);
     LHS -= data.dt * (this->m_nl_mass - MN);
 
   } else if (data.theta == 0.5) {
 
     Vector<Real> c_star = 1.5 * this->m_ch - 0.5 * this->m_ch_old;
-    Sparse<Real> MN = NLfisher(data, mesh, c_star);
+    Sparse<Real> MN = assemblyNL(data, mesh, c_star);
     LHS -= 0.5 * data.dt * (this->m_nl_mass - MN);
     RHS += 0.5 * data.dt * (this->m_nl_mass - MN);
   }
@@ -711,13 +711,13 @@ void Fisher::solver(const DataFKPP &data, const Mesh &mesh, const Real &TOL) {
 /**
  * @brief Get coefficients of the source function.
  *
- * @param data Data Struct.
+ * @param data Fisher equation data struct.
  * @param mesh Mesh Struct.
  * @param t Time step.
  * @return Vector<Real>
  */
 Vector<Real> Fisher::evaluateSource(const DataFKPP &data, const Mesh &mesh,
-                                    const Real &t) {
+                                    const Real &t) const {
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -826,8 +826,8 @@ Vector<Real> Fisher::evaluateSource(const DataFKPP &data, const Mesh &mesh,
 
 /**
  * @brief Evaluate initial conditions.
- * 
- * @param data Data Struct.
+ *
+ * @param data Fisher equation data struct.
  * @param mesh Mesh Struct.
  */
 void Fisher::evaluateIC(const DataFKPP &data, const Mesh &mesh) {
@@ -843,6 +843,145 @@ void Fisher::evaluateIC(const DataFKPP &data, const Mesh &mesh) {
                                                : Vector<Real>{mesh.dofs()};
   m_ch_old = (norm(c_hh) > TOLERANCE) ? solve(this->m_mass, c_hh, blocks, DB)
                                                  : Vector<Real>{mesh.dofs()};
+};
+
+/*
+prolong solution;
+
+ */
+
+/**
+ * @brief Compute Fisher equation errors.
+ *
+ * @param data Fisher equation data struct.
+ * @param mesh Mesh struct.
+ * @param fisher Fisher equation object.
+ */
+void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh, const Fisher &fisher) {
+
+  // Compute the L2 and DG errors.
+  this->computeError(mesh, fisher, data.c_ex);
+
+  // Compute the int_error and the energy error.
+  this->m_int_error += data.dt * std::pow(this->m_DG_error, 2);
+  this->m_energy = std::sqrt(std::pow(this->m_L2_error, 2) + this->m_int_error);
+
+  // Resize forcing vector to new mesh.
+  this->m_L2_errors.resize(mesh.dofs());
+  this->m_H1_errors.resize(mesh.dofs());
+
+  // Number of quadrature nodes.
+  std::vector<std::size_t> nqn{mesh.elements.size(), 0};
+  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                 [](const Element &elem) { return 2 * elem.degree + 1; });
+
+  // Starting indices.
+  std::vector<std::size_t> starts;
+  starts.emplace_back(0);
+
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+
+  // Sizes.
+  Vector<Real> sizes{mesh.elements.size()};
+
+  for (std::size_t j = 0; j < sizes.length; ++j) {
+    Element element{mesh.elements[j]};
+
+    for (const auto &p : element.element.points)
+      for (const auto &q : element.element.points)
+        sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
+  }
+
+  // Loop over the elements.
+  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+    // 2D Local quadrature nodes and weights.
+    auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+
+    // Local dofs.
+    std::size_t element_dofs = mesh.elements[j].dofs();
+
+    // Global matrix indices.
+    std::vector<std::size_t> indices;
+
+    for (std::size_t k = 0; k < element_dofs; ++k)
+      indices.emplace_back(starts[j] + k);
+
+    // Polygon.
+    Polygon polygon = mesh.element(j);
+
+    // Element sub-triangulation.
+    std::vector<Polygon> triangles = triangulate(polygon);
+
+    // Loop over the sub-triangulation.
+    for (std::size_t k = 0; k < triangles.size(); ++k) {
+      // Triangle.
+      Polygon triangle = triangles[k];
+
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
+
+      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+
+      // Jacobian's determinant.
+      Real jacobian_det =
+          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+
+      // Translation.
+      Vector<Real> translation{2};
+
+      translation[0] = triangle.points[0][0];
+      translation[1] = triangle.points[0][1];
+
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_x_2d.length};
+      Vector<Real> physical_y{nodes_y_2d.length};
+
+      for (std::size_t l = 0; l < physical_x.length; ++l) {
+        Vector<Real> node{2};
+
+        node[0] = nodes_x_2d[l];
+        node[1] = nodes_y_2d[l];
+
+        Vector<Real> transformed = jacobian * node + translation;
+
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
+
+      // Weights scaling.
+      Vector<Real> scaled = jacobian_det * weights_2d;
+
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
+
+      // Solutions.
+      Vector<Real> u = data.c_ex(physical_x, physical_y, fisher.t());
+      Vector<Real> uh = phi * fisher.ch()(indices);
+
+      Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y, fisher.t()) +
+                            data.dc_dy_ex(physical_x, physical_y, fisher.t());
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * fisher.ch()(indices);
+
+      // Local L2 error.
+      this->m_L2_errors[j] += dot(scaled, (u - uh) * (u - uh));
+
+      // Local H1 error.
+      this->m_H1_errors[j] +=
+          dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
+    }
+
+    this->m_L2_errors[j] = std::sqrt(this->m_L2_errors[j]);
+    this->m_H1_errors[j] = std::sqrt(this->m_H1_errors[j]);
+  }
 };
 
 } // namespace pacs

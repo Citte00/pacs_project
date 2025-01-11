@@ -28,19 +28,24 @@ protected:
   // Forcing term.
   Vector<Real> m_forcing;
 
+  // Numerical solution.
+  Vector<Real> m_ch;
+
 public:
   // CONSTRUCTOR.
   Laplace(const Mesh &mesh_)
       : m_mass{mesh_.dofs(), mesh_.dofs()}, m_stiff{mesh_.dofs(), mesh_.dofs()},
-        m_DG_stiff{mesh_.dofs(), mesh_.dofs()}, m_forcing{mesh_.dofs()} {};
+        m_DG_stiff{mesh_.dofs(), mesh_.dofs()}, m_forcing{mesh_.dofs()},
+        m_ch{mesh_.dofs()} {};
 
   // GETTER.
   std::array<Sparse<Real>, 3> matrices() const { return {m_mass, m_stiff, m_DG_stiff}; };
   Vector<Real> forcing() const { return m_forcing; };
+  Vector<Real> ch() const { return m_ch; };
 
   // METHODS.
   // Blocks.
-  std::vector<std::array<std::vector<std::size_t>, 2>> block_mass(const Mesh &);
+  std::vector<std::array<std::vector<std::size_t>, 2>> block_mass(const Mesh &) const;
 
   // Assembly of laplacian matrix.
   void assembly(const DataLap &, const Mesh &);
@@ -49,13 +54,13 @@ public:
   void assemblyforce(const DataLap &, const Mesh &);
 
   // Laplacian solver.
-  Vector<Real> solver(const Mesh &, const Real &TOL = 1E-15);
+  void solver(const Mesh &, const Real &TOL = 1E-15);
 
   // Evaluate coefficient.
-  Vector<Real> evaluateCoeff(const Mesh &, const BiFunctor &);
+  Vector<Real> evaluateCoeff(const Mesh &, const BiFunctor &) const;
 
   // Get coefficients of source function.
-  Vector<Real> evaluateSource(const DataLap &, const Mesh &);
+  Vector<Real> evaluateSource(const DataLap &, const Mesh &) const;
 };
 
 } // namespace pacs

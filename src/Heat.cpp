@@ -1,11 +1,11 @@
 /**
  * @file heat.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief 
+ * @brief Src file with all methods related to the heat equation problem.
  * @date 2025-01-10
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #include <PacsHPDG.hpp>
 
@@ -303,7 +303,7 @@ void Heat::assemblyforce(const DataHeat &data, const Mesh &mesh) {
   std::cout << "Computing the forcing term." << std::endl;
 #endif
 
-// Resize forcing term to new mesh.
+  // Resize forcing term to new mesh.
   m_forcing.resize(mesh.dofs());
 
   // Number of quadrature nodes.
@@ -510,7 +510,7 @@ void Heat::assemblyforce(const DataHeat &data, const Mesh &mesh) {
 /**
  * @brief Solver method for the heat equation.
  *
- * @param data Data Struct.
+ * @param data Heat equation data struct.
  * @param mesh Mesh Struct.
  * @param TOL Tolerance.
  */
@@ -529,23 +529,23 @@ void Heat::solver(const DataHeat &data, const Mesh &mesh, const Real &TOL) {
   // Construction of the complete RHS for the theta method.
   Vector<Real> forcing_old = this->m_forcing;
   assemblyforce(data, mesh);
-  Vector<Real> F = RHS * m_ch + data.dt * data.theta * m_forcing +
+  Vector<Real> F = RHS * this->m_ch + data.dt * data.theta * this->m_forcing +
                    data.dt * (1 - data.theta) * forcing_old;
 
   // Solves using GMRES.
-  m_ch = solve(LHS, F, blocks, GMRES, DBI, TOL);
+  this->m_ch = solve(LHS, F, blocks, GMRES, DBI, TOL);
 }
 
 /**
- * @brief Gives the modal coefficient of 
- * 
+ * @brief Gives the modal coefficient of
+ *
  * @param mesh Mesh struct.
  * @param function Function to evaluate.
  * @param t Time step.
- * @return Vector<Real> 
+ * @return Vector<Real>
  */
 Vector<Real> Heat::evaluateCoeff(const Mesh &mesh, const TriFunctor &function,
-                                 const Real &t) {
+                                 const Real &t) const {
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -651,13 +651,14 @@ Vector<Real> Heat::evaluateCoeff(const Mesh &mesh, const TriFunctor &function,
 
 /**
  * @brief Get coefficients of the source function.
- * 
- * @param data Data struct.
+ *
+ * @param data Heat equation data struct.
  * @param mesh Mesh struct.
  * @param t Time step.
- * @return Vector<Real> 
+ * @return Vector<Real>
  */
-Vector<Real> Heat::evaluateSource(const DataHeat &data, const Mesh &mesh, const Real &t) {
+Vector<Real> Heat::evaluateSource(const DataHeat &data, const Mesh &mesh,
+                                  const Real &t) const {
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -763,7 +764,7 @@ Vector<Real> Heat::evaluateSource(const DataHeat &data, const Mesh &mesh, const 
 
 /**
  * @brief Evaluate the initial condition.
- * 
+ *
  * @param mesh Mesh struct.
  * @param mass Mass matrix.
  * @param ch Function to evaluate the initial condition.
@@ -777,7 +778,7 @@ void Heat::evaluateIC(const DataHeat &data, const Mesh &mesh) {
 
   // Projection for modal coordinates.
   m_ch = (norm(c_h) > TOLERANCE) ? solve(m_mass, c_h, blocks, DB)
-                                               : Vector<Real>{mesh.dofs()};
+                                 : Vector<Real>{mesh.dofs()};
 }
 
 /*
@@ -905,4 +906,136 @@ nqn.begin(),
 
 Vector<Real> Heat::construct_transition(const Mesh &) { return ; }
 */
+
+/**
+ * @brief Compute heat equation errors.
+ *
+ * @param data Heat equation data struct.
+ * @param mesh Mesh Struct.
+ * @param heat Heat equation object.
+ */
+void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
+                                    const Heat &heat) {
+
+  // Compute L2 and DG errors.
+  this->computeError(mesh, heat, data.c_ex);
+  
+  // Resize forcing vector to new mesh.
+  this->m_L2_errors.resize(mesh.dofs());
+  this->m_H1_errors.resize(mesh.dofs());
+
+  // Number of quadrature nodes.
+  std::vector<std::size_t> nqn{mesh.elements.size(), 0};
+  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                 [](const Element &elem) { return 2 * elem.degree + 1; });
+
+  // Starting indices.
+  std::vector<std::size_t> starts;
+  starts.emplace_back(0);
+
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+
+  // Sizes.
+  Vector<Real> sizes{mesh.elements.size()};
+
+  for (std::size_t j = 0; j < sizes.length; ++j) {
+    Element element{mesh.elements[j]};
+
+    for (const auto &p : element.element.points)
+      for (const auto &q : element.element.points)
+        sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
+  }
+
+  // Loop over the elements.
+  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+    // 2D Local quadrature nodes and weights.
+    auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+
+    // Local dofs.
+    std::size_t element_dofs = mesh.elements[j].dofs();
+
+    // Global matrix indices.
+    std::vector<std::size_t> indices;
+
+    for (std::size_t k = 0; k < element_dofs; ++k)
+      indices.emplace_back(starts[j] + k);
+
+    // Polygon.
+    Polygon polygon = mesh.element(j);
+
+    // Element sub-triangulation.
+    std::vector<Polygon> triangles = triangulate(polygon);
+
+    // Loop over the sub-triangulation.
+    for (std::size_t k = 0; k < triangles.size(); ++k) {
+      // Triangle.
+      Polygon triangle = triangles[k];
+
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
+
+      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+
+      // Jacobian's determinant.
+      Real jacobian_det =
+          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+
+      // Translation.
+      Vector<Real> translation{2};
+
+      translation[0] = triangle.points[0][0];
+      translation[1] = triangle.points[0][1];
+
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_x_2d.length};
+      Vector<Real> physical_y{nodes_y_2d.length};
+
+      for (std::size_t l = 0; l < physical_x.length; ++l) {
+        Vector<Real> node{2};
+
+        node[0] = nodes_x_2d[l];
+        node[1] = nodes_y_2d[l];
+
+        Vector<Real> transformed = jacobian * node + translation;
+
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
+
+      // Weights scaling.
+      Vector<Real> scaled = jacobian_det * weights_2d;
+
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
+
+      // Solutions.
+      Vector<Real> u = data.c_ex(physical_x, physical_y, heat.t());
+      Vector<Real> uh = phi * heat.ch()(indices);
+
+      Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y, heat.t()) +
+                            data.dc_dy_ex(physical_x, physical_y, heat.t());
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * heat.ch()(indices);
+
+      // Local L2 error.
+      this->m_L2_errors[j] += dot(scaled, (u - uh) * (u - uh));
+
+      // Local H1 error.
+      this->m_H1_errors[j] +=
+          dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
+    }
+
+    this->m_L2_errors[j] = std::sqrt(this->m_L2_errors[j]);
+    this->m_H1_errors[j] = std::sqrt(this->m_H1_errors[j]);
+  }
+};
+
 } // namespace pacs

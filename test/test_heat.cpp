@@ -45,14 +45,17 @@ int main(int argc, char **argv) {
   // Initializing counter for printing the solution.
   int counter = 1;
 
-  // Build the Heat equation object.
+  // Build the heat equation object.
   pacs::Heat equation(mesh);
+
+  // Build the heat equation errors object.
+  pacs::HeatError errors(mesh);
 
   // Builds the Fisher-KPP matrices.
   equation.assembly(Data, mesh);
 
   // Get initial condition.
-  equation.evaluateIC(mesh, Data.c_ex);
+  equation.evaluateIC(Data, mesh);
 
   // Compute initial forcing.
   equation.assemblyforce(Data, mesh);
@@ -80,8 +83,10 @@ int main(int argc, char **argv) {
     equation.solver(Data, mesh);
 
     // Errors.
-    pacs::HeatError error{
-        Data, mesh, {equation.matrices()[0], equation.matrices()[2]}, equation.ch(), equation.t()};
+    errors.computeError(mesh, equation, Data.c_ex);
+
+    // Output errors.
+    errors.print(output, mesh);
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
@@ -93,9 +98,6 @@ int main(int argc, char **argv) {
       solution.write(solfile);
     }
 #endif
-
-    // Output.
-    output << "\n" << error << "\n" << std::endl;
 
     // Estimator.
     // pacs::HeatEstimator estimator{mesh, Matrices[0], ch, ch_old, Source, t,

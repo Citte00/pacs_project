@@ -8,13 +8,16 @@
  * 
  */
 
-#ifndef ERROR_PACS
-#define ERROR_PACS
+#ifndef INCLUDE_PACSHPDG_ERRORS_HPP
+#define INCLUDE_PACSHPDG_ERRORS_HPP
 
-// Error evaluation.
-#include "./Errors/Errors.hpp"
+// Laplace equation errors evaluation.
+#include "./Errors/LaplaceError.hpp"
 
-// Error evaluation.
-#include "./Errors/GeneralErrors.hpp"
+// Heat equation errors evaluation.
+#include "./Errors/HeatError.hpp"
+
+// Fisher-KPP equation errors evaluation.
+#include "./Errors/FisherError.hpp"
 
 #endif
