@@ -15,6 +15,10 @@ lib
 **/output
 **/include/PacsHPDG/Heat/heat.hpp
 **/include/PacsHPDG/Heat/heat.cpp
+**/include/PacsHPDG/Solutions.hpp
+**/include/PacsHPDG/Solutions/
+**/test/test_laplace.cpp
+**/test/test_square_smooth.cpp
 
 # Python
 **/__pycache__

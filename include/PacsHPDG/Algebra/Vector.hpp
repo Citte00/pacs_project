@@ -131,7 +131,7 @@ namespace pacs {
 
         // RESIZE THE VECTOR.
         Vector resize(const std::size_t &new_len){
-            return Vector{new_len, this->elements};
+            return Vector{new_len};
         }
 
         // READ AND WRITE.

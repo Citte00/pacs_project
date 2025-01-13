@@ -8,7 +8,6 @@
  *
  */
 #include <PacsHPDG.hpp>
-#include "LaplaceEstimator.hpp"
 
 namespace pacs {
 
@@ -23,13 +22,8 @@ void Laplace::assembly(const DataLap &data, const Mesh &mesh) {
   std::cout << "Computing the laplacian matrix." << std::endl;
 #endif
 
-  // Reshape matrices to the new mesh.
-  this->m_mass.reshape(mesh.dofs(), mesh.dofs());
-  this->m_stiff.reshape(mesh.dofs(), mesh.dofs());
-  this->m_DG_stiff.reshape(mesh.dofs(), mesh.dofs());
-
   // Number of quadrature nodes.
-  std::vector<std::size_t> nqn{mesh.elements.size(), 0};
+  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
@@ -40,12 +34,14 @@ void Laplace::assembly(const DataLap &data, const Mesh &mesh) {
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
   // Matrices.
+  Sparse<Real> M{dofs, dofs};
   Sparse<Real> A{dofs, dofs};
   Sparse<Real> IA{dofs, dofs};
   Sparse<Real> SA{dofs, dofs};
 
   // Starting indices.
   std::vector<std::size_t> starts;
+  starts.reserve(mesh.elements.size());
   starts.emplace_back(0);
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
@@ -64,6 +60,7 @@ void Laplace::assembly(const DataLap &data, const Mesh &mesh) {
 
     // Global matrix indices.
     std::vector<std::size_t> indices;
+    indices.reserve(element_dofs);
 
     for (std::size_t k = 0; k < element_dofs; ++k)
       indices.emplace_back(starts[j] + k);
@@ -143,7 +140,7 @@ void Laplace::assembly(const DataLap &data, const Mesh &mesh) {
     }
 
     // Global matrix assembly.
-    this->m_mass.insert(indices, indices, local_M);
+    M.insert(indices, indices, local_M);
     A.insert(indices, indices, local_A);
 
     // Face integrals.
@@ -288,6 +285,7 @@ void Laplace::assembly(const DataLap &data, const Mesh &mesh) {
   }
 
   // Matrices.
+  this->m_mass = M;
   this->m_DG_stiff = A + SA;
   this->m_stiff = this->m_DG_stiff - IA - IA.transpose();
 
@@ -351,9 +349,6 @@ void Laplace::assemblyforce(const DataLap &data, const Mesh &mesh) {
   std::cout << "Computing the forcing term." << std::endl;
 #endif
 
-  // Resize forcing vector to new mesh.
-  this->m_forcing.resize(mesh.dofs());
-
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn{mesh.elements.size(), 0};
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -361,6 +356,7 @@ void Laplace::assemblyforce(const DataLap &data, const Mesh &mesh) {
 
   // Starting indices.
   std::vector<std::size_t> starts;
+  starts.reserve(mesh.elements.size());
   starts.emplace_back(0);
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
@@ -382,6 +378,7 @@ void Laplace::assemblyforce(const DataLap &data, const Mesh &mesh) {
 
     // Global matrix indices.
     std::vector<std::size_t> indices;
+    indices.reserve(element_dofs);
 
     for (std::size_t k = 0; k < element_dofs; ++k)
       indices.emplace_back(starts[j] + k);
@@ -590,6 +587,7 @@ Vector<Real> Laplace::evaluateCoeff(const Mesh &mesh,
 
   // Starting indices.
   std::vector<std::size_t> starts;
+  starts.reserve(mesh.elements.size());
   starts.emplace_back(0);
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
@@ -606,6 +604,7 @@ Vector<Real> Laplace::evaluateCoeff(const Mesh &mesh,
 
     // Global matrix indices.
     std::vector<std::size_t> indices;
+    indices.reserve(element_dofs);
 
     for (std::size_t k = 0; k < element_dofs; ++k)
       indices.emplace_back(starts[j] + k);
@@ -780,8 +779,7 @@ Vector<Real> Laplace::evaluateSource(const DataLap &data,
         scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
       // function solution.
-      Vector<Real> local_function =
-          data.source_f(physical_x, physical_y);
+      Vector<Real> local_function = data.source_f(physical_x, physical_y);
 
       // Local coefficients.
       local_coefficients += scaled_phi.transpose() * local_function;
@@ -797,14 +795,12 @@ Vector<Real> Laplace::evaluateSource(const DataLap &data,
 /**
  * @brief Compute DG and L2 scalar errors.
  *
- * @tparam Functor
  * @param mesh Mesh struct.
  * @param laplace Equation object.
  * @param exact Exact solution.
  */
-template <typename Functor>
 void LaplaceError::computeError(const Mesh &mesh, const Laplace &laplace,
-                                const Functor &exact) {
+                                const BiFunctor &exact) {
 #ifndef NVERBOSE
   std::cout << "Evaluating errors." << std::endl;
 #endif
@@ -827,7 +823,7 @@ void LaplaceError::computeError(const Mesh &mesh, const Laplace &laplace,
 
   // L2 Error.
   this->m_L2_error = std::sqrt(dot(error, mass * error));
-}
+};
 
 /**
  * @brief Compute Laplace equation errors.
@@ -968,8 +964,9 @@ void LaplaceError::computeErrors(const DataLap &data, const Mesh &mesh,
  * @param p Algorithm order.
  * @return Vector<Real>
  */
-Vector<Real> LaplaceEstimator::polyfit(const Vector<Real> &x, const Vector<Real> &y,
-                     const std::size_t &p) {
+Vector<Real> LaplaceEstimator::polyfit(const Vector<Real> &x,
+                                       const Vector<Real> &y,
+                                       const std::size_t &p) {
 #ifndef NDEBUG // Integrity check.
   assert(p > 0);
   assert(x.length == y.length);
@@ -998,7 +995,8 @@ Vector<Real> LaplaceEstimator::polyfit(const Vector<Real> &x, const Vector<Real>
  * @param mesh Mesh struct.
  * @param laplace Laplace equation object.
  */
-void LaplaceEstimator::computeEstimate(const DataLap &data, const Mesh &mesh, const Laplace &laplace) {
+void LaplaceEstimator::computeEstimate(const DataLap &data, const Mesh &mesh,
+                                       const Laplace &laplace) {
 #ifndef NVERBOSE
   std::cout << "Evaluating estimates." << std::endl;
 #endif
@@ -1123,7 +1121,7 @@ void LaplaceEstimator::computeEstimate(const DataLap &data, const Mesh &mesh, co
 
       // Local estimator, R_{K, E}^2.
       this->m_estimates[j] += sizes[j] * sizes[j] *
-                            dot(scaled, (f_bar + lap_uh) * (f_bar + lap_uh));
+                              dot(scaled, (f_bar + lap_uh) * (f_bar + lap_uh));
 
       // Local data oscillation, O_{K, E}^2.
       this->m_estimates[j] +=
@@ -1201,7 +1199,7 @@ void LaplaceEstimator::computeEstimate(const DataLap &data, const Mesh &mesh, co
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
           basis_2d(mesh, j, {physical_x, physical_y});
-      
+
       Matrix<Real> scaled_phi{phi};
 
       for (std::size_t l = 0; l < scaled_phi.columns; ++l)
@@ -1276,8 +1274,9 @@ void LaplaceEstimator::computeEstimate(const DataLap &data, const Mesh &mesh, co
             penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
 
         // Local estimator, R_{K, N}^2.
-        this->m_estimates[j] += sizes[j] * dot(scaled, (grad_uh - n_grad_uh) *
-                                                         (grad_uh - n_grad_uh));
+        this->m_estimates[j] +=
+            sizes[j] *
+            dot(scaled, (grad_uh - n_grad_uh) * (grad_uh - n_grad_uh));
 
         // Local estimator, R_{K, T}^2.
         this->m_estimates[j] +=
@@ -1329,11 +1328,9 @@ void LaplaceEstimator::mesh_refine(Mesh &mesh, const Real &refine,
 
   // Masks.
   Mask p_mask = this->m_fits > speed;
-  Mask h_mask =
-      (this->m_estimates * this->m_estimates) >
-      refine *
-          sum(this->m_estimates * this->m_estimates) /
-          mesh.elements.size();
+  Mask h_mask = (this->m_estimates * this->m_estimates) >
+                refine * sum(this->m_estimates * this->m_estimates) /
+                    mesh.elements.size();
 
   // Strategy.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {

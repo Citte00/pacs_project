@@ -531,7 +531,7 @@ void Fisher::assemblyforce(const DataFKPP &data, const Mesh &mesh) {
  * @param mesh Mesh Struct.
  */
 Sparse<Real> Fisher::assemblyNL(const DataFKPP &data, const Mesh &mesh,
-                                const TriFunctor &c_star) {
+                                const Vector<Real> &c_star) {
 
 #ifndef NVERBOSE
   std::cout << "Computing the Fisher-KPP matrices." << std::endl;

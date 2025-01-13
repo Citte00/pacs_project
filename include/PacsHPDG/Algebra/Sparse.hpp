@@ -92,7 +92,7 @@ namespace pacs {
             #ifndef NDEBUG // Integrity checks.
             assert((rows > 0) && (columns > 0));
             assert(inner.size() == rows + 1);
-            assert(outer.size() = values.size());
+            assert(outer.size() == values.size());
 
             for(std::size_t j = 1; j < inner.size(); ++j) {
                 assert(inner[j - 1] < values.size());

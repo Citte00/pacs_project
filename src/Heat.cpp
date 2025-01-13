@@ -529,7 +529,8 @@ void Heat::solver(const DataHeat &data, const Mesh &mesh, const Real &TOL) {
   // Construction of the complete RHS for the theta method.
   Vector<Real> forcing_old = this->m_forcing;
   assemblyforce(data, mesh);
-  Vector<Real> F = RHS * this->m_ch_old + data.dt * data.theta * this->m_forcing +
+  Vector<Real> F = RHS * this->m_ch_old +
+                   data.dt * data.theta * this->m_forcing +
                    data.dt * (1 - data.theta) * forcing_old;
 
   // Solves using GMRES.
@@ -906,6 +907,40 @@ nqn.begin(),
 
 Vector<Real> Heat::construct_transition(const Mesh &) { return ; }
 */
+
+/**
+ * @brief Compute DG and L2 scalar errors.
+ *
+ * @param mesh Mesh struct.
+ * @param heat Equation object.
+ * @param exact Exact solution.
+ */
+void HeatError::computeError(const Mesh &mesh, const Heat &heat,
+                                const TriFunctor &exact) {
+#ifndef NVERBOSE
+  std::cout << "Evaluating errors." << std::endl;
+#endif
+
+  // Matrices.
+  Sparse<Real> mass = heat.matrices()[0];
+  Sparse<Real> dg_stiff = heat.matrices()[2];
+
+  // Mass blocks.
+  auto blocks = heat.block_mass(mesh);
+
+  // Error vector.
+  Vector<Real> u_modals = heat.evaluateCoeff(mesh, exact, heat.t());
+  Vector<Real> u_coeff = solve(mass, u_modals, blocks, DB);
+
+  Vector<Real> error = heat.ch() - u_coeff;
+  std::cout << "error: " << std::sqrt(dot(error, error)) << std::endl;
+
+  // DG Error.
+  this->m_DG_error = std::sqrt(dot(error, dg_stiff * error));
+
+  // L2 Error.
+  this->m_L2_error = std::sqrt(dot(error, mass * error));
+};
 
 /**
  * @brief Compute heat equation errors.

@@ -88,14 +88,17 @@ int main(int argc, char **argv) {
     // Output errors.
     errors.print(output, mesh);
 
+    // Update of the solution.
+    equation.ch_old() = equation.ch();
+
 // Solution structure (output).
 #ifndef NSOLUTIONS
     if (counter % Data.VisualizationStep == 0) {
-      pacs::Solution solution{Data, mesh, ch, t};
+      //pacs::Solution solution{Data, mesh, ch, t};
       std::string solfile =
           "output/square_" + std::to_string(mesh.elements.size()) + "@" +
-          std::to_string(Data.degree) + "_" + std::to_string(t) + ".sol";
-      solution.write(solfile);
+          std::to_string(Data.degree) + "_" + std::to_string(equation.t()) + ".sol";
+      //solution.write(solfile);
     }
 #endif
 
@@ -105,9 +108,6 @@ int main(int argc, char **argv) {
 
     // Refinement.
     // pacs::mesh_refine(mesh, estimator);
-
-    // Update of the solution.
-    // ch_old = pacs::refine(ch);
 
     ++counter;
   }

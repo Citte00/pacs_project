@@ -34,7 +34,7 @@ public:
   void assemblyforce(const DataFKPP &, const Mesh &);
 
   // Assembly of the non-linear matrix.
-  Sparse<Real> assemblyNL(const DataFKPP &, const Mesh &, const TriFunctor &);
+  Sparse<Real> assemblyNL(const DataFKPP &, const Mesh &, const Vector<Real> &);
 
   // Solve the heat equation system.
   void solver(const DataFKPP &, const Mesh &, const Real &TOL = 1E-15);

@@ -46,6 +46,11 @@ public:
   GeneralFunctor(Callable &&callable)
       : m_function{std::forward<Callable>(callable)} {}
 
+  // Conversion operator.
+      operator GenFunc<ResultType, Args...>() const {
+        return m_function;
+    };
+
   // EVALUATION.
   ResultType operator()(const Args &...args) const {
 #ifndef NDEBUG

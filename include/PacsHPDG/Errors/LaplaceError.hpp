@@ -62,15 +62,14 @@ public:
 
   // METHODS.
   // Compute L2 and DG errors.
-  template <typename Functor>
-  void computeError(const Mesh &, const Laplace &, const Functor &);
+  void computeError(const Mesh &, const Laplace &, const BiFunctor &);
 
   // Compute errors.
   void computeErrors(const DataLap &, const Mesh &, const Laplace &);
 
   // Print to stream file for plotting.
   virtual void print(std::ostream &os, const Mesh &mesh_) const {
-    os << "Elements: " << mesh_.elements.size() << std::endl;
+    os << "\nElements: " << mesh_.elements.size() << std::endl;
     os << "Dofs: " << mesh_.dofs() << std::endl;
     os << "Degree (p): " << this->p() << std::endl;
     os << "Size (h): " << this->h() << std::endl;

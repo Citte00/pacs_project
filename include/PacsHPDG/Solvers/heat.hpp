@@ -25,7 +25,7 @@ protected:
 public:
   // CONSTRUCTOR.
   Heat(const Mesh &mesh_)
-      : Laplace{mesh_}, m_t{0.0}, m_ch_old{mesh_.elements.size()} {};
+      : Laplace{mesh_}, m_t{0.0}, m_ch_old{mesh_.dofs()} {};
 
   // GETTER.
   Real t() const { return this->m_t; };

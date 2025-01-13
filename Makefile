@@ -12,10 +12,10 @@ endif
 CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
-CPPFLAGS += -DNVERBOSE
+#CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
-CPPFLAGS += -DNDEBUG
+#CPPFLAGS += -DNDEBUG
 
 # PARALLEL COMPUTING.
 
@@ -71,10 +71,12 @@ HEADERS = ./include/*.hpp # Recompilation purposes.
 HEADERS += ./include/PacsHPDG/*.hpp
 HEADERS += ./include/PacsHPDG/Algebra/*.hpp
 HEADERS += ./include/PacsHPDG/Algebra/Methods/*.hpp
-HEADERS += ./include/PacsHPDG/Geometry/*.hpp
+HEADERS += ./include/PacsHPDG/Data/*.hpp
+HEADERS += ./include/PacsHPDG/Errors/*.hpp
+HEADERS += ./include/PacsHPDG/Estimators/*.hpp
 HEADERS += ./include/PacsHPDG/Fem/*.hpp
+HEADERS += ./include/PacsHPDG/Geometry/*.hpp
 HEADERS += ./include/PacsHPDG/Solvers/*.hpp
-HEADERS += ./include/PacsHPDG/Statistics/*.hpp
 
 EXAMPLE_EXECS = $(subst examples/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find examples -name "*.cpp")))
 EXAMPLE_OBJECTS = $(subst examples/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find examples -name "*.cpp")))

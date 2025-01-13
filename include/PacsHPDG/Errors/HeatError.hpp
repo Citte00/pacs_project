@@ -15,13 +15,16 @@
 namespace pacs {
 
 class HeatError : public LaplaceError {
-    public:
-    // CONSTRUCTOR.
-    HeatError(const Mesh &mesh_) : LaplaceError(mesh_) {};
+public:
+  // CONSTRUCTOR.
+  HeatError(const Mesh &mesh_) : LaplaceError(mesh_) {};
 
-    // METHODS.
-    // Compute L2 and H1 errors.
-    void computeErrors(const DataHeat &, const Mesh &, const Heat &);
+  // METHODS.
+  // Compute L2 and DG errors.
+  void computeError(const Mesh &, const Heat &, const TriFunctor &);
+
+  // Compute L2 and H1 errors.
+  void computeErrors(const DataHeat &, const Mesh &, const Heat &);
 };
 
 } // namespace pacs
