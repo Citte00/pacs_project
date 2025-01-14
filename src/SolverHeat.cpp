@@ -28,7 +28,8 @@ Vector<Real> HeatSolver(const DataHeat &data, const Mesh &mesh,
                         const std::array<Vector<Real>, 2> &forcing,
                         const Real &TOL) {
   // Mass blocks.
-  auto blocks = block_mass(mesh);
+  Laplace laplacian(mesh);
+  auto blocks = laplacian.block_mass(mesh);
 
   // Extract Matrices from tuple.
   auto [M, A, DG] = Matrices;

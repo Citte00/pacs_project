@@ -22,46 +22,42 @@ namespace pacs {
      * @param numerical Numerical solution.
      * @param exact Exact solution.
      */
-LapError::LapError(const Mesh &mesh,
-                   const std::array<Sparse<Real>, 2> &matrices,
-                   const Vector<Real> &numerical, const Functor &exact,
-                   const TwoFunctor &exact_gradient)
-    : Error{mesh.elements.size()} {
+void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, const Laplace &laplacian, const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating errors." << std::endl;
 #endif
 
   // Matrices.
-  auto [mass, dg_laplacian] = matrices;
+  Sparse<Real> mass = laplacian.M();
+  Sparse<Real> dg_stiff = laplacian.DG();
 
   // Mass blocks.
-  auto blocks = block_mass(mesh);
+  auto blocks = laplacian.block_mass(mesh);
 
   // Error vector.
-  Vector<Real> u_modals = modal(mesh, exact);
+  Vector<Real> u_modals = modal(mesh, data.c_ex);
   Vector<Real> u_coeff = solve(mass, u_modals, blocks, DB);
 
   Vector<Real> error = u_coeff - numerical;
 
   // DG Error.
-  this->dg_error = std::sqrt(dot(error, dg_laplacian * error));
+  this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
 
   // L2 Error.
-  this->l2_error = std::sqrt(dot(error, mass * error));
-
-  // Dofs.
-  this->dofs = mesh.dofs();
+  this->m_l2_error = std::sqrt(dot(error, mass * error));
 
   // Starting indices.
   std::vector<std::size_t> starts;
+  starts.reserve(mesh.elements.size());
   starts.emplace_back(0);
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
     starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
 
   // Quadrature nodes.
-  auto [nodes_1d, weights_1d] = quadrature_1d(GAUSS_ORDER);
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(GAUSS_ORDER);
+  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                 [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
@@ -79,11 +75,16 @@ LapError::LapError(const Mesh &mesh,
 
   // Loop over the elements.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+    // 2D quadrature nodes and weights.
+    auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+
     // Local dofs.
     std::size_t element_dofs = mesh.elements[j].dofs();
 
     // Global matrix indices.
     std::vector<std::size_t> indices;
+    indices.reserve(element_dofs);
 
     for (std::size_t k = 0; k < element_dofs; ++k)
       indices.emplace_back(starts[j] + k);
@@ -141,39 +142,24 @@ LapError::LapError(const Mesh &mesh,
           basis_2d(mesh, j, {physical_x, physical_y});
 
       // Solutions.
-      Vector<Real> u = exact(physical_x, physical_y);
+      Vector<Real> u = data.c_ex(physical_x, physical_y);
       Vector<Real> uh = phi * numerical(indices);
 
-      auto [grad_x, grad_y] = exact_gradient(physical_x, physical_y);
-      Vector<Real> grad_u = grad_x + grad_y;
+      Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y) +
+                            data.dc_dy_ex(physical_x, physical_y);
       Vector<Real> grad_uh = (gradx_phi + grady_phi) * numerical(indices);
 
       // Local L2 error.
-      this->l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
+      this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
 
       // Local H1 error.
-      this->h1_errors[j] +=
+      this->m_h1_errors[j] +=
           dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
     }
 
-    this->l2_errors[j] = std::sqrt(this->l2_errors[j]);
-    this->h1_errors[j] = std::sqrt(this->h1_errors[j]);
+    this->m_l2_errors[j] = std::sqrt(this->m_l2_errors[j]);
+    this->m_h1_errors[j] = std::sqrt(this->m_h1_errors[j]);
   }
+};
 
-  // Data.
-  this->degree = 0;
-
-  for (const auto &element : mesh.elements)
-    this->degree =
-        (element.degree > this->degree) ? element.degree : this->degree;
-
-  this->size = 0.0;
-  this->elements = mesh.elements.size();
-
-  for (const auto &element : mesh.elements)
-    for (const auto &p : element.element.points)
-      for (const auto &q : element.element.points)
-        this->size =
-            (distance(p, q) > this->size) ? distance(p, q) : this->size;
-}
-}
+} // namespace pacs

@@ -364,7 +364,8 @@ namespace pacs {
     std::array<Vector<Real>, 2> EvaluateICFKPP(const Mesh &mesh, const Sparse<Real> &mass, const TriFunctor &ch, const Real &t) {
 
         // Mass blocks.
-        auto blocks = block_mass(mesh);
+        Laplace laplacian(mesh);
+        auto blocks = laplacian.block_mass(mesh);
 
         // Initial condition.
         Vector<Real> c_h = evaluateCoeff(mesh, ch, 0.0);
@@ -389,7 +390,8 @@ namespace pacs {
     Vector<Real> EvaluateICHeat(const Mesh &mesh, const Sparse<Real> &mass, const TriFunctor &ch) {
 
         // Mass blocks.
-        auto blocks = block_mass(mesh);
+        Laplace laplacian(mesh);
+        auto blocks = laplacian.block_mass(mesh);
 
         // Initial condition.
         Vector<Real> c_h = evaluateCoeff(mesh, ch, 0.0);

@@ -23,8 +23,9 @@ namespace pacs {
      */
     Vector<Real> lapsolver(const Mesh &mesh, const Sparse<Real> &A, const Vector<Real> &b, const Real &TOL) {
         // Mass blocks.
-        auto blocks = block_mass(mesh);
-        
+        Laplace laplacian(mesh);
+        auto blocks = laplacian.block_mass(mesh);
+
         // Solves using BICGSTAB and DBI preconditioner.
         return solve(A, b, blocks, GMRES, DBI, TOL);
     }

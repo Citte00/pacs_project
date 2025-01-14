@@ -20,7 +20,7 @@ namespace pacs {
 
     // Adaptive refinement.
 
-    void mesh_refine(Mesh &, const BaseEstimator &, const Real &refine = 0.75, const Real &speed = 1.0);
+    void mesh_refine(Mesh &, const LaplaceEstimator &, const Real &refine = 0.75, const Real &speed = 1.0);
 
 }
 

@@ -24,7 +24,7 @@ namespace pacs {
      * @param function Function.
      * @return Vector<Real> 
      */
-    Vector<Real> modal(const Mesh &mesh, const Functor &function) {
+    Vector<Real> modal(const Mesh &mesh, const BiFunctor &function) {
 
         // Number of quadrature nodes.
         std::size_t degree = GAUSS_ORDER;

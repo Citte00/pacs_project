@@ -1,15 +1,15 @@
 /**
  * @file Estimators.hpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief Error estimators polymorphic classes.
+ * @brief Laplace error estimator class.
  * @date 2024-12-21
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
-#ifndef INCLUDE_PACSHPDG_ESTIMATORS_ESTIMATORS_HPP
-#define INCLUDE_PACSHPDG_ESTIMATORS_ESTIMATORS_HPP
+#ifndef INCLUDE_PACSHPDG_ESTIMATORS_LAPLACE_ESTIMATORS_HPP
+#define INCLUDE_PACSHPDG_ESTIMATORS_LAPLACE_ESTIMATORS_HPP
 
 #include <array>
 #include <iostream>
@@ -19,149 +19,56 @@
 #include "../Data.hpp"
 #include "../Fem.hpp"
 #include "../Geometry.hpp"
+#include "../Laplacian.hpp"
 
 namespace pacs {
 
-    /**
-     * @brief Polymorphism base class error estimator.
-     * 
-     */
-    class BaseEstimator {
-    protected:
-      // DOFs.
-      std::size_t dofs;
+class LaplaceEstimator {
+protected:
+  // DOFs.
+  std::size_t m_dofs;
+  // Estimates.
+  Real m_estimate;
+  Vector<Real> m_estimates, m_fits;
 
-      // Estimates.
-      Real estimate = 0.0L;
-      Vector<Real> estimates;
+public:
+  // CONSTRUCTOR.
+  LaplaceEstimator(const Mesh &mesh_)
+      : m_estimates{mesh_.elements.size()}, m_fits{mesh_.elements.size()} {
+    m_dofs = mesh_.dofs();
+    m_estimate = 0.0;
+  };
 
-      // Fits.
-      Vector<Real> fits;
+  // GETTERS.
+  std::size_t dofs() const { return this->m_dofs; };
+  Real estimate() const { return this->m_estimate; };
+  Vector<Real> estimates() const { return this->m_estimates; };
+  Vector<Real> fits() const { return this->m_fits; };
 
-    public:
-      BaseEstimator(std::size_t num_elements = 0)
-          : estimates{num_elements}, fits{num_elements} {};
+  // METHODS.
+  // Compute error estimates.
+  void computeEstimates(const DataLaplace &, const Mesh &, const Laplace &,
+                        const Vector<Real> &numerical);
+  // Polynomial fit.
+  Vector<Real> polyfit(const Vector<Real> &, const Vector<Real> &,
+                       const std::size_t &);
 
-      // Virtual constructor for polymorphic behaviour.
-      virtual ~BaseEstimator() = default;
+  // Refinement.
+  void mesh_refine_size(Mesh &, const Mask &);
+  void mesh_refine_degree(Mesh &, const Mask &);
+  
+  // Mesh refinement.
+  void mesh_refine(Mesh &, const LaplaceEstimator &, const Real &refine = 0.75,
+                   const Real &speed = 1.0);
 
-      // Virtual print method for polymorphic behavior.
-      virtual void print(std::ostream &os) const = 0;
+  // Friend operator<< for output printing.
+  friend std::ostream &operator<<(std::ostream &ost,
+                                  const LaplaceEstimator &estimator) {
+    ost << "Dofs: " << estimator.dofs() << std::endl;
+    ost << "Estimate: " << estimator.estimate() << std::endl;
+  }
+};
 
-      // Virtual getters.
-      virtual std::size_t getDofs() const = 0;
-      virtual Real getEstimate() const = 0;
-      virtual Vector<Real> getEstimates() const = 0;
-      virtual Vector<Real> getFits() const = 0;
-
-      // Virtual setters.
-      virtual void setDofs(const size_t &dofs_) = 0;
-      virtual void setEstimate(const Real &estimate_) = 0;
-      virtual void setEstimates(const Vector<Real> &estimates_) = 0;
-      virtual void setFits(const Vector<Real> &fits_) = 0;
-
-      // Friend operator<< for polymorphic printing.
-      friend std::ostream &operator<<(std::ostream &os,
-                                      const BaseEstimator &estimator) {
-        estimator.print(os);
-        return os;
-      }
-    };
-
-    /**
-     * @brief Laplace equation error estimator class.
-     *
-     */
-    class Estimator : public BaseEstimator {
-    public:
-      // CONSTRUCTOR.
-      Estimator(const Mesh &, const Sparse<Real> &, const Vector<Real> &,
-                const Functor &, const Functor &dirichlet = Functor{},
-                const TwoFunctor &dirichlet_gradient = TwoFunctor{},
-                const Real &penalty_coefficient = 10.0);
-
-      // Getters.
-      std::size_t getDofs() const override { return dofs; };
-      Real getEstimate() const override { return estimate; };
-      Vector<Real> getEstimates() const override { return estimates; };
-      Vector<Real> getFits() const override { return fits; };
-
-      // Setters.
-      void setDofs(const size_t &dofs_) override { dofs = dofs; };
-      void setEstimate(const Real &estimate_) override {
-        estimate = estimate_;
-      };
-      void setEstimates(const Vector<Real> &estimates_) override {
-        estimates = estimates_;
-      };
-      void setFits(const Vector<Real> &fits_) override { fits = fits_; };
-
-      // Output.
-      void print(std::ostream &) const override;
-    };
-
-    /**
-     * @brief Heat equation error estimator class.
-     * 
-     */
-    class HeatEstimator : public BaseEstimator {
-        public:
-          // CONSTRUCTOR.
-          HeatEstimator(const DataHeat &, const Mesh &, const Sparse<Real> &,
-                        const Vector<Real> &, const Vector<Real> &,
-                        const Real &);
-
-          // Getters.
-          std::size_t getDofs() const override { return dofs; };
-          Real getEstimate() const override { return estimate; };
-          Vector<Real> getEstimates() const override { return estimates; };
-          Vector<Real> getFits() const override { return fits; };
-
-          // Setters.
-          void setDofs(const size_t &dofs_) override { dofs = dofs; };
-          void setEstimate(const Real &estimate_) override {
-            estimate = estimate_;
-          };
-          void setEstimates(const Vector<Real> &estimates_) override {
-            estimates = estimates_;
-          };
-          void setFits(const Vector<Real> &fits_) override { fits = fits_; };
-
-          // Output.
-          void print(std::ostream &) const override;
-    };
-
-    /**
-     * @brief Fisher-KPP equation error estimator class.
-     * 
-     */
-    class FKPPEstimator : public BaseEstimator {
-        public:
-          // CONSTRUCTOR.
-          FKPPEstimator(const DataFKPP &, const Mesh &, const Sparse<Real> &,
-                        const Vector<Real> &, const Vector<Real> &,
-                        const Real &);
-
-          // Getters.
-          std::size_t getDofs() const override { return dofs; };
-          Real getEstimate() const override { return estimate; };
-          Vector<Real> getEstimates() const override { return estimates; };
-          Vector<Real> getFits() const override { return fits; };
-
-          // Setters.
-          void setDofs(const size_t &dofs_) override { dofs = dofs; };
-          void setEstimate(const Real &estimate_) override {
-            estimate = estimate_;
-          };
-          void setEstimates(const Vector<Real> &estimates_) override {
-            estimates = estimates_;
-          };
-          void setFits(const Vector<Real> &fits_) override { fits = fits_; };
-
-          // Output.
-          void print(std::ostream &) const override;
-    };
-
-}
+} // namespace pacs
 
 #endif

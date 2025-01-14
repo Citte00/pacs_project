@@ -20,7 +20,7 @@ namespace pacs {
      * @param refine Refinement percentage.
      * @param speed Solution's smoothness.
      */
-    void mesh_refine(Mesh &mesh, const BaseEstimator &estimator, const Real &refine, const Real &speed) {
+    void mesh_refine(Mesh &mesh, const LaplaceEstimator &estimator, const Real &refine, const Real &speed) {
         #ifndef NDEBUG // Integrity check.
         assert((refine > 0.0L) && (refine < 1.0L));
         assert(speed > 0.0L);

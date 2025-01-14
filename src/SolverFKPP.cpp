@@ -30,7 +30,8 @@ Vector<Real> FKPPsolver(const DataFKPP &data, const Mesh &mesh,
                         const Real &dt, const Real &TOL) {
 
   // Mass blocks.
-  auto blocks = block_mass(mesh);
+  Laplace laplacian(mesh);
+  auto blocks = laplacian.block_mass(mesh);
 
   // Extract Matrices from tuple.
   auto [M_prj, M, A, DG] = Matrices;

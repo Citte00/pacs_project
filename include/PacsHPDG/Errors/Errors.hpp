@@ -19,6 +19,7 @@
 #include "../Data.hpp"
 #include "../Fem.hpp"
 #include "../Geometry.hpp"
+#include "../Laplacian.hpp"
 
 namespace pacs {
 
@@ -26,179 +27,58 @@ namespace pacs {
  * @brief Polymorphism base class error.
  *
  */
-class Error {
+class LaplaceError {
 protected:
-  std::size_t elements;
-  std::size_t dofs;
-  std::size_t degree; // p.
-  Real size;          // h.
+  std::size_t m_degree, m_dofs;
+  Real m_size;
 
-  Real dg_error;
-  Real l2_error;
+  Real m_dg_error;
+  Real m_l2_error;
 
-  Vector<Real> l2_errors;
-  Vector<Real> h1_errors;
+  Vector<Real> m_l2_errors;
+  Vector<Real> m_h1_errors;
 
 public:
-  Error(std::size_t num_elements = 0)
-      : elements{num_elements}, l2_errors{num_elements},
-        h1_errors{num_elements} {};
+  LaplaceError(const Mesh &mesh_)
+      : m_l2_errors{mesh_.elements.size()}, m_h1_errors{mesh_.elements.size()} {
 
-  // Virtual constructor for polymorphic behaviour.
-  virtual ~Error() = default;
+    this->m_dofs = mesh_.dofs();
 
-  // Virtual print method for polymorphic behavior.
-  virtual void print(std::ostream &os) const = 0;
+    this->m_degree = 0;
+    for (const auto &element : mesh_.elements)
+      this->m_degree =
+          (element.degree > this->m_degree) ? element.degree : this->m_degree;
 
-  // Virtual getters.
-  virtual std::size_t getDofs() const = 0;
-  virtual Real getElements() const = 0;
-  virtual Vector<Real> getDegree() const = 0;
-  virtual Vector<Real> getSize() const = 0;
-  virtual Real getL2Error() const = 0;
-  virtual Real getDGError() const = 0;
-  virtual Vector<Real> getl2Error() const = 0;
-  virtual Vector<Real> getH1Error() const = 0;
+    this->m_size = 0.0;
+    for (const auto &element : mesh_.elements)
+      for (const auto &p : element.element.points)
+        for (const auto &q : element.element.points)
+          this->m_size =
+              (distance(p, q) > this->m_size) ? distance(p, q) : this->m_size;
+  };
 
-  // Virtual setters.
-  virtual void setDofs(const size_t &) = 0;
-  virtual void setElements(const size_t &) = 0;
-  virtual void setDegree(const size_t &) = 0;
-  virtual void setSize(const Real &) = 0;
-  virtual void setL2Error(const Real &) = 0;
-  virtual void setDGError(const Real &) = 0;
-  virtual void setl2Error(const Vector<Real> &) = 0;
-  virtual void setH1Error(const Vector<Real> &) = 0;
+  // Getter.
+  std::size_t dofs() const { return this->m_dofs; };
+  std::size_t p() const { return this->m_degree; };
+  Real h() const { return this->m_size; };
+  Real L2error() const { return this->m_l2_error; };
+  Real DGerror() const { return this->m_dg_error; };
+  Vector<Real> L2errors() const { return this->m_l2_errors; };
+  Vector<Real> H1errors() const { return this->m_h1_errors; };
+
+  void computeErrors(const DataLaplace &, const Mesh &, const Laplace &, const Vector<Real> &);
 
   // Friend operator<< for polymorphic printing.
-  friend std::ostream &operator<<(std::ostream &os, const Error &error) {
-    error.print(os);
-    return os;
+  friend std::ostream &operator<<(std::ostream &ost, const LaplaceError &error) {
+    ost << "Elements: " << error.L2errors().size() << "\n";
+    ost << "Dofs: " << error.dofs() << "\n";
+    ost << "Degree (p): " << error.p() << "\n";
+    ost << "Size (h): " << error.h() << "\n";
+    ost << "L2 Error: " << error.L2error() << "\n";
+    return ost << "DG Error: " << error.DGerror() << std::endl;
   };
 };
 
-/**
- * @brief Laplace equation error class.
- *
- */
-class LapError : public Error {
-public:
-  // CONSTRUCTORS.
-  LapError(const Mesh &, const std::array<Sparse<Real>, 2> &,
-           const Vector<Real> &, const Functor &, const TwoFunctor &);
-
-  // Getters.
-  std::size_t getDofs() const { return dofs; };
-  Real getElements() const { return elements; };
-  Vector<Real> getDegree() const { return degree; };
-  Vector<Real> getSize() const { return size; };
-  Real getL2Error() const { return l2_error; };
-  Real getDGError() const { return dg_error; };
-  Vector<Real> getl2Error() const { return l2_errors; };
-  Vector<Real> getH1Error() const { return h1_errors; };
-
-  // Setters.
-  void setDofs(const size_t &dofs_) { dofs = dofs_; };
-  void setElements(const size_t &elements_) { elements = elements_; };
-  void setDegree(const size_t &degree_) { degree = degree_; };
-  void setSize(const Real &size_) { size = size_; };
-  void setL2Error(const Real &error_) { l2_error = error_; };
-  void setDGError(const Real &error_) { dg_error = error_; };
-  void setl2Error(const Vector<Real> &errors_) { l2_errors = errors_; };
-  void setH1Error(const Vector<Real> &errors_) { h1_errors = errors_; };
-
-  // Output
-  void print(std::ostream &os) const {
-    os << "Elements: " << elements << "\n";
-    os << "Dofs: " << dofs << "\n";
-    os << "Degree (p): " << degree << "\n";
-    os << "Size (h): " << size << "\n";
-    os << "L2 Error: " << l2_error << "\n";
-    os << "DG Error: " << dg_error << std::endl;
-  };
-};
-
-/**
- * @brief Heat equation error class.
- *
- */
-class HeatError : public Error {
-public:
-  // CONSTRUCTORS.
-  HeatError(const DataHeat &, const Mesh &, const std::array<Sparse<Real>, 2> &,
-            const Vector<Real> &, const Real &);
-
-  // Getters.
-  std::size_t getDofs() const { return dofs; };
-  Real getElements() const { return elements; };
-  Vector<Real> getDegree() const { return degree; };
-  Vector<Real> getSize() const { return size; };
-  Real getL2Error() const { return l2_error; };
-  Real getDGError() const { return dg_error; };
-  Vector<Real> getl2Error() const { return l2_errors; };
-  Vector<Real> getH1Error() const { return h1_errors; };
-
-  // Setters.
-  void setDofs(const size_t &dofs_) { dofs = dofs_; };
-  void setElements(const size_t &elements_) { elements = elements_; };
-  void setDegree(const size_t &degree_) { degree = degree_; };
-  void setSize(const Real &size_) { size = size_; };
-  void setL2Error(const Real &error_) { l2_error = error_; };
-  void setDGError(const Real &error_) { dg_error = error_; };
-  void setl2Error(const Vector<Real> &errors_) { l2_errors = errors_; };
-  void setH1Error(const Vector<Real> &errors_) { h1_errors = errors_; };
-
-  // Output
-  void print(std::ostream &os) const {
-    os << "Elements: " << elements << "\n";
-    os << "Dofs: " << dofs << "\n";
-    os << "Degree (p): " << degree << "\n";
-    os << "Size (h): " << size << "\n";
-    os << "L2 Error: " << l2_error << "\n";
-    os << "DG Error: " << dg_error << std::endl;
-  };
-};
-
-/**
- * @brief Heat equation error class.
- *
- */
-class FKPPError : public Error {
-public:
-  // CONSTRUCTORS.
-  FKPPError(const DataFKPP &, const Mesh &, const std::array<Sparse<Real>, 2> &,
-            const Vector<Real> &, const Real &);
-
-  // Getters.
-  std::size_t getDofs() const { return dofs; };
-  Real getElements() const { return elements; };
-  Vector<Real> getDegree() const { return degree; };
-  Vector<Real> getSize() const { return size; };
-  Real getL2Error() const { return l2_error; };
-  Real getDGError() const { return dg_error; };
-  Vector<Real> getl2Error() const { return l2_errors; };
-  Vector<Real> getH1Error() const { return h1_errors; };
-
-  // Setters.
-  void setDofs(const size_t &dofs_) { dofs = dofs_; };
-  void setElements(const size_t &elements_) { elements = elements_; };
-  void setDegree(const size_t &degree_) { degree = degree_; };
-  void setSize(const Real &size_) { size = size_; };
-  void setL2Error(const Real &error_) { l2_error = error_; };
-  void setDGError(const Real &error_) { dg_error = error_; };
-  void setl2Error(const Vector<Real> &errors_) { l2_errors = errors_; };
-  void setH1Error(const Vector<Real> &errors_) { h1_errors = errors_; };
-
-  // Output
-  void print(std::ostream &os) const {
-    os << "Elements: " << elements << "\n";
-    os << "Dofs: " << dofs << "\n";
-    os << "Degree (p): " << degree << "\n";
-    os << "Size (h): " << size << "\n";
-    os << "L2 Error: " << l2_error << "\n";
-    os << "DG Error: " << dg_error << std::endl;
-  };
-};
-}
+} // namespace pacs
 
 #endif
