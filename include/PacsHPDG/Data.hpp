@@ -17,6 +17,9 @@
 #include "./Data/DataLaplace.hpp"
 
 // Data struct for the heat equation.
+#include "./Data/DataLaplace.hpp"
+
+// Data struct for the heat equation.
 #include "./Data/DataHeat.hpp"
 
 // Data struct for the Fisher-KPP equation.

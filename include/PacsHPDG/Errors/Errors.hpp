@@ -18,7 +18,7 @@
 #include "../Data.hpp"
 #include "../Fem.hpp"
 #include "../Geometry.hpp"
-#include "../Solvers.hpp"
+#include "../Laplacian.hpp"
 
 namespace pacs {
 

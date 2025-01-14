@@ -37,26 +37,13 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
                  [](const Element &elem) { return 2 * elem.degree + 1; });
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
 
-  // Degrees of freedom.
-  std::size_t dofs = mesh.dofs();
   // Degrees of freedom.
   std::size_t dofs = mesh.dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
-  // Neighbours.
-  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-  // Matrices.
-  Sparse<Real> M{dofs, dofs};
-  Sparse<Real> A{dofs, dofs};
-  Sparse<Real> IA{dofs, dofs};
-  Sparse<Real> SA{dofs, dofs};
   // Matrices.
   Sparse<Real> M{dofs, dofs};
   Sparse<Real> A{dofs, dofs};
@@ -67,11 +54,9 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   std::vector<std::size_t> starts;
   starts.reserve(mesh.elements.size());
   starts.emplace_back(0);
-  // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
-  starts[0] = 0;
+
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
 
 // Volume integrals.
 // Loop over the elements.
@@ -82,8 +67,7 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(element_dofs);
     // Global matrix indices.
     std::vector<std::size_t> indices(mesh.elements[j].dofs());
     for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
@@ -96,8 +80,6 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
 
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
-    // Element sub-triangulation.
-    std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local matrices.
     Matrix<Real> local_M{indices.size(), indices.size()};
@@ -105,29 +87,51 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
-    // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-      // Jacobian's determinant and physical nodes.
-      auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+      // Triangle.
+      Polygon triangle = triangles[k];
 
-      // Weights scaling.
-      Vector<Real> scaled = jacobian_det * weights_2d;
+      // Jacobian.
+      Matrix<Real> jacobian{2, 2};
+
+      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
+      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
+      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
+      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
+
+      // Jacobian's determinant.
+      Real jacobian_det =
+          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
+
+      // Translation.
+      Vector<Real> translation{2};
+
+      translation[0] = triangle.points[0][0];
+      translation[1] = triangle.points[0][1];
+
+      // Physical nodes.
+      Vector<Real> physical_x{nodes_x_2d.length};
+      Vector<Real> physical_y{nodes_y_2d.length};
+
+      for (std::size_t l = 0; l < physical_x.length; ++l) {
+        Vector<Real> node{2};
+
+        node[0] = nodes_x_2d[l];
+        node[1] = nodes_y_2d[l];
+
+        Vector<Real> transformed = jacobian * node + translation;
+
+        physical_x[l] = transformed[0];
+        physical_y[l] = transformed[1];
+      }
+
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
 
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
           basis_2d(mesh, j, {physical_x, physical_y});
-      // Basis functions.
-      auto [phi, gradx_phi, grady_phi] =
-          basis_2d(mesh, j, {physical_x, physical_y});
 
-      // Some products.
-      Matrix<Real> scaled_gradx{gradx_phi};
-      Matrix<Real> scaled_grady{grady_phi};
-      Matrix<Real> scaled_phi{phi};
       // Some products.
       Matrix<Real> scaled_gradx{gradx_phi};
       Matrix<Real> scaled_grady{grady_phi};
@@ -153,7 +157,6 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     }
 
     // Face integrals.
-    // Face integrals.
 
     // Local matrices.
     Matrix<Real> local_IA{indices.size(), indices.size()};
@@ -161,33 +164,20 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
 
     // Element's neighbours.
     std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
-    // Element's neighbours.
-    std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
 
-    // Local matrices for neighbours.
-    std::vector<Matrix<Real>> local_IAN;
-    std::vector<Matrix<Real>> local_SAN;
     // Local matrices for neighbours.
     std::vector<Matrix<Real>> local_IAN;
     std::vector<Matrix<Real>> local_SAN;
 
     // Penalties.
     Vector<Real> penalties = penalty(mesh, j, data.penalty_coeff);
-    // Penalties.
-    Vector<Real> penalties = penalty(mesh, j, data.penalty_coeff);
 
-    // Edges.
-    std::vector<Segment> edges{polygon.edges()};
     // Edges.
     std::vector<Segment> edges{polygon.edges()};
 
     // Loop over faces.
     for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
-    // Loop over faces.
-    for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
 
-      // Neighbour information.
-      auto [edge, neighbour, n_edge] = element_neighbours[k];
       // Neighbour information.
       auto [edge, neighbour, n_edge] = element_neighbours[k];
 
@@ -205,14 +195,7 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
           basis_2d(mesh, j, {physical_x, physical_y});
-      // Basis functions.
-      auto [phi, gradx_phi, grady_phi] =
-          basis_2d(mesh, j, {physical_x, physical_y});
 
-      // Local matrix assembly.
-      Matrix<Real> scaled_gradx{gradx_phi};
-      Matrix<Real> scaled_grady{grady_phi};
-      Matrix<Real> scaled_phi{phi};
       // Local matrix assembly.
       Matrix<Real> scaled_gradx{gradx_phi};
       Matrix<Real> scaled_grady{grady_phi};
@@ -223,43 +206,24 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
         scaled_grady.column(l, scaled_grady.column(l) * scaled);
         scaled_phi.column(l, scaled_phi.column(l) * scaled);
       }
-      for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
-        scaled_gradx.column(l, scaled_gradx.column(l) * scaled);
-        scaled_grady.column(l, scaled_grady.column(l) * scaled);
-        scaled_phi.column(l, scaled_phi.column(l) * scaled);
-      }
 
-      Matrix<Real> scaled_grad =
-          normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
       Matrix<Real> scaled_grad =
           normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
 
       if (neighbour == -1) { // Boundary edge.
-      if (neighbour == -1) { // Boundary edge.
 
-        local_IA += scaled_grad.transpose() * phi;
-        local_SA += (penalties[k] * scaled_phi).transpose() * phi;
         local_IA += scaled_grad.transpose() * phi;
         local_SA += (penalties[k] * scaled_phi).transpose() * phi;
 
         // Empty small matrices.
         local_IAN.emplace_back(Matrix<Real>{1, 1});
         local_SAN.emplace_back(Matrix<Real>{1, 1});
-        // Empty small matrices.
-        local_IAN.emplace_back(Matrix<Real>{1, 1});
-        local_SAN.emplace_back(Matrix<Real>{1, 1});
 
-      } else {
       } else {
 
         local_IA += 0.5 * scaled_grad.transpose() * phi;
         local_SA += (penalties[k] * scaled_phi).transpose() * phi;
-        local_IA += 0.5 * scaled_grad.transpose() * phi;
-        local_SA += (penalties[k] * scaled_phi).transpose() * phi;
 
-        // Neighbour's basis function.
-        Matrix<Real> n_phi =
-            basis_2d(mesh, neighbour, {physical_x, physical_y})[0];
         // Neighbour's basis function.
         Matrix<Real> n_phi =
             basis_2d(mesh, neighbour, {physical_x, physical_y})[0];
@@ -281,20 +245,11 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
       if (element_neighbours[k][1] == -1)
         continue;
-    // Neighbouring DG matrices assembly.
-    for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
-      if (element_neighbours[k][1] == -1)
-        continue;
 
       std::vector<std::size_t> n_indices;
       std::size_t n_index = element_neighbours[k][1];
       std::size_t n_dofs = mesh.elements[n_index].dofs(); // Neighbour's dofs.
-      std::vector<std::size_t> n_indices;
-      std::size_t n_index = element_neighbours[k][1];
-      std::size_t n_dofs = mesh.elements[n_index].dofs(); // Neighbour's dofs.
 
-      for (std::size_t h = 0; h < n_dofs; ++h)
-        n_indices.emplace_back(starts[n_index] + h);
       for (std::size_t h = 0; h < n_dofs; ++h)
         n_indices.emplace_back(starts[n_index] + h);
 

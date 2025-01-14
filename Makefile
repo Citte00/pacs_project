@@ -13,7 +13,7 @@ endif
 CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
-CPPFLAGS += -DNVERBOSE
+#CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
 #CPPFLAGS += -DNDEBUG
@@ -84,7 +84,7 @@ EXAMPLE_OBJECTS = $(subst examples/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find 
 DOMAIN_EXECS = $(subst domains/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find domains -name "*.cpp")))
 DOMAIN_OBJECTS = $(subst domains/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find domains -name "*.cpp")))
 
-TEST_FILE = test_heat
+TEST_FILE = test_square_smooth
 TEST_RUN = $(subst .cpp,,$(shell ls ./test))
 TEST_EXECS = $(subst test/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find test -name "*.cpp")))
 TEST_OBJECTS = $(subst test/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find test -name "*.cpp")))
