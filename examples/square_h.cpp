@@ -3,101 +3,97 @@
  * @author Andrea Di Antonio (github.com/diantonioandrea)
  * @brief Poisson on a square domain. Element size adaptive refinement.
  * @date 2024-05-31
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #include <PacsHPDG.hpp>
 
-#include "square.hpp"
-
-#include <string>
-#include <iostream>
 #include <fstream>
 #include <iomanip>
-#include <filesystem>
+#include <iostream>
+#include <string>
 
 int main(int argc, char **argv) {
 
-    // Degree.
-    if(argc <= 1) {
-        std::cout << "Usage: " << argv[0] << " DEGREE [ELEMENTS]." << std::endl;
-        std::exit(-1);
-    }
+  // Retrieve problem data from structure.
+  pacs::DataLaplace data;
 
-    std::size_t degree = static_cast<std::size_t>(std::stoi(argv[1]));
+  // "Splash".
+  std::ofstream output{"output/square_h_" + std::to_string(data.elements) +
+                       "@" + std::to_string(data.degree) + ".error"};
 
-    // Initial diagram.
-    std::size_t elements = 125;
+  output << "Square domain - element size adaptive refinement." << "\n";
 
-    if(argc == 3)
-        elements = static_cast<std::size_t>(std::stoi(argv[2]));
+  std::cout << "Square domain - element size adaptive refinement." << std::endl;
+  std::cout << "Output under output/square_h_" + std::to_string(data.degree) +
+                   ".error."
+            << std::endl;
 
-    std::vector<pacs::Polygon> diagram = pacs::mesh_diagram("data/square/square_" + std::to_string(elements) + ".poly");
+  // Domain.
+  pacs::Polygon domain{data.domain};
 
-    // "Splash".
-    std::ofstream output{"output/square_h_" + std::to_string(elements) + "@" + std::to_string(degree) + ".error"};
+  // Diagram.
+  std::vector<pacs::Polygon> diagram = pacs::mesh_diagram(
+      "meshes/square/square_" + std::to_string(data.elements) + ".poly");
 
-    output << "Square domain - element size adaptive refinement." << "\n";
+  // Refinement percentage.
+  pacs::Real refine = 0.75L;
 
-    std::cout << "Square domain - element size adaptive refinement." << std::endl;
-    std::cout << "Output under output/square_h_" + std::to_string(degree) + ".error." << std::endl;
+  // Mesh.
+  pacs::Mesh mesh{domain, diagram, data.degree};
 
-    // Domain.
-    pacs::Point a{0.0, 0.0};
-    pacs::Point b{1.0, 0.0};
-    pacs::Point c{1.0, 1.0};
-    pacs::Point d{0.0, 1.0};
+  // Sequence of meshes.
+  for (std::size_t index = 0; index < TESTS_MAX; ++index) {
 
-    pacs::Polygon domain{{a, b, c, d}};
+    // Verbosity.
+    std::cout << "\nDEGREE: " << data.degree << "\nINDEX: " << index << "\n"
+              << std::endl;
 
-    // Refinement percentage.
-    pacs::Real refine = 0.75L;
+    // Mesh output.
+    std::string polyfile = "output/square_h_" + std::to_string(data.elements) +
+                           "@" + std::to_string(data.degree) + "_" +
+                           std::to_string(index) + ".poly";
+    mesh.write(polyfile);
 
-    // Mesh.
-    pacs::Mesh mesh{domain, diagram, degree};
+    // Matrices.
+    pacs::Laplace laplacian(mesh);
+    laplacian.assembly(data, mesh);
 
-    // Sequence of meshes.
-    for(std::size_t index = 0; index < TESTS_MAX; ++index) {
+    // Forcing term.
+    pacs::Vector<pacs::Real> forcing = laplacian.forcing(data, mesh);
 
-        // Verbosity.
-        std::cout << "\nDEGREE: " << degree << "\nINDEX: " << index << "\n" << std::endl;
+    // Linear system solution.
+    pacs::Vector<pacs::Real> numerical = laplacian.lapsolver(mesh, forcing);
 
-        // Mesh output.
-        std::string polyfile = "output/square_h_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(index) + ".poly";
-        mesh.write(polyfile);
+// Solution structure (output).
+#ifndef NSOLUTIONS
+    pacs::Solution solution{mesh, numerical, exact};
+    std::string solfile = "output/square_h_" + std::to_string(elements) + "@" +
+                          std::to_string(degree) + "_" + std::to_string(index) +
+                          ".sol";
+    solution.write(solfile);
+#endif
 
-        // Matrices.
-        auto [mass, laplacian, dg_laplacian] = pacs::laplacian(mesh);
+    // Errors.
+    pacs::LaplaceError error(mesh);
 
-        // Forcing term.
-        pacs::Vector<pacs::Real> forcing = pacs::forcing(mesh, source);
-        
-        // Linear system solution.
-        pacs::Vector<pacs::Real> numerical = pacs::lapsolver(mesh, laplacian, forcing);
+    // Output.
+    output << "\n" << error << "\n";
 
-        // Errors.
-        pacs::Error error{mesh, {mass, dg_laplacian}, numerical, exact, {exact_x, exact_y}};
+    output << "Laplacian: " << laplacian.A().rows << " x "
+           << laplacian.A().columns << "\n";
+    output << "Residual: " << pacs::norm(laplacian.A() * numerical - forcing)
+           << std::endl;
 
-        // Solution structure (output).
-        #ifndef NSOLUTIONS
-        pacs::Solution solution{mesh, numerical, exact};
-        std::string solfile = "output/square_h_" + std::to_string(elements) + "@" + std::to_string(degree) + "_" + std::to_string(index) + ".sol";
-        solution.write(solfile);
-        #endif
+    // Exit.
+    if (error.dofs() > DOFS_MAX)
+      break;
 
-        // Output.
-        output << "\n" << error << "\n";
-        
-        output << "Laplacian: " << laplacian.rows << " x " << laplacian.columns << "\n";
-        output << "Residual: " << pacs::norm(laplacian * numerical - forcing) << std::endl;
-
-        // Exit.
-        if(error.dofs > DOFS_MAX)
-            break;
-
-        // Refinement.
-        pacs::mesh_refine_size(mesh, error.l2_errors > refine * pacs::max(error.l2_errors));
-    }
+    // Refinement.
+    pacs::LaplaceEstimator estimator(mesh);
+    estimator.mesh_refine_size(mesh, error.L2errors() >
+                                     refine * pacs::max(error.L2errors()));
+  }
 }

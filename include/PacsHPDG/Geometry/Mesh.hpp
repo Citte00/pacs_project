@@ -104,10 +104,6 @@ namespace pacs {
     std::vector<Polygon> mesh_diagram(const std::string &);
     std::vector<Polygon> mesh_relax(const Polygon &, const std::vector<Polygon> &, const bool &reflect = false);
 
-    // Refinement.
-    void mesh_refine_size(Mesh &, const Mask &);
-    void mesh_refine_degree(Mesh &, const Mask &);
-
     // Data.
     std::vector<Element> mesh_elements(const std::vector<Polygon> &, const std::vector<std::size_t> &);
     std::vector<std::vector<std::array<int, 3>>> mesh_neighbours(const Polygon &, const std::vector<Element> &);
