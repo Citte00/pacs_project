@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-@file polyplot.py
-@author Andrea Di Antonio (github.com/diantonioandrea)
-@date 2024-05-04
+@file estimatesplot.py
+@author Lorenzo Citterio (github.com/Citte00)
+@date 2025-01-24
 
 @copyright Copyright (c) 2024
 """
@@ -19,7 +19,7 @@ import os
 matplotlib.rcParams.update({'font.size': 18})
 
 if len(sys.argv) <= 1:
-    print(f"Usage: {sys.argv[0]} /path/to/file.poly. Add --degrees to highlight elements polynomial degrees.")
+    print(f"Usage: {sys.argv[0]} /path/to/file.poly. Add --estimates to highlight elements error estimates.")
     sys.exit(0)
 
 try:
@@ -45,26 +45,23 @@ black: list[float] = [7 / 255, 54 / 255, 66 / 255]
 fig, ax = plt.subplots()
 
 # Normalize the colormap
-degrees: list[int] = []
+estimates: list[float] = []
 
-if "--degrees" in sys.argv:
-    for line in lines:
-        if line:
-            if line[0] == "@":
-                continue
 
-        data: list[str] = line.split(" ")
-        
-        try:
-            degrees.append(int(data[-1]))
-
-        except ValueError:
+for line in lines:
+    if line:
+        if line[0] == "@":
             continue
 
-if not degrees:
-    degrees = [1, 2]
+    data: list[str] = line.split(" ")
+    
+    try:
+        estimates.append(float(data[-1]))
 
-norm = Normalize(vmin=min(degrees), vmax=max(degrees))
+    except ValueError:
+        continue
+
+norm = Normalize(vmin=min(estimates), vmax=max(estimates))
 
 for line in lines:
     if line:
@@ -89,8 +86,13 @@ for line in lines:
         continue
 
     # Color.
-    color: tuple[int] = [1, 1, 1, 1] if "--degrees" not in sys.argv else list(cm.Blues(norm(int(data[-1]))))
-    color[3] = 0.75 # Reduces alpha.
+    try:
+        estimate = float(data[-1])  # Handle estimates as floats.
+        color: tuple[float] = list(cm.Blues(norm(estimate)))
+    except ValueError:
+        color: tuple[float] = [1, 1, 1, 1]
+
+    color[3] = 0.75  # Reduces alpha.
 
     # Plot.
     ax.fill(x, y, facecolor=color, edgecolor=black, linewidth=0.25)
@@ -100,8 +102,7 @@ sm = plt.cm.ScalarMappable(cmap=cm.Blues, norm=norm)
 sm.set_array([])
 
 # Add colorbar
-if "--degrees" in sys.argv:
-    fig.colorbar(sm, ax=ax, ticks=range(min(degrees), max(degrees) + 1), alpha=0.75)
+fig.colorbar(sm, ax=ax, alpha=0.75)
 
 ax.set_aspect('equal', adjustable='box')
 

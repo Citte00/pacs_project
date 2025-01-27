@@ -99,9 +99,10 @@ for j in range(3):
         bars[j].set_ticks([min(data[j]), max(data[j])])
         bars[j].set_ticklabels([f"{min(data[j]):.2f}", f"{max(data[j]):.2f}"])
 
-# Output from interactive backend.
-#plt.show()
-
-# Output from terminal.
-name = f"{os.path.splitext(sys.argv[1])[0]}.png"
-plt.savefig(name)
+# Output.
+if matplotlib.get_backend() == "agg":
+    name = f"{os.path.splitext(sys.argv[1])[0]}.png"
+    print(f"No interactive backend available. Plot will be saved as {name}.")
+    plt.savefig(name)
+else:
+    plt.show()

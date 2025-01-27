@@ -7,17 +7,16 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
 #ifndef INCLUDE_PACSHPDG_ERRORS_HPP
 #define INCLUDE_PACSHPDG_ERRORS_HPP
 
 // Laplace equation errors evaluation.
 #include "./Errors/LaplaceError.hpp"
 
-// Heat equation errors evaluation.
-#include "./Errors/HeatError.hpp"
+// Error estimator.
+#include "./Errors/Estimators.hpp"
 
-// Fisher-KPP equation errors evaluation.
-#include "./Errors/FisherError.hpp"
+// Solution methods.
+#include "./Errors/Solutions.hpp"
 
 #endif

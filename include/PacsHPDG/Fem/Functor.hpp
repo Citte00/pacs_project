@@ -1,76 +1,106 @@
 /**
  * @file Functor.hpp
- * @author Andrea Di Antonio (github.com/diantonioandrea)
- * @brief 
- * @date 2024-05-11
- * 
+ * @author Lorenzo Citterio (github.com/Citte00)
+ * @brief Template Functor class.
+ * @date 2024-11-27
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
+#ifndef INCLUDE_PACSHPDG_FEM_FUNCTOR_HPP
+#define INCLUDE_PACSHPDG_FEM_FUNCTOR_HPP
 
-#ifndef FUNCTOR_PACS
-#define FUNCTOR_PACS
-
-#include "../Base.hpp"
 #include "../Algebra.hpp"
+#include "../Base.hpp"
 
 namespace pacs {
 
-    /**
-     * @brief Zero function.
-     * 
-     * @return Real 
-     */
-    inline Real zero(const Real &, const Real &) { return 0.0; }
+/**
+ * @brief Function template alias.
+ *
+ * @tparam ResultType
+ * @tparam Params
+ */
+template <typename ResultType, typename... Params>
+using GenFunc = std::function<ResultType(Params...)>;
 
-    /**
-     * @brief Functor class.
-     * 
-     */
-    class Functor {
-        private:
-            
-            // Function.
-            Function function;
+/**
+ * @brief General Functor class.
+ *
+ */
+template <typename ResultType, typename... Args> class GeneralFunctor {
+private:
+  // Function.
+  GenFunc<ResultType, Args...> m_function;
 
-        public:
+public:
+  // CONSTRUCTORS.
+  GeneralFunctor() : m_function{} {};
+  explicit GeneralFunctor(const GenFunc<ResultType, Args...> &function_)
+      : m_function{function_} {};
+  template <typename Callable, typename = std::enable_if_t<!std::is_same_v<
+                                   std::decay_t<Callable>, GeneralFunctor>>>
+  GeneralFunctor(Callable &&callable)
+      : m_function{std::forward<Callable>(callable)} {}
 
-            // CONSTRUCTORS.
-            
-            Functor();
-            Functor(const Function &);
+  // EVALUATION.
+  ResultType operator()(const Args &...args) const {
+#ifndef NDEBUG
+    if (!this->m_function) {
+      throw std::bad_function_call();
+    }
+#endif
 
-            // EVALUATION.
+    return this->m_function(args...);
+  };
+};
 
-            Real operator ()(const Real &, const Real &) const;
-            Vector<Real> operator ()(const Vector<Real> &, const Vector<Real> &) const;
-    };
+/**
+ * @brief General TwoFunctor class.
+ *
+ */
+template <typename ResultType, typename... Args> class GeneralTwoFunctor {
+private:
+  // Functions.
+  GenFunc<ResultType, Args...> m_first;
+  GenFunc<ResultType, Args...> m_second;
 
-    /**
-     * @brief TwoFunctor class.
-     * 
-     */
-    class TwoFunctor {
-        private:
+public:
+  // CONSTRUCTORS.
+  GeneralTwoFunctor() : m_first{}, m_second{} {};
+  explicit GeneralTwoFunctor(const GenFunc<ResultType, Args...> &first_,
+                             const GenFunc<ResultType, Args...> &second_)
+      : m_first{first_}, m_second{second_} {};
+  template <typename Callable, typename = std::enable_if_t<!std::is_same_v<
+                                   std::decay_t<Callable>, GeneralTwoFunctor>>>
+  GeneralTwoFunctor(Callable &&callable_f, Callable &&callable_s)
+      : m_first{std::forward<Callable>(callable_f)},
+        m_second{std::forward<Callable>(callable_s)} {}
 
-            // Functions.
-            Function first;
-            Function second;
+  // EVALUATION.
+  std::array<ResultType, 2> operator()(const Args &...args) const {
+#ifndef NDEBUG
+    if (!this->m_first || !this->m_second) {
+      throw std::bad_function_call();
+    }
+#endif
 
-        public:
+    return {this->m_first(args...), this->m_second(args...)};
+  };
+};
 
-            // CONSTRUCTORS.
+// Some functor.
+using BiFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>>;
+using TriFunctor =
+    GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+using FKPPSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>,
+                                  Real, Vector<Real>, Vector<Real>>;
+using HeatSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>,
+                                  Real, Vector<Real>>;
+using TriTwoFunctor =
+    pacs::GeneralTwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>,
+                            pacs::Vector<pacs::Real>, pacs::Real>;
 
-            TwoFunctor();
-            TwoFunctor(const Function &, const Function &);
-
-            // EVALUATION.
-
-            std::array<Real, 2> operator ()(const Real &, const Real &) const ;
-            std::array<Vector<Real>, 2> operator ()(const Vector<Real> &, const Vector<Real> &) const;
-
-    };
-
-}
+} // namespace pacs
 
 #endif

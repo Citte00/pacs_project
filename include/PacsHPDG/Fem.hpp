@@ -1,21 +1,14 @@
 /**
  * @file Fem.hpp
- * @author Andrea Di Antonio (github.com/diantonioandrea)
+ * @author Lorenzo Citterio (github.com/Citte00)
  * @brief 
- * @date 2024-05-26
+ * @date 2025-01-24
  * 
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  * 
  */
-
-#ifndef FEM_PACS
-#define FEM_PACS
-
-// Legendre polynomials.
-#include "./Fem/Legendre.hpp"
-
-// Quadrature.
-#include "./Fem/Quadrature.hpp"
+#ifndef INCLUDE_PACSHPDG_FEM_HPP
+#define INCLUDE_PACSHPDG_FEM_HPP
 
 // Basis functions.
 #include "./Fem/Basis.hpp"
@@ -23,13 +16,13 @@
 // Functors.
 #include "./Fem/Functor.hpp"
 
-// General functors.
-#include "./Fem/GeneralFunctor.hpp"
+// Legendre polynomials.
+#include "./Fem/Legendre.hpp"
 
-// Penalty coefficients.
-#include "./Fem/Penalty.hpp"
+// Quadrature.
+#include "./Fem/Quadrature.hpp"
 
-// Solution methods.
-#include "./Fem/Solution.hpp"
+// Utilities.
+#include "./Fem/Utilities.hpp"
 
 #endif

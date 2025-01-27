@@ -7,7 +7,6 @@
  * @copyright Copyright (c) 2024
  *
  */
-
 #include <PacsHPDG.hpp>
 
 #include <fstream>
@@ -62,22 +61,24 @@ int main(int argc, char **argv) {
     laplacian.assembly(data, mesh);
 
     // Forcing term.
-    pacs::Vector<pacs::Real> forcing = laplacian.forcing(data, mesh);
+    pacs::Vector<pacs::Real> forcing = laplacian.assembly_force(data, mesh);
 
     // Linear system solution.
-    pacs::Vector<pacs::Real> numerical = laplacian.lapsolver(mesh, forcing);
+    pacs::Vector<pacs::Real> numerical = laplacian.solver(mesh, forcing);
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-    pacs::Solution solution{mesh, numerical, exact};
-    std::string solfile = "output/square_h_" + std::to_string(elements) + "@" +
-                          std::to_string(degree) + "_" + std::to_string(index) +
+    pacs::LaplaceSolution solution{mesh};
+    solution.computeSolution(data, mesh, numerical);
+    std::string solfile = "output/square_h_" + std::to_string(data.elements) + "@" +
+                          std::to_string(data.degree) + "_" + std::to_string(index) +
                           ".sol";
     solution.write(solfile);
 #endif
 
     // Errors.
     pacs::LaplaceError error(mesh);
+    error.computeErrors(data, mesh, laplacian, numerical);
 
     // Output.
     output << "\n" << error << "\n";
@@ -93,7 +94,10 @@ int main(int argc, char **argv) {
 
     // Refinement.
     pacs::LaplaceEstimator estimator(mesh);
-    estimator.mesh_refine_size(mesh, error.L2errors() >
-                                     refine * pacs::max(error.L2errors()));
+    estimator.mesh_refine_size(error.L2errors() >
+                                         refine * pacs::max(error.L2errors()));
+    
+    // Update mesh.
+    mesh = estimator.mesh();
   }
 }

@@ -15,7 +15,7 @@
 
 #include "../Algebra.hpp"
 #include "../Base.hpp"
-#include "../Fem/GeneralFunctor.hpp"
+#include "../Fem.hpp"
 #include "../Geometry.hpp"
 
 namespace pacs {

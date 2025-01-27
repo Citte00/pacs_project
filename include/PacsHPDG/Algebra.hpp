@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef ALGEBRA_PACS
-#define ALGEBRA_PACS
+#ifndef INCLUDE_PACSHPDG_ALGEBRA_HPP
+#define INCLUDE_PACSHPDG_ALGEBRA_HPP
 
 // Vectors.
 #include "./Algebra/Vector.hpp"

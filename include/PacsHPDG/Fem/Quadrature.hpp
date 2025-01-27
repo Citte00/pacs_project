@@ -7,9 +7,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
-#ifndef QUADRATURE_PACS
-#define QUADRATURE_PACS
+#ifndef INCLUDE_PACSHPDG_FEM_QUADRATURE_HPP
+#define INCLUDE_PACSHPDG_FEM_QUADRATURE_HPP
 
 #include "../Base.hpp"
 #include "../Algebra.hpp"

@@ -15,7 +15,7 @@
 
 #include "../Algebra.hpp"
 #include "../Base.hpp"
-#include "../Fem/GeneralFunctor.hpp"
+#include "../Fem.hpp"
 #include "../Geometry.hpp"
 
 namespace pacs {
@@ -109,19 +109,19 @@ struct DataHeat {
 
   // Time discretization
   Real t_0 = 0.0;
-  Real t_f = 2.0;
+  Real t_f = 2e-2;
   Real dt = 1e-2;
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 4;
+  size_t degree = 2;
   Real penalty_coeff = 10.0;
 
   // Visualization settings
   bool PlotExact = true;
   bool PlotGridSol = true;
   bool PlotIniCond = true;
-  int VisualizationStep = 10;
+  int VisualizationStep = 1;
   int NqnVisualization = 5;
 
   // Save solution settings

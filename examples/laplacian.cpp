@@ -7,41 +7,31 @@
  * @copyright Copyright (c) 2024
  *
  */
-
-#include "../examples/smooth.hpp"
 #include <PacsHPDG.hpp>
 
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <chrono>
 
 int main(int argc, char **argv) {
 
-  // Degree.
-  if (argc <= 1) {
-    std::cout << "Usage: " << argv[0] << " DEGREE." << std::endl;
-    std::exit(-1);
-  }
+  // Retrieve problem data from structure.
+  pacs::DataLaplace data;
 
-  std::size_t degree = static_cast<std::size_t>(std::stoi(argv[1]));
-
-  std::ofstream output{"output/square_s_" + std::to_string(degree) + ".error"};
+  std::ofstream output{"output/square_s_" + std::to_string(data.degree) +
+                       ".error"};
 
   output << "Square domain - uniform refinement." << "\n";
 
   std::cout << "Square domain - uniform refinement." << std::endl;
-  std::cout << "Output under output/square_" + std::to_string(degree) +
+  std::cout << "Output under output/square_s_" + std::to_string(data.degree) +
                    ".error."
             << std::endl;
 
   // Domain.
-  pacs::Point a{0.0, 0.0};
-  pacs::Point b{1.0, 0.0};
-  pacs::Point c{1.0, 1.0};
-  pacs::Point d{0.0, 1.0};
-
-  pacs::Polygon domain{{a, b, c, d}};
+  pacs::Polygon domain{data.domain};
 
   // Diagrams.
   std::vector<std::vector<pacs::Polygon>> diagrams;
@@ -53,30 +43,36 @@ int main(int argc, char **argv) {
   diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_2000.poly"));
   diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_4000.poly"));
 
-  pacs::DataLaplace data;
-
   // Test.
   for (std::size_t j = 0; j < diagrams.size(); ++j) {
 
-    std::cout << "INDEX: " << j << std::endl;
-
     // Mesh.
-    pacs::Mesh mesh{domain, diagrams[j], degree};
+    pacs::Mesh mesh{domain, diagrams[j], data.degree};
 
     // Matrices.
     pacs::Laplace laplacian(mesh);
     laplacian.assembly(data, mesh);
 
     // Forcing term.
-    pacs::Vector<pacs::Real> forcing = laplacian.forcing(mesh, data);
+    pacs::Vector<pacs::Real> forcing = laplacian.assembly_force(data, mesh);
 
     // Linear system solution.
     pacs::Vector<pacs::Real> numerical = laplacian.solver(mesh, forcing);
 
     // Errors.
-    pacs::Error error{mesh};
+    pacs::LaplaceError error(mesh);
 
-    error.computerros(data, mesh, laplacian, numerical);
+// Solution structure (output).
+#ifndef NSOLUTIONS
+    pacs::LaplaceSolution solution{mesh};
+    solution.computeSolution(data, mesh, numerical);
+    std::string solfile = "output/square_s_" + std::to_string(data.degree) + "_" +
+                          std::to_string(j) + ".sol";
+    solution.write(solfile);
+#endif
+
+    // Compute error.
+    error.computeErrors(data, mesh, laplacian, numerical);
 
     // Output.
     output << "\n" << error << "\n";

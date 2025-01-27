@@ -7,9 +7,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
-#ifndef LEGENDRE_PACS
-#define LEGENDRE_PACS
+#ifndef INCLUDE_PACSHPDG_FEM_LEGENDRE_HPP
+#define INCLUDE_PACSHPDG_FEM_LEGENDRE_HPP
 
 #include "../Base.hpp"
 #include "../Algebra.hpp"

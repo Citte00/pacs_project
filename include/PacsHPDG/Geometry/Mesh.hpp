@@ -1,116 +1,124 @@
 /**
  * @file Mesh.hpp
  * @author Andrea Di Antonio (github.com/diantonioandrea)
- * @brief 
+ * @brief
  * @date 2024-05-04
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
+#ifndef INCLUDE_PACSHPDG_GEOMETRY_MESH_HPP
+#define INCLUDE_PACSHPDG_GEOMETRY_MESH_HPP
 
-#ifndef MESH_PACS
-#define MESH_PACS
-
-#include "../Base.hpp"
 #include "../Algebra.hpp"
+#include "../Base.hpp"
 
 #include "./Shapes.hpp"
 
-#include <vector>
 #include <array>
 #include <string>
+#include <vector>
 
 namespace pacs {
 
-    // Element, implemented under Element.cpp
+// Element, implemented under Element.cpp
 
-    /**
-     * @brief Element struct. Polygon wrapper.
-     * 
-     */
-    struct Element {
-            
-        // Polygon.
-        Polygon element;
-        
-        std::vector<Point> nodes;
-        std::vector<Segment> edges;
+/**
+ * @brief Element struct. Polygon wrapper.
+ *
+ */
+struct Element {
 
-        // Polynomial degree.
-        std::size_t degree;
+  // Polygon.
+  Polygon element;
 
-        // CONSTRUCTORS.
+  std::vector<Point> nodes;
+  std::vector<Segment> edges;
 
-        Element(const Polygon &);
-        Element(const Polygon &, const std::size_t &);
+  // Polynomial degree.
+  std::size_t degree;
 
-        // METHODS.
+  // CONSTRUCTORS.
 
-        inline std::size_t dofs() const { return (this->degree + 1) * (this->degree + 2) / 2; }
+  Element(const Polygon &);
+  Element(const Polygon &, const std::size_t &);
 
-    };
+  // METHODS.
 
-    // Mesh, implemented under Mesh.cpp
+  inline std::size_t dofs() const {
+    return (this->degree + 1) * (this->degree + 2) / 2;
+  }
+};
 
-    /**
-     * @brief Mesh struct.
-     * 
-     */
-    struct Mesh {
+// Mesh, implemented under Mesh.cpp
 
-        // Geometry.
-        Polygon domain; // Polygonal domain.
+/**
+ * @brief Mesh struct.
+ *
+ */
+struct Mesh {
 
-        // Elements.
-        std::vector<Element> elements;
+  // Geometry.
+  Polygon domain; // Polygonal domain.
+  std::vector<Point> coord;
+  std::vector<std::vector<int>> connectivity;
 
-        // Neighbours.
-        std::vector<std::vector<std::array<int, 3>>> neighbours;
+  // Elements.
+  std::vector<Element> elements;
 
-        // Areas.
-        std::vector<Real> areas;
-        std::vector<Vector<Real>> max_simplices;
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours;
 
-        // Entries for the solution.
-        std::size_t entries;
+  // Areas.
+  std::vector<Real> areas;
+  std::vector<Vector<Real>> max_simplices;
 
-        // CONSTRUCTORS.
+  // Entries for the solution.
+  std::size_t entries;
 
-        Mesh(const Polygon &, const std::vector<Polygon> &, const std::vector<std::size_t> &);
-        Mesh(const Polygon &, const std::vector<Polygon> &, const std::size_t &degree = 1);
-        Mesh(const Mesh &);
+  // CONSTRUCTORS.
 
-        Mesh &operator =(const Mesh &);
+  Mesh(const Polygon &, const std::vector<Polygon> &,
+       const std::vector<std::size_t> &);
+  Mesh(const Polygon &, const std::vector<Polygon> &,
+       const std::size_t &degree = 1);
+  Mesh(const Mesh &);
 
-        // READ, WRAPPERS.
-    
-        Polygon element(const std::size_t &) const;
+  Mesh &operator=(const Mesh &);
 
-        // STATS.
+  // READ, WRAPPERS.
 
-        std::size_t dofs() const;
+  Polygon element(const std::size_t &) const;
 
-        // OUTPUT.
+  // STATS.
 
-        void write(const std::string &, const bool &degrees = false);
-        void exportVTK(const std::string &);
-    };
+  std::size_t dofs() const;
 
-    // METHODS.
-    // Implemented under src/Builder.cpp
+  // OUTPUT.
 
-    // Diagrams.
-    std::vector<Polygon> mesh_diagram(const Polygon &, const std::size_t &, const bool &reflect = false, const bool &uniform = false);
-    std::vector<Polygon> mesh_diagram(const std::string &);
-    std::vector<Polygon> mesh_relax(const Polygon &, const std::vector<Polygon> &, const bool &reflect = false);
+  void write(const std::string &, const bool &degrees = false);
+};
 
-    // Data.
-    std::vector<Element> mesh_elements(const std::vector<Polygon> &, const std::vector<std::size_t> &);
-    std::vector<std::vector<std::array<int, 3>>> mesh_neighbours(const Polygon &, const std::vector<Element> &);
+// METHODS.
+// Implemented under src/Builder.cpp
 
-    std::vector<Real> mesh_areas(const std::vector<Polygon> &);
-    std::vector<Vector<Real>> mesh_max_simplices(const std::vector<Polygon> &);
+// Diagrams.
+std::vector<Polygon> mesh_diagram(const Polygon &, const std::size_t &,
+                                  const bool &reflect = false,
+                                  const bool &uniform = false);
+std::vector<Polygon> mesh_diagram(const std::string &);
+std::vector<Polygon> mesh_relax(const Polygon &, const std::vector<Polygon> &,
+                                const bool &reflect = false);
 
-}
+// Data.
+std::vector<Element> mesh_elements(const std::vector<Polygon> &,
+                                   const std::vector<std::size_t> &);
+std::vector<std::vector<std::array<int, 3>>>
+mesh_neighbours(const Polygon &, const std::vector<Element> &);
+
+std::vector<Real> mesh_areas(const std::vector<Polygon> &);
+std::vector<Vector<Real>> mesh_max_simplices(const std::vector<Polygon> &);
+
+} // namespace pacs
 
 #endif

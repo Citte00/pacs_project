@@ -7,16 +7,15 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
-#ifndef BASE_PACS
-#define BASE_PACS
+#ifndef INCLUDE_PACSHPDG_BASE_HPP
+#define INCLUDE_PACSHPDG_BASE_HPP
 
 #include <concepts>
 #include <vector>
 #include <complex>
 #include <cmath>
 #include <type_traits>
-
+#include <omp.h>
 
 // TOLERANCES.
 

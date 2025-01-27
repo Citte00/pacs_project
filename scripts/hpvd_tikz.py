@@ -13,6 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 import sys
+import os
 
 # Font.
 matplotlib.rcParams.update({'font.size': 18})
