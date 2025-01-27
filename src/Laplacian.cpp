@@ -1,13 +1,12 @@
 /**
  * @file Laplacian.cpp
- * @author Andrea Di Antonio (github.com/diantonioandrea)
- * @brief
- * @date 2024-05-08
- *
- * @copyright Copyright (c) 2024
- *
+ * @author Lorenzo Citterio (github.com/Citte00)
+ * @brief Contains the implementation of all Laplace objet methods.
+ * @date 2025-01-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
  */
-
 #include <PacsHPDG.hpp>
 
 namespace pacs {
@@ -50,9 +49,10 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
     starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
 
-  // Volume integrals.
+// Volume integrals.
 
-  // Loop over the elements.
+// Loop over the elements.
+#pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
     // 2D quadrature nodes and weights.
@@ -81,42 +81,9 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-      // Triangle.
-      Polygon triangle = triangles[k];
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
-
-      // Jacobian's determinant.
-      Real jacobian_det =
-          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = triangle.points[0][0];
-      translation[1] = triangle.points[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_x_2d.length};
-      Vector<Real> physical_y{nodes_y_2d.length};
-
-      for (std::size_t l = 0; l < physical_x.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_x_2d[l];
-        node[1] = nodes_y_2d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
+      // Jacobian's determinant and physical nodes.
+      auto [jacobian_det, physical_x, physical_y] =
+          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -142,9 +109,12 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
                  scaled_grady.transpose() * grady_phi;
     }
 
-    // Global matrix assembly.
-    M.insert(indices, indices, local_M);
-    A.insert(indices, indices, local_A);
+// Global matrix assembly.
+#pragma omp critical
+    {
+      M.insert(indices, indices, local_M);
+      A.insert(indices, indices, local_A);
+    }
 
     // Face integrals.
 
@@ -176,53 +146,11 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
           (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour]))
                           : quadrature_1d(nqn[j]);
 
-      // Edge geometry.
-      Segment segment{edges[k]};
-
-      // Edge's normal.
-      Vector<Real> edge_vector{2};
-
-      edge_vector[0] = segment[1][0] - segment[0][0];
-      edge_vector[1] = segment[1][1] - segment[0][1];
-
-      Vector<Real> normal_vector{2};
-
-      normal_vector[0] = edge_vector[1];
-      normal_vector[1] = -edge_vector[0];
-
-      normal_vector /= norm(normal_vector);
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = segment[1][0] - segment[0][0];
-      jacobian(0, 1) = 0.5 * (segment[1][0] - segment[0][0]);
-      jacobian(1, 0) = segment[1][1] - segment[0][1];
-      jacobian(1, 1) = 0.5 * (segment[1][1] - segment[0][1]);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = segment[0][0];
-      translation[1] = segment[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_1d.length};
-      Vector<Real> physical_y{nodes_1d.length};
-
-      for (std::size_t l = 0; l < nodes_1d.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_1d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
+      auto [normal_vector, edge_vector, physical_x, physical_y] =
+          faces_physical_points(edges[k], nodes_1d);
 
       // Weights scaling.
-      Vector<Real> scaled = std::abs(segment) * weights_1d;
+      Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
 
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
@@ -267,8 +195,11 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
       }
     }
 
-    IA.insert(indices, indices, local_IA);
-    SA.insert(indices, indices, local_SA);
+#pragma omp critical
+    {
+      IA.insert(indices, indices, local_IA);
+      SA.insert(indices, indices, local_SA);
+    }
 
     // Neighbouring DG matrices assembly.
     for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
@@ -282,8 +213,11 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
       for (std::size_t h = 0; h < n_dofs; ++h)
         n_indices.emplace_back(starts[n_index] + h);
 
-      IA.add(indices, n_indices, local_IAN[k]);
-      SA.add(indices, n_indices, local_SAN[k]);
+#pragma omp critical
+      {
+        IA.add(indices, n_indices, local_IAN[k]);
+        SA.add(indices, n_indices, local_SAN[k]);
+      }
     }
   }
 
@@ -331,7 +265,8 @@ Laplace::block_mass(const Mesh &mesh) const {
     for (std::size_t k = 0; k < dofs[j]; ++k)
       indices.emplace_back(start + k);
 
-    blocks.emplace_back(std::array<std::vector<std::size_t>, 2>{indices, indices});
+    blocks.emplace_back(
+        std::array<std::vector<std::size_t>, 2>{indices, indices});
     start += dofs[j];
   }
 
@@ -345,8 +280,8 @@ Laplace::block_mass(const Mesh &mesh) const {
  * @param penalty_coefficient Penalty coefficient.
  * @return Vector<Real>
  */
-Vector<Real> Laplace::forcing(const DataLaplace &data, const Mesh &mesh) {
-
+Vector<Real> Laplace::assembly_force(const DataLaplace &data,
+                                     const Mesh &mesh) const {
 #ifndef NVERBOSE
   std::cout << "Computing the forcing term." << std::endl;
 #endif
@@ -373,9 +308,10 @@ Vector<Real> Laplace::forcing(const DataLaplace &data, const Mesh &mesh) {
   // Forcing term.
   Vector<Real> forcing{dofs};
 
-  // Volume integrals.
+// Volume integrals.
 
-  // Loop over the elements.
+// Loop over the elements.
+#pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
     // 2D quadrature nodes and weights.
@@ -403,42 +339,9 @@ Vector<Real> Laplace::forcing(const DataLaplace &data, const Mesh &mesh) {
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-      // Triangle.
-      Polygon triangle = triangles[k];
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
-
-      // Jacobian's determinant.
-      Real jacobian_det =
-          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = triangle.points[0][0];
-      translation[1] = triangle.points[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_x_2d.length};
-      Vector<Real> physical_y{nodes_y_2d.length};
-
-      for (std::size_t l = 0; l < physical_x.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_x_2d[l];
-        node[1] = nodes_y_2d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
+      // Jacobian's determinant and physical nodes.
+      auto [jacobian_det, physical_x, physical_y] =
+          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -481,53 +384,11 @@ Vector<Real> Laplace::forcing(const DataLaplace &data, const Mesh &mesh) {
       if (neighbour != -1)
         continue;
 
-      // Edge geometry.
-      Segment segment{edges[k]}; // Mesh's edges to be fixed. [!]
-
-      // Edge's normal. Check the order. [!]
-      Vector<Real> edge_vector{2};
-
-      edge_vector[0] = segment[1][0] - segment[0][0];
-      edge_vector[1] = segment[1][1] - segment[0][1];
-
-      Vector<Real> normal_vector{2};
-
-      normal_vector[0] = edge_vector[1];
-      normal_vector[1] = -edge_vector[0];
-
-      normal_vector /= norm(normal_vector);
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = segment[1][0] - segment[0][0];
-      jacobian(0, 1) = 0.5 * (segment[1][0] - segment[0][0]);
-      jacobian(1, 0) = segment[1][1] - segment[0][1];
-      jacobian(1, 1) = 0.5 * (segment[1][1] - segment[0][1]);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = segment[0][0];
-      translation[1] = segment[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_1d.length};
-      Vector<Real> physical_y{nodes_1d.length};
-
-      for (std::size_t l = 0; l < nodes_1d.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_1d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
+      auto [normal_vector, edge_vector, physical_x, physical_y] =
+          faces_physical_points(edges[k], nodes_1d);
 
       // Weights scaling.
-      Vector<Real> scaled = std::abs(segment) * weights_1d;
+      Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
 
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
@@ -555,7 +416,8 @@ Vector<Real> Laplace::forcing(const DataLaplace &data, const Mesh &mesh) {
       local_f += penalties[k] * scaled_phi.transpose() * boundary;
     }
 
-    // Global forcing term.
+// Global forcing term.
+#pragma omp critical
     forcing(indices, local_f);
   }
 
@@ -571,8 +433,8 @@ Vector<Real> Laplace::forcing(const DataLaplace &data, const Mesh &mesh) {
  * @param TOL Tolerance.
  * @return Vector<Real>
  */
-Vector<Real> Laplace::lapsolver(const Mesh &mesh, const Vector<Real> &b,
-                                const Real &TOL) {
+Vector<Real> Laplace::solver(const Mesh &mesh, const Vector<Real> &b,
+                             const Real &TOL) const {
   // Mass blocks.
   auto blocks = block_mass(mesh);
 
@@ -587,7 +449,7 @@ Vector<Real> Laplace::lapsolver(const Mesh &mesh, const Vector<Real> &b,
  * @param function Function.
  * @return Vector<Real>
  */
-Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) {
+Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) const {
 
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
@@ -605,7 +467,8 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) {
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
     starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
 
-  // Loop over the elements.
+// Loop over the elements.
+#pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
     // 2D quadrature nodes and weights.
@@ -633,42 +496,9 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) {
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-      // Triangle.
-      Polygon triangle = triangles[k];
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
-
-      // Jacobian's determinant.
-      Real jacobian_det =
-          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = triangle.points[0][0];
-      translation[1] = triangle.points[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_x_2d.length};
-      Vector<Real> physical_y{nodes_y_2d.length};
-
-      for (std::size_t l = 0; l < physical_x.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_x_2d[l];
-        node[1] = nodes_y_2d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
+      // Jacobian's determinant and physical nodes.
+      auto [jacobian_det, physical_x, physical_y] =
+          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -687,7 +517,8 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) {
       local_coefficients += scaled_phi.transpose() * local_function;
     }
 
-    // Update.
+// Update.
+#pragma omp critical
     coefficients(indices, local_coefficients);
   }
 

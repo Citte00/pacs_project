@@ -1,5 +1,3 @@
-// clang-format off
-
 /**
  * @file Voronoi.hpp
  * @author Andrea Di Antonio (github.com/diantonioandrea)
@@ -10,11 +8,10 @@
  * 
  */
 
-#ifndef VORONOI_PACS
-#define VORONOI_PACS
+#ifndef INCLUDE_PACSHPDG_GEOMETRY_VORONOI_HPP
+#define INCLUDE_PACSHPDG_GEOMETRY_VORONOI_HPP
 
 #include "../Base.hpp"
-
 #include "./Shapes.hpp"
 
 #include <vector>

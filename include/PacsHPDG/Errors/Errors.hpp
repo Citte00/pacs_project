@@ -1,13 +1,12 @@
 /**
  * @file Errors.hpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief
+ * @brief Errors computation classes.
  * @date 2024-12-22
  *
  * @copyright Copyright (c) 2024
  *
  */
-
 #ifndef INCLUDE_PACSHPDG_ERRORS_ERRORS_HPP
 #define INCLUDE_PACSHPDG_ERRORS_ERRORS_HPP
 
@@ -19,12 +18,12 @@
 #include "../Data.hpp"
 #include "../Fem.hpp"
 #include "../Geometry.hpp"
-#include "../Laplacian.hpp"
+#include "../Solvers.hpp"
 
 namespace pacs {
 
 /**
- * @brief Polymorphism base class error.
+ * @brief Laplace equation errors computation class.
  *
  */
 class LaplaceError {
@@ -39,6 +38,7 @@ protected:
   Vector<Real> m_h1_errors;
 
 public:
+  // CONSTRUCTOR.
   LaplaceError(const Mesh &mesh_)
       : m_l2_errors{mesh_.elements.size()}, m_h1_errors{mesh_.elements.size()} {
 
@@ -57,7 +57,7 @@ public:
               (distance(p, q) > this->m_size) ? distance(p, q) : this->m_size;
   };
 
-  // Getter.
+  // GETTERS.
   std::size_t dofs() const { return this->m_dofs; };
   std::size_t p() const { return this->m_degree; };
   Real h() const { return this->m_size; };
@@ -66,16 +66,69 @@ public:
   Vector<Real> L2errors() const { return this->m_l2_errors; };
   Vector<Real> H1errors() const { return this->m_h1_errors; };
 
-  void computeErrors(const DataLaplace &, const Mesh &, const Laplace &, const Vector<Real> &);
+  // METHODS.
+
+  // Compute errors.
+  void computeErrors(const DataLaplace &, const Mesh &, const Laplace &,
+                     const Vector<Real> &);
 
   // Friend operator<< for polymorphic printing.
-  friend std::ostream &operator<<(std::ostream &ost, const LaplaceError &error) {
+  friend std::ostream &operator<<(std::ostream &ost,
+                                  const LaplaceError &error) {
     ost << "Elements: " << error.L2errors().size() << "\n";
     ost << "Dofs: " << error.dofs() << "\n";
     ost << "Degree (p): " << error.p() << "\n";
     ost << "Size (h): " << error.h() << "\n";
     ost << "L2 Error: " << error.L2error() << "\n";
     return ost << "DG Error: " << error.DGerror() << std::endl;
+  };
+};
+
+/**
+ * @brief Heat equation errors computation class.
+ *
+ */
+class HeatError : public LaplaceError {
+public:
+  // CONSTRUCTOR.
+  HeatError(const Mesh &mesh_) : LaplaceError(mesh_) {};
+
+  // METHODS.
+
+  // Compute errors.
+  void computeErrors(const DataHeat &, const Mesh &, const Heat &);
+};
+
+/**
+ * @brief Fisher equation errors computation class.
+ *
+ */
+class FisherError : public HeatError {
+protected:
+  // Energy error.
+  Real m_energy;
+
+public:
+  // CONSTRUCTOR.
+  FisherError(const Mesh &mesh_) : HeatError(mesh_), m_energy{0.0} {};
+
+  // GETTER.
+  Real energy() const { return this->m_energy; };
+  Real &energy() { return this->m_energy; };
+
+  // METHODS.
+  // Compute errors.
+  void computeErrors(const DataFKPP &, const Mesh &, const Fisher &);
+
+  // Friend operator<< for polymorphic printing.
+  friend std::ostream &operator<<(std::ostream &ost, const FisherError &error) {
+    ost << "Elements: " << error.L2errors().size() << std::endl;
+    ost << "Dofs: " << error.dofs() << std::endl;
+    ost << "Degree (p): " << error.p() << std::endl;
+    ost << "Size (h): " << error.h() << std::endl;
+    ost << "L2 Error: " << error.L2error() << std::endl;
+    ost << "DG Error: " << error.DGerror() << std::endl;
+    return ost << "Energy Error: " << std::sqrt(std::pow(error.L2error(), 2) + error.energy()) << std::endl;
   };
 };
 

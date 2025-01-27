@@ -24,17 +24,21 @@ int main() {
     pacs::Polygon domain{{a, b, c, d}};
     
     // Constructing a mesh.
-    pacs::Mesh mesh{domain, pacs::mesh_diagram("data/square/square_30.poly")};
+    pacs::Mesh mesh{domain, pacs::mesh_diagram("meshes/square/square_300.poly")};
+    std::cout << "Dofs: " << mesh.dofs() << std::endl;
 
     // Refining some elements.
-    pacs::Mask refinement(30);
+    pacs::Mask refinement(300);
 
     refinement[0] = true;
     refinement[1] = true;
     refinement[2] = true;
 
     // Refinement.
-    pacs::mesh_refine_size(mesh, refinement);
+    pacs::LaplaceEstimator estimator(mesh);
+    estimator.mesh_refine_size(mesh, refinement);
+
+    std::cout << "Dofs: " << mesh.dofs() << std::endl;
 
     // Mesh output.
     mesh.write("output/refined.poly");

@@ -1,0 +1,64 @@
+/**
+ * @file Heat.hpp
+ * @author Lorenzo Citterio (github.com/Citte00)
+ * @brief
+ * @date 2024-12-16
+ *
+ * @copyright Copyright (c) 2024
+ *
+ */
+#ifndef INCLUDE_PACSHPDG_SOLVERS_HEAT_HPP
+#define INCLUDE_PACSHPDG_SOLVERS_HEAT_HPP
+
+#include "./Laplacian.hpp"
+
+namespace pacs {
+
+class Heat : public Laplace {
+protected:
+  // Forcing term and numerical solution.
+  Vector<Real> m_forcing, m_ch;
+
+  // Time step.
+  Real m_t;
+
+public:
+  // CONSTRUCTOR.
+  Heat(const Mesh &mesh_)
+      : Laplace(mesh_), m_forcing{mesh_.dofs()}, m_ch{mesh_.dofs()} {
+    this->m_t = 0.0;
+  };
+
+  // GETTERS.
+  Vector<Real> forcing() const { return this->m_forcing; };
+  Vector<Real> &forcing() { return this->m_forcing; };
+  Vector<Real> ch() const { return this->m_ch; };
+  Vector<Real> &ch() { return this->m_ch; };
+  Real t() const { return this->m_t; };
+  Real &t() { return this->m_t; };
+
+  // METHODS.
+  // Assembly the heat equation system matrices.
+  void assembly(const DataHeat &, const Mesh &);
+  // Assembly the forcing term.
+  void assembly_force(const DataHeat &, const Mesh &);
+  // Solver of the Heat equation.
+  void solver(const DataHeat &, const Mesh &, const Vector<Real> &,
+              const Vector<Real> &, const Real &TOL = 1E-15);
+  // Get functions modal coefficients.
+  Vector<Real> modal(const Mesh &, const TriFunctor &) const;
+  // Get source function modal coefficient.
+  Vector<Real> modal_source(const DataHeat &, const Mesh &) const;
+  // hp-adaptive methods.
+  // Construct matrix with base indeces for each degree.
+  Matrix<int> transition(const std::size_t &);
+  // prolong solution for p.
+  void prolong_solution_p(const Mesh &, const Mesh &, const Mask &);
+  // prolong solution for h.
+  void prolong_solution_h(const Mesh &, const Mesh &, const Mask &);
+  // prolong solution.
+  // void prolong_solution(const Mesh &, const Mesh &, const Mask &, const Mask &);
+};
+} // namespace pacs
+
+#endif

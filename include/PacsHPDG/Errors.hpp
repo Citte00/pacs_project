@@ -7,14 +7,16 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
-#ifndef ERROR_PACS
-#define ERROR_PACS
+#ifndef INCLUDE_PACSHPDG_ERRORS_HPP
+#define INCLUDE_PACSHPDG_ERRORS_HPP
 
 // Error evaluation.
 #include "./Errors/Errors.hpp"
 
-// Error evaluation.
-#include "./Errors/GeneralErrors.hpp"
+// Error estimator.
+#include "./Errors/Estimators.hpp"
+
+// Solution methods.
+#include "./Errors/Solutions.hpp"
 
 #endif

@@ -7,9 +7,8 @@
  * @copyright Copyright (c) 2024
  * 
  */
-
-#ifndef BASIS_PACS
-#define BASIS_PACS
+#ifndef INCLUDE_PACSHPDG_FEM_BASIS_HPP
+#define INCLUDE_PACSHPDG_FEM_BASIS_HPP
 
 #include "../Base.hpp"
 #include "../Algebra.hpp"

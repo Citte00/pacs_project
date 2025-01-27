@@ -13,7 +13,7 @@ endif
 CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
-#CPPFLAGS += -DNVERBOSE
+CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
 #CPPFLAGS += -DNDEBUG
@@ -72,19 +72,19 @@ HEADERS = ./include/*.hpp # Recompilation purposes.
 HEADERS += ./include/PacsHPDG/*.hpp
 HEADERS += ./include/PacsHPDG/Algebra/*.hpp
 HEADERS += ./include/PacsHPDG/Algebra/Methods/*.hpp
-HEADERS += ./include/PacsHPDG/Geometry/*.hpp
+HEADERS += ./include/PacsHPDG/Data/*.hpp
+HEADERS += ./include/PacsHPDG/Errors/*.hpp
 HEADERS += ./include/PacsHPDG/Fem/*.hpp
-HEADERS += ./include/PacsHPDG/Laplacian/*.hpp
-HEADERS += ./include/PacsHPDG/Statistics/*.hpp
+HEADERS += ./include/PacsHPDG/Geometry/*.hpp
+HEADERS += ./include/PacsHPDG/Solvers/*.hpp
 
 EXAMPLE_EXECS = $(subst examples/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find examples -name "*.cpp")))
 EXAMPLE_OBJECTS = $(subst examples/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find examples -name "*.cpp")))
-HEADERS += ./examples/*.hpp
 
 DOMAIN_EXECS = $(subst domains/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find domains -name "*.cpp")))
 DOMAIN_OBJECTS = $(subst domains/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find domains -name "*.cpp")))
 
-TEST_FILE = test_square_smooth
+TEST_FILE = test_heat
 TEST_RUN = $(subst .cpp,,$(shell ls ./test))
 TEST_EXECS = $(subst test/,$(EXEC_DIR)/,$(subst .cpp,.out,$(shell find test -name "*.cpp")))
 TEST_OBJECTS = $(subst test/,$(OBJECT_DIR)/,$(subst .cpp,.o,$(shell find test -name "*.cpp")))
@@ -94,7 +94,7 @@ all: tests examples domains
 
 # Debug target for debugging with gdb.
 debug: CXXFLAGS = $(DEBUG_CXXFLAGS)
-debug: distclean single_test
+debug: distclean examples
 	@echo "Build completed with debugging flags"
 
 # Library.

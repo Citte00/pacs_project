@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef GEOMETRY_PACS
-#define GEOMETRY_PACS
+#ifndef INCLUDE_PACSHPDG_GEOMETRY_HPP
+#define INCLUDE_PACSHPDG_GEOMETRY_HPP
 
 // Shapes.
 #include "./Geometry/Shapes.hpp"

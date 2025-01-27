@@ -4,7 +4,7 @@ _The hp-Adaptive Discontinuous Galërkin Method_
 
 ## Introduction
 
-This repository provides an implementation of the _hp-adaptive_ discontinuous Galërkin method for the Poisson problem, serving as the foundation for the _PacsHPDG_ library.
+This repository provides an implementation of the _hp-adaptive_ discontinuous Galërkin method for the Poisson problem, the Heat equation and the Fisher-KPP equation.
 
 :warning: Refer to the [report](#compiling-the-report) for a detailed explanation of the background and results related to this project.
 
@@ -41,22 +41,24 @@ This repository provides an implementation of the _hp-adaptive_ discontinuous Ga
 
 The key components are as follows:
 
+- `domains/`: Stores sample meshes generation scripts.
+- `examples/`: Provides the main examples of using the repository.
+- `format/`: Containes scripts that set and control the formatting of the code.
 - `include/`: Holds definitions for the structures and methods utilized in the repository.
     - [`include/PacsHPDG/Algebra/`](./include/PacsHPDG/Algebra/): Structures and methods for vectors, matrices and linear solvers.
+    - [`include/PacsHPDG/Data/`](./include/PacsHPDG/Data/): Structures with problems data.
+    - [`include/PacsHPDG/Errors/`](./include/PacsHPDG/Errors/): Classes and methods for errors, error estimators computation and solution plotting.
     - [`include/PacsHPDG/Geometry/`](./include/PacsHPDG/Geometry/): Tools for working with polygons and meshes.
     - [`include/PacsHPDG/Fem/`](./include/PacsHPDG/Fem/): Finite element structures and methods.
-    - [`include/PacsHPDG/Laplacian/`](./include/PacsHPDG/Laplacian/): Implementation details for the Poisson problem.
-    - [`include/PacsHPDG/Statistics/`](./include/PacsHPDG/Statistics/): Statistics related tools.
-- `src/`: Contains the primary implementations for the repository’s structures and methods.
-- `data/`: Includes sample meshes for simple domains.
-- `domains/`: Stores scripts for generating sample meshes.
-- `examples/`: Provides the main examples for using the repository.
-- `snippets/`: Simpler examples for the report.
-- `test/`: Contains scripts for testing fundamental features.
-- `scripts/`: Contains Python scripts for meshes, solutions and errors visualization.
-- `templates/`: Contains TikZ templates.
-- `report/`: Contains the LaTeX report on the project.
+    - [`include/PacsHPDG/Solvers/`](./include/PacsHPDG/Solvers/): Classes and methods for the numerical implementation and solution of each problems.
+- `meshes/`: Includes sample meshes for simple domains.
 - `presentation/`: Contains the LaTeX presentation on the project.
+- `report/`: Contains the LaTeX report on the project.
+- `scripts/`: Contains Python scripts for meshes, solutions and errors visualization.
+- `snippets/`: Simpler examples for the report.
+- `src/`: Contains the primary implementations for the repository’s structures and methods.
+- `templates/`: Contains TikZ templates.
+- `test/`: Contains scripts for testing fundamental features.
 
 Every directory under `include/PacsHPDG/` has a `README.md` that lists the classes, structures, and methods introduced in that particular category.
 
@@ -64,10 +66,10 @@ Every directory under `include/PacsHPDG/` has a `README.md` that lists the class
 
 ### Cloning the Repository
 
-Clone the repository from [here](https://github.com/diantonioandrea/pacs-project):
+Clone the repository from [here](https://github.com/Citte00/pacs_project.git):
 
 ```bash
-git clone git@github.com:diantonioandrea/pacs-project.git
+git clone git@github.com:Citte00/pacs_project.git
 ```
 
 ### Compilation and Execution
@@ -102,6 +104,12 @@ Compile mesh generation scripts with:
 make domains
 ```
 
+Compile with debugging flag for `gdb`:
+
+```bash
+make debug
+```
+
 Executables are located in `executables/` and their outputs in `output/`.
 
 #### Compilation Flags
@@ -112,6 +120,7 @@ The code uses the following custom compilation flags:
 
 - `-DNVERBOSE`: Disables verbose output.
 - `-DNSOLUTIONS`: Disables solution output.
+- `-DNDEBUG`: Disables debug output.
 
 ### Compiling the Code into a Library
 
@@ -180,7 +189,7 @@ This command generates an L-shaped mesh over $[-1, 1] \times [-1, 1] \setminus [
 
 ### Examples
 
-Examples are divided into the following categories based on their domains and meshes:
+Examples are divided into the following categories based on their equations and meshes:
 
 1. Uniform meshes:
     - `square_smooth.cpp` Square domain, smooth solution[^solutions].

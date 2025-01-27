@@ -15,7 +15,7 @@
 
 #include "../Algebra.hpp"
 #include "../Base.hpp"
-#include "../Fem/GeneralFunctor.hpp"
+#include "../Fem.hpp"
 #include "../Geometry.hpp"
 
 namespace pacs {
@@ -113,7 +113,7 @@ struct DataFKPP {
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 4;
+  size_t degree = 2;
   Real penalty_coeff = 10.0;
 
   // Visualization settings

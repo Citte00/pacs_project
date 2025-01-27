@@ -1,11 +1,11 @@
 /**
  * @file Solution.cpp
- * @author Andrea Di Antonio (github.com/diantonioandrea)
- * @brief
- * @date 2024-05-11
- *
- * @copyright Copyright (c) 2024
- *
+ * @author Lorenzo Citterio (github.com/Citte00)
+ * @brief 
+ * @date 2025-01-20
+ * 
+ * @copyright Copyright (c) 2025
+ * 
  */
 
 #include <PacsHPDG.hpp>
@@ -18,22 +18,19 @@
 namespace pacs {
 
 /**
- * @brief Constructs a new solution object.
- *
- * @param mesh Mesh.
- * @param numerical Numerical solution.
- * @param exact Exact solution.
+ * @brief Construct a new Laplace solution object.
+ * 
+ * @param data Laplace equation data struct.
+ * @param mesh Mesh struct.
+ * @param numerical numerical solution.
  */
-Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
-                   const BiFunctor &exact)
-    : x{mesh.entries}, y{mesh.entries}, numerical{mesh.entries},
-      exact{mesh.entries} {
+void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
 
   // Number of quadrature nodes.
-  std::size_t nqn = GAUSS_ORDER;
+  std::size_t degree = GAUSS_ORDER;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
 
   // Starting indices.
   std::vector<std::size_t> starts;
@@ -45,7 +42,7 @@ Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
   // Local vectors indices.
   std::vector<std::size_t> local_indices;
 
-  for (std::size_t h = 0; h < nqn * nqn; ++h)
+  for (std::size_t h = 0; h < degree * degree; ++h)
     local_indices.emplace_back(h);
 
   // Loop over the elements.
@@ -109,44 +106,39 @@ Solution::Solution(const Mesh &mesh, const Vector<Real> &numerical,
       Vector<Real> local_numerical = phi * numerical(indices);
 
       // Exact solution.
-      Vector<Real> local_exact = exact(physical_x, physical_y);
+      Vector<Real> local_exact = data.c_ex(physical_x, physical_y);
 
       // Writing.
-      this->x(local_indices, physical_x);
-      this->y(local_indices, physical_y);
-      this->numerical(local_indices, local_numerical);
-      this->exact(local_indices, local_exact);
+      this->m_x(local_indices, physical_x);
+      this->m_y(local_indices, physical_y);
+      this->m_numerical(local_indices, local_numerical);
+      this->m_exact(local_indices, local_exact);
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += nqn * nqn;
+        index += degree * degree;
     }
   }
-}
+};
 
 /**
- * @brief Constructs a new Solution object for the heat equation.
+ * @brief Construct a new Heat solution object.
  *
- * @param data Data struct.
- * @param mesh Mesh.
- * @param numerical Numerical solution.
- * @param t Time step.
+ * @param data Heat equation data struct.
+ * @param mesh Mesh struct.
+ * @param numerical numerical solution.
  */
-Solution::Solution(const DataHeat &data, const Mesh &mesh,
-                   const Vector<Real> &numerical, const Real &t)
-    : x{(data.NqnVisualization + 0) * data.NqnVisualization * mesh.entries},
-      y{(data.NqnVisualization + 0) * data.NqnVisualization * mesh.entries},
-      numerical{(data.NqnVisualization + 0) * data.NqnVisualization *
-                mesh.entries},
-      exact{(data.NqnVisualization + 0) * data.NqnVisualization *
-            mesh.entries} {
+void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
+                                      const Heat &heat) {
+#ifndef NVERBOSE
+  std::cout << "Evaluating solutions." << std::endl;
+#endif
 
   // Number of quadrature nodes.
-  std::size_t nqn = data.NqnVisualization;
+  std::size_t degree = GAUSS_ORDER;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
-  auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
 
   // Starting indices.
   std::vector<std::size_t> starts;
@@ -158,7 +150,7 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
   // Local vectors indices.
   std::vector<std::size_t> local_indices;
 
-  for (std::size_t h = 0; h < nqn * nqn; ++h)
+  for (std::size_t h = 0; h < degree * degree; ++h)
     local_indices.emplace_back(h);
 
   // Loop over the elements.
@@ -178,7 +170,6 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
 
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
-
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -220,131 +211,39 @@ Solution::Solution(const DataHeat &data, const Mesh &mesh,
       Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
 
       // Numerical solution.
-      Vector<Real> local_numerical = phi * numerical(indices);
+      Vector<Real> local_numerical = phi * heat.ch()(indices);
 
       // Exact solution.
-      Vector<Real> local_exact = data.c_ex(physical_x, physical_y, t);
+      Vector<Real> local_exact = data.c_ex(physical_x, physical_y, heat.t());
 
       // Writing.
-      this->x(local_indices, physical_x);
-      this->y(local_indices, physical_y);
-      this->numerical(local_indices, local_numerical);
-      this->exact(local_indices, local_exact);
+      this->m_x(local_indices, physical_x);
+      this->m_y(local_indices, physical_y);
+      this->m_numerical(local_indices, local_numerical);
+      this->m_exact(local_indices, local_exact);
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += nqn * nqn;
+        index += degree * degree;
     }
-
-    // Local neighbour indices.
-    /*std::vector<std::size_t> neigh_indices;
-
-    for (std::size_t i = 0; i < nqn+1; i++)
-      neigh_indices.emplace_back(*local_indices.begin() + i);
-
-    // Face integrals.
-
-    // Element's neighbours.
-    std::vector<std::array<int, 3>> element_neighbours = mesh.neighbours[j];
-
-    // Edges.
-    std::vector<Segment> edges{polygon.edges()};
-
-    // Loop over faces.
-    for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
-
-      // Edge geometry.
-      Segment segment{edges[k]};
-
-      // Edge's normal.
-      Vector<Real> edge_vector{2};
-
-      edge_vector[0] = segment[1][0] - segment[0][0];
-      edge_vector[1] = segment[1][1] - segment[0][1];
-
-      Vector<Real> normal_vector{2};
-
-      normal_vector[0] = edge_vector[1];
-      normal_vector[1] = -edge_vector[0];
-
-      normal_vector /= norm(normal_vector);
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = segment[1][0] - segment[0][0];
-      jacobian(0, 1) = 0.5 * (segment[1][0] - segment[0][0]);
-      jacobian(1, 0) = segment[1][1] - segment[0][1];
-      jacobian(1, 1) = 0.5 * (segment[1][1] - segment[0][1]);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = segment[0][0];
-      translation[1] = segment[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_1d.length};
-      Vector<Real> physical_y{nodes_1d.length};
-
-      for (std::size_t l = 0; l < nodes_1d.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_1d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
-
-      // Basis functions.
-      Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
-
-      // Numerical solution.
-      Vector<Real> local_numerical = phi * numerical(indices);
-
-      // Exact solution.
-      Vector<Real> local_exact = data.c_ex(physical_x, physical_y, t);
-
-      // Writing.
-      this->x(neigh_indices, physical_x);
-      this->y(neigh_indices, physical_y);
-      this->numerical(neigh_indices, local_numerical);
-      this->exact(neigh_indices, local_exact);
-
-      // Local indices update.
-      for (auto &index : neigh_indices)
-        index += nqn;
-
-    }
-
-    for (auto &index : local_indices)
-      index += element_neighbours.size() * nqn;*/
   }
-}
+};
 
 /**
- * @brief Constructs a new Solution object for the Fisher-KPP equation.
+ * @brief Construct a new Fisher solution object.
  *
- * @param data Data struct.
- * @param mesh Mesh.
- * @param numerical Numerical solution.
- * @param t Time step.
+ * @param data Fisher equation data struct.
+ * @param mesh Mesh struct.
+ * @param fisher Fisher equation object.
  */
-Solution::Solution(const DataFKPP &data, const Mesh &mesh,
-                   const Vector<Real> &numerical, const Real &t)
-    : x{data.NqnVisualization * data.NqnVisualization * mesh.entries},
-      y{data.NqnVisualization * data.NqnVisualization * mesh.entries},
-      numerical{data.NqnVisualization * data.NqnVisualization * mesh.entries},
-      exact{data.NqnVisualization * data.NqnVisualization * mesh.entries} {
+void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
+                                   const Fisher &fisher) {
 
   // Number of quadrature nodes.
-  std::size_t nqn = data.NqnVisualization;
+  std::size_t degree = GAUSS_ORDER;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
-  auto [nodes_1d, weights_1d] = quadrature_1d(nqn);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
 
   // Starting indices.
   std::vector<std::size_t> starts;
@@ -356,7 +255,7 @@ Solution::Solution(const DataFKPP &data, const Mesh &mesh,
   // Local vectors indices.
   std::vector<std::size_t> local_indices;
 
-  for (std::size_t h = 0; h < nqn * nqn; ++h)
+  for (std::size_t h = 0; h < degree * degree; ++h)
     local_indices.emplace_back(h);
 
   // Loop over the elements.
@@ -417,32 +316,31 @@ Solution::Solution(const DataFKPP &data, const Mesh &mesh,
       Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
 
       // Numerical solution.
-      Vector<Real> local_numerical = phi * numerical(indices);
+      Vector<Real> local_numerical = phi * fisher.ch()(indices);
 
       // Exact solution.
-      Vector<Real> local_exact = data.c_ex(physical_x, physical_y, t);
+      Vector<Real> local_exact = data.c_ex(physical_x, physical_y, fisher.t());
 
       // Writing.
-      this->x(local_indices, physical_x);
-      this->y(local_indices, physical_y);
-      this->numerical(local_indices, local_numerical);
-      this->exact(local_indices, local_exact);
+      this->m_x(local_indices, physical_x);
+      this->m_y(local_indices, physical_y);
+      this->m_numerical(local_indices, local_numerical);
+      this->m_exact(local_indices, local_exact);
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += nqn * nqn;
+        index += degree * degree;
     }
   }
-}
-
-// OUTPUT.
+};
 
 /**
  * @brief Outputs the solution to a .sol file.
  *
  * @param filename Filename.
  */
-void Solution::write(const std::string &filename) {
+void LaplaceSolution::write(const std::string &filename) {
+
   // File loading.
   std::ofstream file{filename};
 
@@ -450,83 +348,14 @@ void Solution::write(const std::string &filename) {
   file << "@ contplot.py readable mesh\n";
   file << "@ Structure: [x, y, numerical(x, y), exact(x, y)].\n";
 
-  for (std::size_t j = 0; j < this->x.length; ++j) {
-    file << this->x[j] << ",";
-    file << this->y[j] << ",";
-    file << this->numerical[j] << ",";
-    file << this->exact[j] << "\n";
+  for (std::size_t j = 0; j < this->m_x.length; ++j) {
+    file << this->m_x[j] << ",";
+    file << this->m_y[j] << ",";
+    file << this->m_numerical[j] << ",";
+    file << this->m_exact[j] << "\n";
   }
 
   file.close();
-}
-
-/**
- * @brief Outputs the solution to a .vtk file
- *
- * @param filename Output file name.
- */
-void Solution::writeVTK(const Mesh &mesh, const std::string &filename) {
-
-  // Open the file.
-  std::ofstream vtkFile{filename};
-
-  // Check if the vtkFile was opened.
-  if (!vtkFile.is_open()) {
-    std::cerr << "Error opening vtkFile " << filename << std::endl;
-    return;
-  }
-
-  // Headers.
-  vtkFile << "# vtk DataFile Version 1.0" << std::endl;
-  vtkFile << "Comment" << std::endl;
-  vtkFile << "ASCII" << std::endl;
-  vtkFile << "DATASET UNSTRUCTURED_GRID" << std::endl;
-
-  // Points.
-  vtkFile << "POINTS " << this->x.length << " float" << std::endl;
-  for (std::size_t j = 0; j < this->x.length; ++j) {
-    vtkFile << this->x[j] << " ";
-    vtkFile << this->y[j] << " ";
-    vtkFile << "0.0" << std::endl;
-  }
-
-  // Cells.
-  size_t numCells = mesh.elements.size();
-  size_t conn = 0;
-
-  for (int i = 0; i < numCells; i++)
-    conn += mesh.elements[i].edges.size();
-
-  conn += numCells;
-
-  vtkFile << "POLYGONS " << numCells << " " << conn << std::endl;
-  // Loop over the cells.
-  for (int i = 0; i < numCells; i++) {
-    std::vector<std::array<int, 3>> element_neighbours = mesh.neighbours[i];
-    vtkFile << element_neighbours.size() << " ";
-
-    for (int k = 0; k < element_neighbours.size(); k++)
-      vtkFile << element_neighbours[k][1] << " ";
-
-    vtkFile << std::endl;
-  }
-
-  // Cell types.
-  vtkFile << "CELL_TYPES " << numCells << std::endl;
-  for (std::size_t j = 0; j < numCells; ++j) {
-    vtkFile << "7" << std::endl;
-  }
-
-  // Point data.
-  vtkFile << "POINT_DATA " << this->x.length << std::endl;
-  vtkFile << "SCALARS " << "c_h " << "float 1" << std::endl;
-  vtkFile << "LOOKUP_TABLE default" << std::endl;
-
-  for (std::size_t j = 0; j < this->x.length; ++j)
-    vtkFile << this->numerical[j] << std::endl;
-
-  // Closing the file.
-  vtkFile.close();
-}
+};
 
 } // namespace pacs

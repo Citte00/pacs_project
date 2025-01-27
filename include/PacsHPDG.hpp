@@ -15,12 +15,8 @@
 #include "./PacsHPDG/Base.hpp"
 #include "./PacsHPDG/Data.hpp"
 #include "./PacsHPDG/Errors.hpp"
-#include "./PacsHPDG/Estimators.hpp"
 #include "./PacsHPDG/Fem.hpp"
-#include "./PacsHPDG/Fisher.hpp"
 #include "./PacsHPDG/Geometry.hpp"
-#include "./PacsHPDG/Heat.hpp"
-#include "./PacsHPDG/Laplacian.hpp"
-#include "./PacsHPDG/Statistics.hpp"
+#include "./PacsHPDG/Solvers.hpp"
 
 #endif

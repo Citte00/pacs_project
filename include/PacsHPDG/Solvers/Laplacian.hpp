@@ -1,15 +1,15 @@
 /**
  * @file Laplacian.hpp
- * @author Andrea Di Antonio (github.com/diantonioandrea)
- * @brief
- * @date 2024-05-08
+ * @author Lorenzo Citterio (github.com/Citte00)
+ * @brief Laplace equation class.
+ * @date 2025-01-14
  *
- * @copyright Copyright (c) 2024
+ * @copyright Copyright (c) 2025
  *
  */
 
-#ifndef LAPLACIAN_MATRIX__PACS
-#define LAPLACIAN_MATRIX__PACS
+#ifndef INCLUDE_PACSHPDG_SOLVERS_LAPLACIAN_HPP
+#define INCLUDE_PACSHPDG_SOLVERS_LAPLACIAN_HPP
 
 #include "../Algebra.hpp"
 #include "../Base.hpp"
@@ -20,7 +20,7 @@
 namespace pacs {
 
 class Laplace {
-private:
+protected:
   Sparse<Real> m_mass, m_stiff, m_dg_stiff;
 
 public:
@@ -36,16 +36,17 @@ public:
 
   // METHODS.
   // Blocks.
-  std::vector<std::array<std::vector<std::size_t>, 2>> block_mass(const Mesh &) const;
+  std::vector<std::array<std::vector<std::size_t>, 2>>
+  block_mass(const Mesh &) const;
   // Assembly the laplace system matrix.
   void assembly(const DataLaplace &, const Mesh &);
   // Assembly the forcing term.
-  Vector<Real> forcing(const DataLaplace &, const Mesh &);
+  Vector<Real> assembly_force(const DataLaplace &, const Mesh &) const;
   // Solver of the Laplace equation.
-  Vector<Real> lapsolver(const Mesh &, const Vector<Real> &,
-                         const Real &TOL = 1E-15);
+  Vector<Real> solver(const Mesh &, const Vector<Real> &,
+                      const Real &TOL = 1E-15) const;
   // Get functions modal coefficients.
-  Vector<Real> modal(const Mesh &, const BiFunctor &);
+  Vector<Real> modal(const Mesh &, const BiFunctor &) const;
 };
 } // namespace pacs
 

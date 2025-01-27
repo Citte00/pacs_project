@@ -42,4 +42,6 @@ int main() {
     std::cout << first << std::endl;
     std::cout << second << std::endl;
 
+    first.resize(10);
+    std::cout << first << std::endl;
 }
