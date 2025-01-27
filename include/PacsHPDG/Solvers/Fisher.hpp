@@ -17,7 +17,7 @@ namespace pacs {
 
 class Fisher : public Heat {
 protected:
-// Non-linear matrix.
+  // Non-linear matrix.
   Sparse<Real> m_nl_mass;
   Vector<Real> m_ch_old;
 
@@ -46,12 +46,13 @@ public:
   // Assembly the fisher equation system matrices.
   void assembly(const DataFKPP &, const Mesh &);
   // Assembly the non-linear term.
-  Sparse<Real> assembly_nl(const DataFKPP &, const Mesh &, const Vector<Real> &);
+  Sparse<Real> assembly_nl(const DataFKPP &, const Mesh &,
+                           const Vector<Real> &);
   // Assembly the forcing term.
   void assembly_force(const DataFKPP &, const Mesh &);
   // Solver of the Heat equation.
   Vector<Real> solver(const DataFKPP &, const Mesh &, const Vector<Real> &,
-              const Vector<Real> &, const Real &TOL = 1E-15);
+                      const Vector<Real> &, const Real &TOL = 1E-15);
   // Get source function modal coefficient.
   Vector<Real> modal_source(const DataFKPP &, const Mesh &) const;
 };

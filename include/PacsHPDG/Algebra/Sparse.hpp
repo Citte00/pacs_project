@@ -497,14 +497,6 @@ struct Sparse {
       this->values.resize(rows * columns, 0.0);
     }
   };
-
-  void clear() {
-    if (this->compressed) {
-      std::fill(this->inner.begin(), this->inner.end(), 0.0);
-      this->outer.resize(rows * columns, 0.0);
-      this->values.resize(rows * columns, 0.0);
-    }
-  }
   
   /**
    * @brief Returns the transpose Sparse matrix.

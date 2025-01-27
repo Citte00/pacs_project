@@ -22,6 +22,12 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
   std::cout << "Computing the Fisher-KPP matrices." << std::endl;
 #endif
 
+  // Reshaping matrices.
+  this->m_mass.reshape(mesh.dofs(), mesh.dofs());
+  this->m_stiff.reshape(mesh.dofs(), mesh.dofs());
+  this->m_dg_stiff.reshape(mesh.dofs(), mesh.dofs());
+  this->m_nl_mass.reshape(mesh.dofs(), mesh.dofs());
+
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),

@@ -88,42 +88,9 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
 
-      // Triangle.
-      Polygon triangle = triangles[k];
-
-      // Jacobian.
-      Matrix<Real> jacobian{2, 2};
-
-      jacobian(0, 0) = triangle.points[1][0] - triangle.points[0][0];
-      jacobian(0, 1) = triangle.points[2][0] - triangle.points[0][0];
-      jacobian(1, 0) = triangle.points[1][1] - triangle.points[0][1];
-      jacobian(1, 1) = triangle.points[2][1] - triangle.points[0][1];
-
-      // Jacobian's determinant.
-      Real jacobian_det =
-          jacobian(0, 0) * jacobian(1, 1) - jacobian(0, 1) * jacobian(1, 0);
-
-      // Translation.
-      Vector<Real> translation{2};
-
-      translation[0] = triangle.points[0][0];
-      translation[1] = triangle.points[0][1];
-
-      // Physical nodes.
-      Vector<Real> physical_x{nodes_x_2d.length};
-      Vector<Real> physical_y{nodes_y_2d.length};
-
-      for (std::size_t l = 0; l < physical_x.length; ++l) {
-        Vector<Real> node{2};
-
-        node[0] = nodes_x_2d[l];
-        node[1] = nodes_y_2d[l];
-
-        Vector<Real> transformed = jacobian * node + translation;
-
-        physical_x[l] = transformed[0];
-        physical_y[l] = transformed[1];
-      }
+      // Jacobian's determinant and physical nodes.
+      auto [jacobian_det, physical_x, physical_y] =
+          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;

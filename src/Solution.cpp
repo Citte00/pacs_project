@@ -27,7 +27,7 @@ namespace pacs {
 void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
 
   // Number of quadrature nodes.
-  std::size_t nqn = data.NqnVisualization;
+  std::size_t nqn = GAUSS_ORDER;
 
   // Quadrature nodes.
   auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
@@ -40,7 +40,7 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices(nqn*nqn);
+  std::vector<std::size_t> local_indices(nqn * nqn);
 
   for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices[h] = h;
@@ -113,7 +113,7 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += nqn * nqn;
+        index += degree * degree;
     }
   }
 };
@@ -321,7 +321,7 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += nqn * nqn;
+        index += degree * degree;
     }
   }
 };

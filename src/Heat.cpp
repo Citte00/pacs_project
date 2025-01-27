@@ -37,10 +37,14 @@ void Heat::initialize(const Mesh &mesh) {
  * @return std::array<Sparse<Real>, 3>
  */
 void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
-void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 #ifndef NVERBOSE
   std::cout << "Computing the Heat equation matrices." << std::endl;
 #endif
+
+  // Reshaping matrices.
+  this->m_mass.reshape(mesh.dofs(), mesh.dofs());
+  this->m_stiff.reshape(mesh.dofs(), mesh.dofs());
+  this->m_dg_stiff.reshape(mesh.dofs(), mesh.dofs());
 
   // Number of quadrature nodes.
   std::size_t num_elements = mesh.elements.size();
@@ -102,7 +106,6 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 
       // Param initialization.
       Vector<Real> D_ext = data.D_ext(physical_x, physical_y, 0.0);
-      Vector<Real> D_ext = data.D_ext(physical_x, physical_y, 0.0);
 
       // Basis functions.
       auto [phi, gradx_phi, grady_phi] =
@@ -149,7 +152,6 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 
     // Penalties.
     Vector<Real> penalties = penalty(mesh, j, data.penalty_coeff);
-    Vector<Real> penalties = penalty(mesh, j, data.penalty_coeff);
 
     // Edges.
     std::vector<Segment> edges{polygon.edges()};
@@ -171,7 +173,6 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
       Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
 
       // Param initialization.
-      Vector<Real> D_ext = data.D_ext(physical_x, physical_y, 0.0);
       Vector<Real> D_ext = data.D_ext(physical_x, physical_y, 0.0);
 
       // Basis functions.

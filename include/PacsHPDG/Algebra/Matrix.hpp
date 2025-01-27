@@ -7,6 +7,7 @@
  * @copyright Copyright (c) 2025
  * 
  */
+
 #ifndef INCLUDE_PACSHPDG_ALGEBRA_MATRIX_HPP
 #define INCLUDE_PACSHPDG_ALGEBRA_MATRIX_HPP
 

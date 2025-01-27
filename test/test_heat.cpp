@@ -1,22 +1,16 @@
 /**
  * @file test_heat.cpp
- * @file test_heat.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief
  * @brief
  * @date 2024-11-26
  *
- *
  * @copyright Copyright (c) 2024
- *
  *
  */
 #include <PacsHPDG.hpp>
 
 #include <fstream>
 #include <iomanip>
-#include <iostream>
-#include <string>
 #include <iostream>
 #include <string>
 

@@ -10,8 +10,8 @@
 #ifndef INCLUDE_PACSHPDG_ERRORS_HPP
 #define INCLUDE_PACSHPDG_ERRORS_HPP
 
-// Laplace equation errors evaluation.
-#include "./Errors/LaplaceError.hpp"
+// Error estimator.
+#include "./Errors/Estimators.hpp"
 
 // Error estimator.
 #include "./Errors/Estimators.hpp"
