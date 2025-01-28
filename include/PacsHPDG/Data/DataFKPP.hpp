@@ -24,21 +24,23 @@ struct DataFKPP {
 
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
-  int N = 300;
+  int elements = 125;
   bool meshFromFile = true;
   std::string VTKMeshFileName = "Mesh.vtk";
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Material properties
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
       [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
-    GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> alpha =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> alpha =
       [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
 
   // Forcing Term
   bool homog_source_f = false;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>
-      source_f = [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D, Vector<Real> alpha) {
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>,
+           Vector<Real>>
+      source_f = [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D,
+                    Vector<Real> alpha) {
         Vector<Real> result{x.size()};
 
         for (size_t i = 0; i < x.size(); i++)
@@ -51,7 +53,7 @@ struct DataFKPP {
       };
 
   // Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -65,7 +67,7 @@ struct DataFKPP {
       };
 
   // Gradients of the Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -76,7 +78,7 @@ struct DataFKPP {
         return result;
       };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -87,7 +89,7 @@ struct DataFKPP {
         return result;
       };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.size()};
 
@@ -99,12 +101,12 @@ struct DataFKPP {
       };
 
   // Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
 
   // Time discretization
   Real t_0 = 0.0;
@@ -113,26 +115,12 @@ struct DataFKPP {
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 2;
+  size_t degree = 3;
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  bool PlotExact = true;
-  bool PlotGridSol = true;
-  bool PlotIniCond = true;
   int VisualizationStep = 10;
   int NqnVisualization = 5;
-
-  // p-adaptivity
-  bool isAdaptive = true;
-  std::string p_adaptive = "eta";
-  double grad_threshold = -INFINITY;
-  double eta_threshold = -INFINITY;
-  double error_threshold = -INFINITY;
-
-  // Save solution settings
-  double SaveSolutionStep = 0.05;
-  std::string VTKpFileName = "Distribution_p_" + std::to_string(degree) + "_t_";
 };
 
 } // namespace pacs

@@ -14,6 +14,7 @@
 #include <vector>
 #include <complex>
 #include <cmath>
+#include <functional>
 #include <type_traits>
 #include <omp.h>
 
@@ -102,11 +103,14 @@ namespace pacs {
     using Real = long double;
 
     /**
-     * @brief Function alias.
+     * @brief Function variadic template alias.
      * 
+     * @tparam ReturnType Type to return from the function.
+     * @tparam Params Parameters to pass to the function.
      */
-    using Function = Real (*) (const Real &, const Real &);
-    
+    template <typename ReturnType, typename... Params>
+    using Function = std::function<ReturnType(Params...)>;
+
     /**
      * @brief Mask alias.
      * 

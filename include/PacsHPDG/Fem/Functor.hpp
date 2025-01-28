@@ -1,11 +1,11 @@
 /**
  * @file Functor.hpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief Template Functor class.
- * @date 2024-11-27
- *
- * @copyright Copyright (c) 2024
- *
+ * @brief Variadic template wrapper class for functions.
+ * @date 2025-01-28
+ * 
+ * @copyright Copyright (c) 2025
+ * 
  */
 #ifndef INCLUDE_PACSHPDG_FEM_FUNCTOR_HPP
 #define INCLUDE_PACSHPDG_FEM_FUNCTOR_HPP
@@ -16,32 +16,22 @@
 namespace pacs {
 
 /**
- * @brief Function template alias.
- *
- * @tparam ResultType
- * @tparam Params
- */
-template <typename ResultType, typename... Params>
-using GenFunc = std::function<ResultType(Params...)>;
-
-/**
- * @brief General Functor class.
+ * @brief Variadic template Functor class.
  *
  */
-template <typename ResultType, typename... Args> class GeneralFunctor {
+template <typename ResultType, typename... Args> class Functor {
 private:
   // Function.
-  GenFunc<ResultType, Args...> m_function;
+  Function<ResultType, Args...> m_function;
 
 public:
   // CONSTRUCTORS.
-  GeneralFunctor() : m_function{} {};
-  explicit GeneralFunctor(const GenFunc<ResultType, Args...> &function_)
+  Functor() : m_function{} {};
+  explicit Functor(const Function<ResultType, Args...> &function_)
       : m_function{function_} {};
   template <typename Callable, typename = std::enable_if_t<!std::is_same_v<
-                                   std::decay_t<Callable>, GeneralFunctor>>>
-  GeneralFunctor(Callable &&callable)
-      : m_function{std::forward<Callable>(callable)} {}
+                                   std::decay_t<Callable>, Functor>>>
+  Functor(Callable &&callable) : m_function{std::forward<Callable>(callable)} {}
 
   // EVALUATION.
   ResultType operator()(const Args &...args) const {
@@ -56,24 +46,24 @@ public:
 };
 
 /**
- * @brief General TwoFunctor class.
+ * @brief Variadic template TwoFunctor class.
  *
  */
-template <typename ResultType, typename... Args> class GeneralTwoFunctor {
+template <typename ResultType, typename... Args> class TwoFunctor {
 private:
   // Functions.
-  GenFunc<ResultType, Args...> m_first;
-  GenFunc<ResultType, Args...> m_second;
+  Function<ResultType, Args...> m_first;
+  Function<ResultType, Args...> m_second;
 
 public:
   // CONSTRUCTORS.
-  GeneralTwoFunctor() : m_first{}, m_second{} {};
-  explicit GeneralTwoFunctor(const GenFunc<ResultType, Args...> &first_,
-                             const GenFunc<ResultType, Args...> &second_)
+  TwoFunctor() : m_first{}, m_second{} {};
+  explicit TwoFunctor(const Function<ResultType, Args...> &first_,
+                      const Function<ResultType, Args...> &second_)
       : m_first{first_}, m_second{second_} {};
   template <typename Callable, typename = std::enable_if_t<!std::is_same_v<
-                                   std::decay_t<Callable>, GeneralTwoFunctor>>>
-  GeneralTwoFunctor(Callable &&callable_f, Callable &&callable_s)
+                                   std::decay_t<Callable>, TwoFunctor>>>
+  TwoFunctor(Callable &&callable_f, Callable &&callable_s)
       : m_first{std::forward<Callable>(callable_f)},
         m_second{std::forward<Callable>(callable_s)} {}
 
@@ -90,16 +80,15 @@ public:
 };
 
 // Some functor.
-using BiFunctor = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>>;
-using TriFunctor =
-    GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
-using FKPPSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>,
-                                  Real, Vector<Real>, Vector<Real>>;
-using HeatSource = GeneralFunctor<Vector<Real>, Vector<Real>, Vector<Real>,
-                                  Real, Vector<Real>>;
+using BiFunctor = Functor<Vector<Real>, Vector<Real>, Vector<Real>>;
+using TriFunctor = Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+using FKPPSource = Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real,
+                           Vector<Real>, Vector<Real>>;
+using HeatSource =
+    Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>;
 using TriTwoFunctor =
-    pacs::GeneralTwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>,
-                            pacs::Vector<pacs::Real>, pacs::Real>;
+    TwoFunctor<pacs::Vector<pacs::Real>, pacs::Vector<pacs::Real>,
+               pacs::Vector<pacs::Real>, pacs::Real>;
 
 } // namespace pacs
 

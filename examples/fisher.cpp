@@ -16,8 +16,11 @@
 
 int main(int argc, char **argv) {
 
+  // To save typing the full qualified names.
+  using namespace pacs;
+
   // Retrieve problem data from structure.
-  pacs::DataFKPP data;
+  DataFKPP data;
 
   std::ofstream output{"output/square_fisher_" + std::to_string(data.degree) +
                        ".error"};
@@ -30,34 +33,34 @@ int main(int argc, char **argv) {
             << std::endl;
 
   // Domain.
-  pacs::Polygon domain{data.domain};
+  Polygon domain{data.domain};
 
   // Diagrams.
-  std::vector<std::vector<pacs::Polygon>> diagrams;
+  std::vector<std::vector<Polygon>> diagrams;
 
-  diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_125.poly"));
-  diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_250.poly"));
-  diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_500.poly"));
-  diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_1000.poly"));
-  diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_2000.poly"));
-  diagrams.emplace_back(pacs::mesh_diagram("meshes/square/square_4000.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_125.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_250.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_500.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_1000.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_2000.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_4000.poly"));
 
   // Test.
   for (std::size_t j = 0; j < diagrams.size(); ++j) {
 
     // Mesh.
-    pacs::Mesh mesh{domain, diagrams[j], data.degree};
+    Mesh mesh{domain, diagrams[j], data.degree};
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Errors.
-    pacs::FisherError error(mesh);
+    FisherError error(mesh);
 
     // Matrices.
-    pacs::Fisher fisher(data, mesh);
+    Fisher fisher(data, mesh);
     fisher.assembly(data, mesh);
 
     // Initial condition.
-    pacs::Vector<pacs::Real> ch_oold = fisher.modal(mesh, data.c_ex);
+    Vector<Real> ch_oold = fisher.modal(mesh, data.c_ex);
     fisher.t() += data.dt;
     fisher.ch_old() = fisher.modal(mesh, data.c_ex);
 
@@ -72,7 +75,7 @@ int main(int argc, char **argv) {
       std::cout << "TIME: " << fisher.t() << std::endl;
 
       // Update forcing term.
-      pacs::Vector<pacs::Real> F_old = fisher.forcing();
+      Vector<Real> F_old = fisher.forcing();
       fisher.assembly_force(data, mesh);
 
       // Linear system equation solution.
@@ -88,7 +91,7 @@ int main(int argc, char **argv) {
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-    pacs::FisherSolution solution{mesh};
+    FisherSolution solution{mesh};
     solution.computeSolution(data, mesh, fisher);
     std::string solfile = "output/square_s_" + std::to_string(data.degree) +
                           "_" + std::to_string(j) + ".sol";
@@ -99,9 +102,9 @@ int main(int argc, char **argv) {
     output << "\n" << error << "\n";
 
     output << "Residual: "
-           << pacs::norm(fisher.M() * fisher.ch() + fisher.A() * fisher.ch() +
-                         fisher.M_alpha() * fisher.ch() * (1 - fisher.ch()) -
-                         fisher.forcing())
+           << norm(fisher.M() * fisher.ch() + fisher.A() * fisher.ch() +
+                   fisher.M_alpha() * fisher.ch() * (1 - fisher.ch()) -
+                   fisher.forcing())
            << std::endl;
   }
 }
