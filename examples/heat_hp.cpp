@@ -17,8 +17,11 @@
 
 int main(int argc, char **argv) {
 
+  // To save typing the full qualified names.
+  using namespace pacs;
+
   // Retrieve problem data from structure.
-  pacs::DataHeat data;
+  DataHeat data;
 
   std::ofstream output{"output/square_heat_hp_" + std::to_string(data.degree) +
                        ".error"};
@@ -34,21 +37,21 @@ int main(int argc, char **argv) {
             << std::endl;
 
   // Domain.
-  pacs::Polygon domain{data.domain};
+  Polygon domain{data.domain};
 
   // Diagrams.
-  std::vector<pacs::Polygon> diagram =
-      pacs::mesh_diagram("meshes/square/square_125.poly");
+  std::vector<Polygon> diagram = mesh_diagram(
+      "meshes/square/square_" + std::to_string(data.elements) + ".poly");
 
   // Mesh.
-  pacs::Mesh mesh{domain, diagram, data.degree};
+  Mesh mesh{domain, diagram, data.degree};
 
   // Matrices.
-  pacs::Heat heat(mesh);
+  Heat heat(mesh);
   heat.assembly(data, mesh);
 
   // Initial condition.
-  pacs::Vector<pacs::Real> ch_old = heat.modal(mesh, data.c_ex);
+  Vector<Real> ch_old = heat.modal(mesh, data.c_ex);
 
   // Forcing term.
   heat.assembly_force(data, mesh);
@@ -63,14 +66,14 @@ int main(int argc, char **argv) {
     std::cout << "TIME: " << heat.t() << std::endl;
 
     // Update forcing term.
-    pacs::Vector<pacs::Real> F_old = heat.forcing();
+    Vector<Real> F_old = heat.forcing();
     heat.assembly_force(data, mesh);
 
     // Linear system equation solution.
     heat.solver(data, mesh, ch_old, F_old);
 
     // Errors.
-    pacs::HeatError error(mesh);
+    HeatError error(mesh);
 
     // Compute error.
     error.computeErrors(data, mesh, heat);
@@ -80,13 +83,13 @@ int main(int argc, char **argv) {
       output << "\n" << error << "\n";
 
       output << "Residual: "
-             << pacs::norm(heat.M() * heat.ch() + heat.A() * heat.ch() -
-                           heat.forcing())
+             << norm(heat.M() * heat.ch() + heat.A() * heat.ch() -
+                     heat.forcing())
              << std::endl;
     }
 
     // Compute estimates.
-    pacs::HeatEstimator estimates(mesh);
+    HeatEstimator estimates(mesh);
     estimates.computeEstimates(data, heat, ch_old);
     estimates.write(outputVTK, true);
 
@@ -102,7 +105,7 @@ int main(int argc, char **argv) {
 
     // Update solution.
     ch_old.resize(heat.ch().length);
-    ch_old = pacs::solve(heat.M(), heat.ch(), blocks, pacs::DB);
+    ch_old = solve(heat.M(), heat.ch(), blocks, DB);
 
     // Update forcing.
     heat.forcing().resize(mesh.dofs());
@@ -113,7 +116,7 @@ int main(int argc, char **argv) {
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-  pacs::HeatSolution solution{mesh};
+  HeatSolution solution{mesh};
   solution.computeSolution(data, mesh, heat);
   std::string solfile =
       "output/square_s_" + std::to_string(data.degree) + ".sol";

@@ -30,9 +30,8 @@ struct DataLaplace {
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Forcing Term
-  bool homog_source_f = false;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>>
-      source_f = [](Vector<Real> x, Vector<Real> y) {
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> source_f =
+      [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.size()};
 
         for (size_t i = 0; i < x.size(); i++)
@@ -43,7 +42,7 @@ struct DataLaplace {
       };
 
   // Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.size()};
 
@@ -55,7 +54,7 @@ struct DataLaplace {
       };
 
   // Gradients of the Boundary Conditions
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dx =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dx =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.size()};
 
@@ -66,7 +65,7 @@ struct DataLaplace {
         return result;
       };
 
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dy =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dy =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.size()};
 
@@ -78,11 +77,11 @@ struct DataLaplace {
       };
 
   // Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> c_ex = DirBC;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> dc_dx_ex = DirBC_dx;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> dc_dy_ex = DirBC_dy;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dx_ex = DirBC_dx;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dy_ex = DirBC_dy;
   
   // Space discretization
   size_t degree = 2;
@@ -90,10 +89,6 @@ struct DataLaplace {
 
   int VisualizationStep = 10;
   int NqnVisualization = 5;
-
-  // Save solution settings
-  double SaveSolutionStep = 0.05;
-  std::string VTKpFileName = "Distribution_p_" + std::to_string(degree) + "_t_";
 };
 
 } // namespace pacs

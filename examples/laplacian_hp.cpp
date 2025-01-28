@@ -16,8 +16,11 @@
 
 int main(int argc, char **argv) {
 
+  // To save typing the full qualified names.
+  using namespace pacs;
+
   // Retrieve problem data from structure.
-  pacs::DataLaplace data;
+  DataLaplace data;
 
   // "Splash".
   std::ofstream output{"output/square_hp_" + std::to_string(data.elements) +
@@ -31,14 +34,14 @@ int main(int argc, char **argv) {
             << std::endl;
 
   // Domain.
-  pacs::Polygon domain{data.domain};
+  Polygon domain{data.domain};
 
   // Diagram.
-  std::vector<pacs::Polygon> diagram = pacs::mesh_diagram(
+  std::vector<Polygon> diagram = mesh_diagram(
       "meshes/square/square_" + std::to_string(data.elements) + ".poly");
 
   // Mesh.
-  pacs::Mesh mesh{domain, diagram, data.degree};
+  Mesh mesh{domain, diagram, data.degree};
 
   // Sequence of meshes.
   for (std::size_t index = 0; index < TESTS_MAX; ++index) {
@@ -55,18 +58,18 @@ int main(int argc, char **argv) {
     mesh.write(polyfile, true);
 
     // Matrices.
-    pacs::Laplace laplacian(mesh);
+    Laplace laplacian(mesh);
     laplacian.assembly(data, mesh);
 
     // Forcing term.
-    pacs::Vector<pacs::Real> forcing = laplacian.assembly_force(data, mesh);
+    Vector<Real> forcing = laplacian.assembly_force(data, mesh);
 
     // Linear system solution.
-    pacs::Vector<pacs::Real> numerical = laplacian.solver(mesh, forcing);
+    Vector<Real> numerical = laplacian.solver(mesh, forcing);
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-    pacs::LaplaceSolution solution{mesh};
+    LaplaceSolution solution{mesh};
     solution.computeSolution(data, mesh, numerical);
     std::string solfile = "output/square_hp_" + std::to_string(data.elements) +
                           "@" + std::to_string(data.degree) + "_" +
@@ -75,7 +78,7 @@ int main(int argc, char **argv) {
 #endif
 
     // Errors.
-    pacs::LaplaceError error(mesh);
+    LaplaceError error(mesh);
     error.computeErrors(data, mesh, laplacian, numerical);
 
     // Output.
@@ -83,7 +86,7 @@ int main(int argc, char **argv) {
 
     output << "Laplacian: " << laplacian.A().rows << " x "
            << laplacian.A().columns << "\n";
-    output << "Residual: " << pacs::norm(laplacian.A() * numerical - forcing)
+    output << "Residual: " << norm(laplacian.A() * numerical - forcing)
            << std::endl;
 
     // Exit.
@@ -91,7 +94,7 @@ int main(int argc, char **argv) {
       break;
 
     // Estimator.
-    pacs::LaplaceEstimator estimator(mesh);
+    LaplaceEstimator estimator(mesh);
     estimator.computeEstimates(data, laplacian, numerical);
 
     // Refinement.

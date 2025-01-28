@@ -15,7 +15,6 @@
 
 #include "../Algebra.hpp"
 #include "../Base.hpp"
-#include "../Fem.hpp"
 #include "../Geometry.hpp"
 
 namespace pacs {
@@ -29,18 +28,18 @@ struct DataHeat {
 
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
-  int N = 300;
+  int elements = 125;
   bool meshFromFile = true;
   std::string VTKMeshFileName = "Mesh.vtk";
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Material properties
-  SpatialTemporalFunction D_ext =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
       [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
 
   // Forcing Term
   bool homog_source_f = false;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>
       source_f = [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D) {
         Vector<Real> result{x.length};
 
@@ -54,7 +53,7 @@ struct DataHeat {
       };
 
   // Boundary Conditions
-  SpatialTemporalFunction DirBC =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -68,8 +67,9 @@ struct DataHeat {
       };
 
   // Gradients of the Boundary Conditions
-  SpatialTemporalFunction DirBC_dx = [](Vector<Real> x, Vector<Real> y, Real t) {
-    Vector<Real> result{x.length};
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
+      [](Vector<Real> x, Vector<Real> y, Real t) {
+        Vector<Real> result{x.size()};
 
     for (size_t i = 0; i < x.length; i++)
       result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
@@ -78,8 +78,9 @@ struct DataHeat {
     return result;
   };
 
-  SpatialTemporalFunction DirBC_dy = [](Vector<Real> x, Vector<Real> y, Real t) {
-    Vector<Real> result{x.length};
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
+      [](Vector<Real> x, Vector<Real> y, Real t) {
+        Vector<Real> result{x.size()};
 
     for (size_t i = 0; i < x.length; i++)
       result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
@@ -88,7 +89,7 @@ struct DataHeat {
     return result;
   };
 
-  SpatialFunction DirBC_dt =
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.length};
 
@@ -100,12 +101,12 @@ struct DataHeat {
       };
 
   // Exact Solution
-  SpatialTemporalFunction c_ex = DirBC;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  SpatialTemporalFunction dc_dx_ex = DirBC_dx;
-  SpatialTemporalFunction dc_dy_ex = DirBC_dy;
-  GenFunc<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
+  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
 
   // Time discretization
   Real t_0 = 0.0;
@@ -118,15 +119,8 @@ struct DataHeat {
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  bool PlotExact = true;
-  bool PlotGridSol = true;
-  bool PlotIniCond = true;
-  int VisualizationStep = 1;
+  int VisualizationStep = 10;
   int NqnVisualization = 5;
-
-  // Save solution settings
-  double SaveSolutionStep = 0.05;
-  std::string VTKpFileName = "Distribution_p_" + std::to_string(degree) + "_t_";
 };
 
 } // namespace pacs
