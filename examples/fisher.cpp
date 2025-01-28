@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   // Diagrams.
   std::vector<std::vector<Polygon>> diagrams;
 
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_300.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_125.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_250.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_500.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_1000.poly"));

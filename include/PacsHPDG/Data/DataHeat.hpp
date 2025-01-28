@@ -28,7 +28,7 @@ struct DataHeat {
 
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
-  int elements = 300;
+  int elements = 125;
   bool meshFromFile = true;
   std::string VTKMeshFileName = "Mesh.vtk";
   std::string meshFileSeq = "meshes/square/square_300.poly";
