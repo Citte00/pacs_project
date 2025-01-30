@@ -39,12 +39,11 @@ void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, cons
   this->m_l2_error = std::sqrt(dot(error, mass * error));
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
@@ -71,15 +70,11 @@ void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, cons
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -130,7 +125,7 @@ void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, cons
  * @param heat Heat equation object.
  */
 void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
-                                 const Heat &heat) {
+                                 const Heat &heat, const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating errors." << std::endl;
 #endif
@@ -142,7 +137,7 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
   // Error vector.
   Vector<Real> u_modals = heat.modal(mesh, data.c_ex);
 
-  Vector<Real> error = u_modals - heat.ch();
+  Vector<Real> error = u_modals - ch;
 
   // DG Error.
   this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
@@ -151,12 +146,11 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
   this->m_l2_error = std::sqrt(dot(error, mass * error));
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
@@ -183,15 +177,11 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -215,11 +205,11 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
 
       // Solutions.
       Vector<Real> u = data.c_ex(physical_x, physical_y, heat.t());
-      Vector<Real> uh = phi * heat.ch()(indices);
+      Vector<Real> uh = phi * ch(indices);
 
       Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y, heat.t()) +
                             data.dc_dy_ex(physical_x, physical_y, heat.t());
-      Vector<Real> grad_uh = (gradx_phi + grady_phi) * heat.ch()(indices);
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch(indices);
 
       // Local L2 error.
       this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
@@ -242,7 +232,7 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
  * @param fisher Fisher equation object.
  */
 void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
-                              const Fisher &fisher) {
+                                const Fisher &fisher, const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating errors." << std::endl;
 #endif
@@ -254,7 +244,7 @@ void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
   // Error vector.
   Vector<Real> u_modals = fisher.modal(mesh, data.c_ex);
 
-  Vector<Real> error = u_modals - fisher.ch();
+  Vector<Real> error = u_modals - ch;
 
   // DG Error.
   this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
@@ -266,12 +256,11 @@ void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
   this->m_energy += data.dt * this->m_dg_error * this->m_dg_error;
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
@@ -298,15 +287,11 @@ void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -330,11 +315,11 @@ void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
 
       // Solutions.
       Vector<Real> u = data.c_ex(physical_x, physical_y, fisher.t());
-      Vector<Real> uh = phi * fisher.ch()(indices);
+      Vector<Real> uh = phi * ch(indices);
 
       Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y, fisher.t()) +
                             data.dc_dy_ex(physical_x, physical_y, fisher.t());
-      Vector<Real> grad_uh = (gradx_phi + grady_phi) * fisher.ch()(indices);
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch(indices);
 
       // Local L2 error.
       this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));

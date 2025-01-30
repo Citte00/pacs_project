@@ -11,6 +11,16 @@
 
 namespace pacs {
 
+void Laplace::initialize(const Mesh &mesh) { 
+  // Dofs.
+  std::size_t dofs = mesh.dofs();
+  
+  // Reshape matrices.
+  m_mass.reshape(dofs, dofs);
+  m_stiff.reshape(dofs, dofs);
+  m_dg_stiff.reshape(dofs, dofs);
+};
+
 /**
  * @brief Returns the matrix for the Laplacian operator.
  *
@@ -59,17 +69,12 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   starts.reserve(mesh.elements.size());
   starts.emplace_back(0);
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
-
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Volume integrals.
-
 // Loop over the elements.
 #pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
@@ -77,22 +82,13 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
     std::vector<std::size_t> indices;
     indices.reserve(element_dofs);
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -105,11 +101,8 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local matrices.
-    Matrix<Real> local_M{element_dofs, element_dofs};
-    Matrix<Real> local_A{element_dofs, element_dofs};
-    // Local matrices.
-    Matrix<Real> local_M{element_dofs, element_dofs};
-    Matrix<Real> local_A{element_dofs, element_dofs};
+    Matrix<Real> local_M{indices.size(), indices.size()};
+    Matrix<Real> local_A{indices.size(), indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -164,11 +157,8 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     // Face integrals.
 
     // Local matrices.
-    Matrix<Real> local_IA{element_dofs, element_dofs};
-    Matrix<Real> local_SA{element_dofs, element_dofs};
-    // Local matrices.
-    Matrix<Real> local_IA{element_dofs, element_dofs};
-    Matrix<Real> local_SA{element_dofs, element_dofs};
+    Matrix<Real> local_IA{indices.size(), indices.size()};
+    Matrix<Real> local_SA{indices.size(), indices.size()};
 
     // Element's neighbours.
     std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
@@ -318,9 +308,12 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   }
 
   // Matrices.
-  this->m_mass = M;
-  this->m_dg_stiff = A + SA;
-  this->m_stiff = m_dg_stiff - IA - IA.transpose();
+  this->m_mass = std::move(M);
+  this->m_dg_stiff = std::move(A);
+  this->m_dg_stiff += SA;
+  this->m_stiff = std::move(this->m_dg_stiff);
+  this->m_stiff -= IA;
+  this->m_stiff -= IA.transpose();
 
   // Compression.
   this->m_mass.compress();
@@ -347,19 +340,17 @@ Laplace::block_mass(const Mesh &mesh) const {
   std::size_t start = 0;
 
   // Precomputing dofs.
-  std::vector<std::size_t> dofs;
-  dofs.reserve(mesh.elements.size());
+  std::vector<std::size_t> dofs(mesh.elements.size());
 
   for (std::size_t j = 0; j < mesh.elements.size(); ++j)
-    dofs.emplace_back(mesh.elements[j].dofs());
+    dofs[j] = mesh.elements[j].dofs();
 
   // Evaluating blocks.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
-    std::vector<std::size_t> indices;
-    indices.reserve(dofs[j]);
-
+    
+    std::vector<std::size_t> indices(dofs[j]);
     for (std::size_t k = 0; k < dofs[j]; ++k)
-      indices.emplace_back(start + k);
+      indices[k] = start + k;
 
     blocks.emplace_back(
         std::array<std::vector<std::size_t>, 2>{indices, indices});
@@ -393,12 +384,11 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
   std::size_t dofs = mesh.dofs();
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0]= 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
@@ -415,15 +405,10 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -432,7 +417,7 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local forcing term.
-    Vector<Real> local_f{element_dofs};
+    Vector<Real> local_f{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -518,7 +503,6 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
 #pragma omp critical
     forcing(indices, local_f);
   }
-
   return forcing;
 };
 
@@ -558,12 +542,11 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) const {
   Vector<Real> coefficients{mesh.dofs()};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Loop over the elements.
 #pragma omp parallel for
@@ -572,15 +555,10 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) const {
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -589,7 +567,7 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) const {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local coefficients.
-    Vector<Real> local_coefficients{element_dofs};
+    Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {

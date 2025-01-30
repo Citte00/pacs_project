@@ -33,29 +33,26 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
   auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices;
+  std::vector<std::size_t> local_indices(degree*degree);
 
   for (std::size_t h = 0; h < degree * degree; ++h)
-    local_indices.emplace_back(h);
+    local_indices[h] = h;
 
   // Loop over the elements.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -129,7 +126,7 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
  * @param numerical numerical solution.
  */
 void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
-                                      const Heat &heat) {
+                                   const Heat &heat, const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating solutions." << std::endl;
 #endif
@@ -141,29 +138,26 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
   auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices;
+  std::vector<std::size_t> local_indices(degree * degree);
 
   for (std::size_t h = 0; h < degree * degree; ++h)
-    local_indices.emplace_back(h);
+    local_indices[h] = h;
 
   // Loop over the elements.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -211,7 +205,7 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
       Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
 
       // Numerical solution.
-      Vector<Real> local_numerical = phi * heat.ch()(indices);
+      Vector<Real> local_numerical = phi * ch(indices);
 
       // Exact solution.
       Vector<Real> local_exact = data.c_ex(physical_x, physical_y, heat.t());
@@ -237,7 +231,8 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
  * @param fisher Fisher equation object.
  */
 void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
-                                   const Fisher &fisher) {
+                                     const Fisher &fisher,
+                                     const Vector<Real> &ch) {
 
   // Number of quadrature nodes.
   std::size_t degree = GAUSS_ORDER;
@@ -246,29 +241,26 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
   auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices;
+  std::vector<std::size_t> local_indices(degree * degree);
 
   for (std::size_t h = 0; h < degree * degree; ++h)
-    local_indices.emplace_back(h);
+    local_indices[h] = h;
 
   // Loop over the elements.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -316,7 +308,7 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
       Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
 
       // Numerical solution.
-      Vector<Real> local_numerical = phi * fisher.ch()(indices);
+      Vector<Real> local_numerical = phi * ch(indices);
 
       // Exact solution.
       Vector<Real> local_exact = data.c_ex(physical_x, physical_y, fisher.t());

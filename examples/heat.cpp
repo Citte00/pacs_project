@@ -75,10 +75,10 @@ int main(int argc, char **argv) {
       heat.assembly_force(data, mesh);
 
       // Linear system equation solution.
-      heat.solver(data, mesh, ch_old, F_old);
+      Vector<Real> ch = heat.solver(data, mesh, ch_old, F_old);
 
       // Update solution.
-      ch_old = heat.ch();
+      ch_old = ch;
     }
 
     // Errors.
@@ -87,19 +87,19 @@ int main(int argc, char **argv) {
 // Solution structure (output).
 #ifndef NSOLUTIONS
     HeatSolution solution{mesh};
-    solution.computeSolution(data, mesh, heat);
+    solution.computeSolution(data, mesh, heat, ch_old);
     std::string solfile = "output/square_s_" + std::to_string(data.degree) +
                           "_" + std::to_string(j) + ".sol";
     solution.write(solfile);
 #endif
 
     // Compute error.
-    error.computeErrors(data, mesh, heat);
+    error.computeErrors(data, mesh, heat, ch_old);
 
     // Output.
     output << "\n" << error << "\n";
 
-    output << "Residual: " << norm(heat.M() * heat.ch() + heat.A() * heat.ch() - heat.forcing())
+    output << "Residual: " << norm(heat.M() * ch_old + heat.A() * ch_old - heat.forcing())
            << std::endl;
   }
 }

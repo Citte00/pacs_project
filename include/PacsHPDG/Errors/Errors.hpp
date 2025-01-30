@@ -96,7 +96,8 @@ public:
   // METHODS.
 
   // Compute errors.
-  void computeErrors(const DataHeat &, const Mesh &, const Heat &);
+  void computeErrors(const DataHeat &, const Mesh &, const Heat &,
+                     const Vector<Real> &);
 };
 
 /**
@@ -118,7 +119,8 @@ public:
 
   // METHODS.
   // Compute errors.
-  void computeErrors(const DataFKPP &, const Mesh &, const Fisher &);
+  void computeErrors(const DataFKPP &, const Mesh &, const Fisher &,
+                     const Vector<Real> &);
 
   // Friend operator<< for polymorphic printing.
   friend std::ostream &operator<<(std::ostream &ost, const FisherError &error) {

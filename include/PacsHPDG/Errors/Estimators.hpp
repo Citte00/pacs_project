@@ -91,7 +91,7 @@ public:
 
   // METHODS.
   // Compute error estimates.
-  void computeEstimates(const DataHeat &, const Heat &, const Vector<Real> &);
+  void computeEstimates(const DataHeat &, const Heat &, const Vector<Real> &, const Vector<Real> &);
   // Refine mesh.
   void mesh_refine(Heat &, const Mesh &,
                    const Real &refine = 0.75, const Real &speed = 1.0);
@@ -108,7 +108,8 @@ public:
 
   // METHODS.
   // Compute error estimates.
-  void computeEstimates(const DataFKPP &, const Fisher &);
+  void computeEstimates(const DataFKPP &, const Fisher &,
+                        const Vector<Real> &);
 };
 
 } // namespace pacs

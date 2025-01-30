@@ -51,8 +51,8 @@ class HeatSolution : public LaplaceSolution {
     HeatSolution(const Mesh &mesh_) : LaplaceSolution(mesh_) {};
 
     // METHODS.
-    void computeSolution(const DataHeat &, const Mesh &,
-                         const Heat &);
+    void computeSolution(const DataHeat &, const Mesh &, const Heat &,
+                         const Vector<Real> &);
 };
 
 class FisherSolution : public HeatSolution {
@@ -61,7 +61,8 @@ public:
   FisherSolution(const Mesh &mesh_) : HeatSolution(mesh_) {};
 
   // METHODS.
-  void computeSolution(const DataFKPP &, const Mesh &, const Fisher &);
+  void computeSolution(const DataFKPP &, const Mesh &, const Fisher &,
+                       const Vector<Real> &);
 };
 
 } // namespace pacs
