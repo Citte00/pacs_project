@@ -70,31 +70,31 @@ int main(int argc, char **argv) {
     heat.assembly_force(data, mesh);
 
     // Linear system equation solution.
-    heat.solver(data, mesh, ch_old, F_old);
+    Vector<Real> ch = heat.solver(data, mesh, ch_old, F_old);
 
     // Errors.
     HeatError error(mesh);
 
     // Compute error.
-    error.computeErrors(data, mesh, heat);
+    error.computeErrors(data, mesh, heat, ch);
 
     if (counter % data.VisualizationStep == 0) {
       // Output.
       output << "\n" << error << "\n";
 
       output << "Residual: "
-             << norm(heat.M() * heat.ch() + heat.A() * heat.ch() -
+             << norm(heat.M() * ch + heat.A() * ch -
                      heat.forcing())
              << std::endl;
     }
 
     // Compute estimates.
     HeatEstimator estimates(mesh);
-    estimates.computeEstimates(data, heat, ch_old);
+    estimates.computeEstimates(data, heat, ch, ch_old);
     estimates.write(outputVTK, true);
 
     // hp-Refine and prolong solution.
-    estimates.mesh_refine(heat, mesh);
+    //estimates.mesh_refine(heat, mesh);
 
     // Update mesh.
     mesh = estimates.mesh();
@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
     auto blocks = heat.block_mass(mesh);
 
     // Update solution.
-    ch_old.resize(heat.ch().length);
-    ch_old = solve(heat.M(), heat.ch(), blocks, DB);
+    ch_old.resize(ch.length);
+    ch_old = ch;
 
     // Update forcing.
     heat.forcing().resize(mesh.dofs());

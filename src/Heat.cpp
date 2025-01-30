@@ -11,6 +11,19 @@
 
 namespace pacs {
 
+void Heat::initialize(const Mesh &mesh) {
+  // Dofs.
+  std::size_t dofs = mesh.dofs();
+
+  // Reshape matrices.
+  m_mass.reshape(dofs, dofs);
+  m_stiff.reshape(dofs, dofs);
+  m_dg_stiff.reshape(dofs, dofs);
+
+  // Resize vector.
+  m_forcing.resize(dofs);
+};
+
 /**
  * @brief Assembly of the heat equation matrices.
  *
@@ -23,11 +36,6 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   std::cout << "Computing the Heat equation matrices." << std::endl;
 #endif
 
-  // Reshaping matrices.
-  this->m_mass.reshape(mesh.dofs(), mesh.dofs());
-  this->m_stiff.reshape(mesh.dofs(), mesh.dofs());
-  this->m_dg_stiff.reshape(mesh.dofs(), mesh.dofs());
-
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -37,7 +45,8 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   std::size_t dofs = mesh.dofs();
 
   // Neighbours.
-  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+  const std::vector<std::vector<std::array<int, 3>>> &neighbours =
+      mesh.neighbours;
 
   // Matrices.
   Sparse<Real> M{dofs, dofs};
@@ -46,10 +55,13 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   Sparse<Real> SA{dofs, dofs};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());git 
-    // Volume integrals.
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+
+    // Volume integrals.
     // Loop over the elements.
 #pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
@@ -57,25 +69,19 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
     // 2D Quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
-
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
     // Polygon.
-    Polygon polygon = mesh.element(j);
+    const Polygon &polygon = mesh.element(j);
 
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local matrices.
-    Matrix<Real> local_M{element_dofs, element_dofs};
-    Matrix<Real> local_A{element_dofs, element_dofs};
+    Matrix<Real> local_M{indices.size(), indices.size()};
+    Matrix<Real> local_A{indices.size(), indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -121,8 +127,8 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
     // Face integrals.
 
     // Local matrices.
-    Matrix<Real> local_IA{element_dofs, element_dofs};
-    Matrix<Real> local_SA{element_dofs, element_dofs};
+    Matrix<Real> local_IA{indices.size(), indices.size()};
+    Matrix<Real> local_SA{indices.size(), indices.size()};
 
     // Element's neighbours.
     std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
@@ -228,15 +234,18 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   }
 
   // Matrices.
-  this->m_mass = M;
-  this->m_dg_stiff = A + SA;
-  this->m_stiff = this->m_dg_stiff - IA - IA.transpose();
+  this->m_mass = std::move(M);
+  this->m_dg_stiff = std::move(A);
+  this->m_dg_stiff += SA;
+  this->m_stiff = std::move(this->m_dg_stiff);
+  this->m_stiff -= IA;
+  this->m_stiff -= IA.transpose();
 
   // Compression.
   this->m_mass.compress();
   this->m_dg_stiff.compress();
   this->m_stiff.compress();
-}; // namespace pacs
+};
 
 /**
  * @brief Assembly of the forcing term for the Heat eqaution.
@@ -256,17 +265,17 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-// Volume integrals.
+  // Volume integrals.
+  Vector<Real> forcing{mesh.dofs()};
 
 // Loop over the elements.
 #pragma omp parallel for
@@ -274,15 +283,10 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
     // 2D Local quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -291,7 +295,7 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local forcing term.
-    Vector<Real> local_f{element_dofs};
+    Vector<Real> local_f{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -377,8 +381,9 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
 
 // Global forcing term.
 #pragma omp critical
-    this->m_forcing(indices, local_f);
+    forcing(indices, local_f);
   }
+  this->m_forcing = std::move(forcing);
 };
 
 /**
@@ -392,9 +397,9 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
  * @param TOL Tolerance.
  * @return Vector<Real>
  */
-void Heat::solver(const DataHeat &data, const Mesh &mesh,
-                  const Vector<Real> &c_old, const Vector<Real> &forcing_old,
-                  const Real &TOL) {
+Vector<Real> Heat::solver(const DataHeat &data, const Mesh &mesh,
+                          const Vector<Real> &c_old,
+                          const Vector<Real> &forcing_old, const Real &TOL) {
   // Mass blocks.
   auto blocks = block_mass(mesh);
 
@@ -411,7 +416,7 @@ void Heat::solver(const DataHeat &data, const Mesh &mesh,
                    data.dt * (1 - data.theta) * forcing_old;
 
   // Solves using GMRES.
-  this->m_ch = solve(LHS, F, blocks, GMRES, DBI, TOL);
+  return solve(LHS, F, blocks, GMRES, DBI, TOL);
 };
 
 /**
@@ -432,12 +437,11 @@ Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
   Vector<Real> coefficients{mesh.dofs()};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Loop over the elements.
 #pragma omp parallel for
@@ -446,15 +450,10 @@ Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
     // Quadrature nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -463,7 +462,7 @@ Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local coefficients.
-    Vector<Real> local_coefficients{element_dofs};
+    Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -518,12 +517,11 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
   Vector<Real> coefficients{mesh.dofs()};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Loop over the elements.
 #pragma omp parallel for
@@ -531,15 +529,10 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
     // Quadrature nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
-
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -548,7 +541,7 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local coefficients.
-    Vector<Real> local_coefficients{element_dofs};
+    Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -594,7 +587,7 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
  * @param mesh Mesh struct.
  * @return Matrix<int>
  */
-Matrix<int> Heat::transition(const std::size_t &degree) {
+Matrix<int> Heat::transition(const std::size_t &degree) const {
 
 #ifndef NVERBOSE
   std::cout << "Computing transition matrix." << std::endl;
@@ -672,8 +665,11 @@ Matrix<int> Heat::transition(const std::size_t &degree) {
  * @param old_mesh Old mesh struct.
  * @param mask_p Vector identifying element to refine through degree.
  */
-void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
-                              const Sparse<Real> &M, const Mask &mask_p) {
+Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
+                                      const Mesh &old_mesh,
+                                      const Sparse<Real> &M,
+                                      const Vector<Real> &ch,
+                                      const Mask &mask_p) const {
 
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(new_mesh.elements.size(), 0);
@@ -682,8 +678,7 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Resize new solution vector.
-  Vector<Real> ch = this->m_ch;
-  this->m_ch.resize(new_mesh.dofs());
+  Vector<Real> new_ch(new_mesh.dofs());
 
   // Starting indices.
   std::vector<std::size_t> old_starts;
@@ -725,9 +720,9 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
     for (std::size_t k = 0; k < new_element_dofs; ++k)
       new_indices.emplace_back(new_starts[j] + k);
 
-        // Check to refine.
-    if (!mask_p[j]){
-      this->m_ch(new_indices, ch(old_indices));
+    // Check to refine.
+    if (!mask_p[j]) {
+      new_ch(new_indices, ch(old_indices));
       continue;
     }
 
@@ -767,7 +762,7 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
         if (transitions(old_mesh.elements[j].degree - 1, i) == 1)
           indexes.emplace_back(i);
 
-      // Re-based solution vector: 0 for new basis, ch for old basis.
+      // Re-based solution vector: 0 for new basis, new_ch for old basis.
       Vector<Real> u_edge{new_element_dofs};
       u_edge(indexes, ch(old_indices));
 
@@ -779,8 +774,9 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
     local_coefficients =
         solve(M(new_indices, new_indices), local_coefficients, LUD);
 
-    this->m_ch(new_indices, local_coefficients);
+    new_ch(new_indices, local_coefficients);
   }
+  return new_ch;
 };
 
 /**
@@ -790,8 +786,11 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
  * @param old_mesh Old mesh struct.
  * @param mask_h Vector identifying element to refine through size.
  */
-void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
-                              const Sparse<Real> &M, const Mask &mask_h) {
+Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
+                                      const Mesh &old_mesh,
+                                      const Sparse<Real> &M,
+                                      const Vector<Real> &ch,
+                                      const Mask &mask_h) const {
 
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn_new(new_mesh.elements.size(), 0);
@@ -805,46 +804,32 @@ void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices for old mesh.
-  std::vector<std::size_t> old_starts;
-  old_starts.reserve(old_mesh.elements.size());
-  old_starts.emplace_back(0);
-
+  std::vector<std::size_t> old_starts(old_mesh.elements.size());
+  old_starts[0] = 0;
   for (std::size_t j = 1; j < old_mesh.elements.size(); ++j)
-    old_starts.emplace_back(old_starts[j - 1] +
-                            old_mesh.elements[j - 1].dofs());
+    old_starts[j] = old_starts[j - 1] + old_mesh.elements[j - 1].dofs();
+
+  // Starting indices for new mesh.
+  std::vector<std::size_t> new_starts(new_mesh.elements.size());
+  new_starts[0] = 0;
+  for (std::size_t j = 1; j < new_mesh.elements.size(); ++j)
+    new_starts[j] = new_starts[j - 1] + new_mesh.elements[j - 1].dofs();
 
   // Creating new solution vector adding first non-refined element.
-  Vector<Real> new_ch{old_mesh.dofs()};
-  std::size_t dofs = 0;
-  std::size_t unrefined = old_mesh.elements.size();
+  Vector<Real> new_ch{new_mesh.dofs()};
+  std::size_t new_elem_idx = 0;
 
   for (std::size_t j = 0; j < old_mesh.elements.size(); ++j) {
     // Copy non-refined element.
     if (!mask_h[j]) {
       std::size_t start = old_starts[j];
       std::size_t count = old_mesh.elements[j].dofs();
-      std::copy(this->m_ch.elements.begin() + start,
-                this->m_ch.elements.begin() + start + count,
-                new_ch.elements.begin() + dofs);
-      dofs += count;
-    } else {
-      // Remove refined element.
-      unrefined--;
+      std::copy(ch.elements.begin() + start,
+                ch.elements.begin() + start + count,
+                new_ch.elements.begin() + new_starts[new_elem_idx]);
+      new_elem_idx++;
     }
   }
-
-  // Starting indices for new mesh.
-  std::vector<std::size_t> new_starts;
-  new_starts.reserve(new_mesh.elements.size());
-  new_starts.emplace_back(0);
-
-  for (std::size_t j = 1; j < new_mesh.elements.size(); ++j)
-    new_starts.emplace_back(new_starts[j - 1] +
-                            new_mesh.elements[j - 1].dofs());
-
-  // Resizing solution vectors.
-  this->m_ch.resize(new_mesh.dofs());
-  new_ch.resize(new_mesh.dofs());
 
   // Loop over old elements.
   for (std::size_t j = 0; j < old_mesh.elements.size(); j++) {
@@ -858,12 +843,9 @@ void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
         quadrature_2d(nqn_old[j]);
 
     // Global matrix indices.
-    std::size_t old_element_dofs = old_mesh.elements[j].dofs();
-    std::vector<std::size_t> old_indices;
-    old_indices.reserve(old_element_dofs);
-
-    for (std::size_t k = 0; k < old_element_dofs; ++k)
-      old_indices.emplace_back(old_starts[j] + k);
+    std::vector<std::size_t> old_indices(old_mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < old_mesh.elements[j].dofs(); ++k)
+      old_indices[k] = old_starts[j] + k;
 
     // New elements.
     std::size_t new_elements = (old_mesh.elements[j].edges.size() <= 4)
@@ -871,28 +853,26 @@ void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
                                    : old_mesh.elements[j].edges.size() + 1;
 
     // Loop over new elements.
-    for (std::size_t i = unrefined; i < unrefined + new_elements; i++) {
+    for (std::size_t i = 0; i < new_elements; i++, new_elem_idx++) {
 
       // 2D quadrature weights and nodes.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn_new[i]);
+      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn_new[new_elem_idx]);
 
       // Local dofs.
-      std::size_t new_element_dofs = new_mesh.elements[i].dofs();
+      std::vector<std::size_t> new_indices(
+          new_mesh.elements[new_elem_idx].dofs());
 
-      std::vector<std::size_t> new_indices;
-      new_indices.reserve(new_element_dofs);
-
-      for (std::size_t k = 0; k < new_element_dofs; ++k)
-        new_indices.emplace_back(new_starts[i] + k);
+      for (std::size_t k = 0; k < new_mesh.elements[new_elem_idx].dofs(); ++k)
+        new_indices[k] = new_starts[new_elem_idx] + k;
 
       // Polygon.
-      Polygon polygon = new_mesh.element(i);
+      Polygon polygon = new_mesh.element(new_elem_idx);
 
       // Element sub-triangulation.
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local coefficients.
-      Vector<Real> local_coefficients{new_element_dofs};
+      Vector<Real> local_coefficients{new_indices.size()};
 
       // Loop over the sub-triangulation.
       for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -906,7 +886,7 @@ void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
         Vector<Real> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(new_mesh, i, {physical_x, physical_y})[0];
+        Matrix<Real> phi = basis_2d(new_mesh, new_elem_idx, {physical_x, physical_y})[0];
         Matrix<Real> phi_old =
             basis_2d(old_mesh, j, {physical_x, physical_y})[0];
         Matrix<Real> scaled_phi{phi};
@@ -916,18 +896,16 @@ void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
 
         // Local coefficients.
         local_coefficients +=
-            scaled_phi.transpose() * (phi_old * this->m_ch(old_indices));
+            scaled_phi.transpose() * (phi_old * ch(old_indices));
       }
       // Update temporal solution vector.
       local_coefficients =
-          solve(M(new_indices, new_indices), local_coefficients, LUD);
+          solve(M(new_indices, new_indices), local_coefficients);
       new_ch(new_indices, local_coefficients);
     }
-    // Update number of elements.
-    unrefined += new_elements;
   }
-  // Update solution.
-  this->m_ch = new_ch;
+  // Return update solution.
+  return new_ch;
 };
 
 } // namespace pacs

@@ -22,12 +22,6 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
   std::cout << "Computing the Fisher-KPP matrices." << std::endl;
 #endif
 
-  // Reshaping matrices.
-  this->m_mass.reshape(mesh.dofs(), mesh.dofs());
-  this->m_stiff.reshape(mesh.dofs(), mesh.dofs());
-  this->m_dg_stiff.reshape(mesh.dofs(), mesh.dofs());
-  this->m_nl_mass.reshape(mesh.dofs(), mesh.dofs());
-
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -39,6 +33,13 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
+  // Starting indices.
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
+
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+
   // Matrices.
   Sparse<Real> M_prj{dofs, dofs};
   Sparse<Real> M{dofs, dofs};
@@ -46,29 +47,18 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
   Sparse<Real> IA{dofs, dofs};
   Sparse<Real> SA{dofs, dofs};
 
-  // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.emplace_back(0);
-
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
-
-    // Volume integrals.
-
-    // Loop over the elements.
+  // Volume integrals.
+  // Loop over the elements.
 #pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
     // 2D Quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -77,9 +67,9 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local matrices.
-    Matrix<Real> local_M_prj{element_dofs, element_dofs};
-    Matrix<Real> local_M{element_dofs, element_dofs};
-    Matrix<Real> local_A{element_dofs, element_dofs};
+    Matrix<Real> local_M_prj{indices.size(), indices.size()};
+    Matrix<Real> local_M{indices.size(), indices.size()};
+    Matrix<Real> local_A{indices.size(), indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -130,8 +120,8 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
     // Face integrals.
 
     // Local matrices.
-    Matrix<Real> local_IA{element_dofs, element_dofs};
-    Matrix<Real> local_SA{element_dofs, element_dofs};
+    Matrix<Real> local_IA{indices.size(), indices.size()};
+    Matrix<Real> local_SA{indices.size(), indices.size()};
 
     // Element's neighbours.
     std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
@@ -236,10 +226,13 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
   }
 
   // Matrices.
-  this->m_mass = M_prj;
-  this->m_nl_mass = M;
-  this->m_dg_stiff = A + SA;
-  this->m_stiff = this->m_dg_stiff - IA - IA.transpose();
+  this->m_mass = std::move(M_prj);
+  this->m_nl_mass = std::move(M);
+  this->m_dg_stiff = std::move(A);
+  this->m_dg_stiff += SA;
+  this->m_stiff = std::move(this->m_dg_stiff);
+  this->m_stiff -= IA;
+  this->m_stiff -= IA.transpose();
 
   // Compression.
   this->m_mass.compress();
@@ -277,27 +270,23 @@ Sparse<Real> Fisher::assembly_nl(const DataFKPP &data, const Mesh &mesh,
   Sparse<Real> M_star{dofs, dofs};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Volume integrals.
-
   // Loop over the elements.
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
     // 2D Quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -306,7 +295,7 @@ Sparse<Real> Fisher::assembly_nl(const DataFKPP &data, const Mesh &mesh,
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local matrices.
-    Matrix<Real> local_M{element_dofs, element_dofs};
+    Matrix<Real> local_M{indices.size(), indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -359,7 +348,6 @@ Sparse<Real> Fisher::assembly_nl(const DataFKPP &data, const Mesh &mesh,
  * @param mesh Mesh struct.
  */
 void Fisher::assembly_force(const DataFKPP &data, const Mesh &mesh) {
-
 #ifndef NVERBOSE
   std::cout << "Computing the forcing term." << std::endl;
 #endif
@@ -370,31 +358,27 @@ void Fisher::assembly_force(const DataFKPP &data, const Mesh &mesh) {
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-// Volume integrals.
-
-// Loop over the elements.
+  // Volume integrals.
+  // Loop over the elements.
 #pragma omp parallel for
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
     // 2D Local quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -403,7 +387,7 @@ void Fisher::assembly_force(const DataFKPP &data, const Mesh &mesh) {
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local forcing term.
-    Vector<Real> local_f{element_dofs};
+    Vector<Real> local_f{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {
@@ -505,7 +489,7 @@ void Fisher::assembly_force(const DataFKPP &data, const Mesh &mesh) {
  * @param forcing_old Forcing term.
  * @param TOL Tolerance.
  */
-void Fisher::solver(const DataFKPP &data, const Mesh &mesh,
+Vector<Real> Fisher::solver(const DataFKPP &data, const Mesh &mesh,
                     const Vector<Real> &ch_oold,
                     const Vector<Real> &forcing_old, const Real &TOL) {
 
@@ -545,7 +529,7 @@ void Fisher::solver(const DataFKPP &data, const Mesh &mesh,
                    data.dt * (1.0 - data.theta) * forcing_old;
 
   // Solves using GMRES.
-  this->m_ch = solve(LHS, F, blocks, GMRES, DBI, TOL);
+  return solve(LHS, F, blocks, GMRES, DBI, TOL);
 }
 
 /**
@@ -557,7 +541,6 @@ void Fisher::solver(const DataFKPP &data, const Mesh &mesh,
  */
 Vector<Real> Fisher::modal_source(const DataFKPP &data,
                                   const Mesh &mesh) const {
-
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(mesh.elements.size(), 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
@@ -567,12 +550,11 @@ Vector<Real> Fisher::modal_source(const DataFKPP &data,
   Vector<Real> coefficients{mesh.dofs()};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Loop over the elements.
 #pragma omp parallel for
@@ -580,15 +562,11 @@ Vector<Real> Fisher::modal_source(const DataFKPP &data,
     // Quadrature nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = mesh.element(j);
@@ -597,7 +575,7 @@ Vector<Real> Fisher::modal_source(const DataFKPP &data,
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Local coefficients.
-    Vector<Real> local_coefficients{element_dofs};
+    Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
     for (std::size_t k = 0; k < triangles.size(); ++k) {

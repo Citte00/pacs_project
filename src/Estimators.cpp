@@ -79,7 +79,7 @@ void LaplaceEstimator::mesh_refine_size(const Mask &mask) {
       for (std::size_t k = 0;
            k < this->m_mesh.elements[j].edges.size() +
                    static_cast<std::size_t>(
-   this->m_mesh.elements[j].edges.size() > 4);
+                       this->m_mesh.elements[j].edges.size() > 4);
            ++k)
         degrees.emplace_back(this->m_mesh.elements[j].degree);
 
@@ -232,12 +232,11 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(m_mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(m_mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < m_mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + m_mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + m_mesh.elements[j - 1].dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = m_mesh.neighbours;
@@ -266,15 +265,11 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = m_mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(m_mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < m_mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = m_mesh.element(j);
@@ -437,7 +432,7 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
     this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
 
     // Degrees.
-    Vector<Real> degrees{element_dofs};
+    Vector<Real> degrees{indices.size()};
     std::size_t counter = 0;
 
     for (std::size_t i = 0; i < m_mesh.elements[j].degree + 1; ++i)
@@ -466,7 +461,8 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
  * @param filename File name.
  * @param estimates Bool value.
  */
-void LaplaceEstimator::write(const std::string &filename, const bool &estimates) {
+void LaplaceEstimator::write(const std::string &filename,
+                             const bool &estimates) {
   // File loading.
   std::ofstream file{filename};
 
@@ -505,6 +501,7 @@ void LaplaceEstimator::write(const std::string &filename, const bool &estimates)
  * @param ch_old Numerical solution at the previous time step.
  */
 void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
+                                     const Vector<Real> &ch,
                                      const Vector<Real> &ch_old) {
 #ifndef NVERBOSE
   std::cout << "Evaluating estimates." << std::endl;
@@ -516,12 +513,11 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(m_mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(m_mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < m_mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + m_mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + m_mesh.elements[j - 1].dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = m_mesh.neighbours;
@@ -547,15 +543,11 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = m_mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(m_mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < m_mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = m_mesh.element(j);
@@ -582,10 +574,10 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
       Vector<Real> f = data.source_f(physical_x, physical_y, heat.t(), D_ext);
 
       // Local numerical heat.
-      Vector<Real> lap_uh = D_ext * (lap_phi * heat.ch()(indices));
+      Vector<Real> lap_uh = D_ext * (lap_phi * ch(indices));
 
       // Local time derivative.
-      Vector<Real> local_uh = phi * heat.ch()(indices);
+      Vector<Real> local_uh = phi * ch(indices);
       Vector<Real> local_uh_old = phi * ch_old(indices);
       Vector<Real> partial_uh_t = (local_uh - local_uh_old) / data.dt;
 
@@ -680,15 +672,15 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
         scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
       // Local numerical solution and gradients.
-      Vector<Real> uh = phi * heat.ch()(indices);
+      Vector<Real> uh = phi * ch(indices);
 
       Matrix<Real> grad =
           normal_vector[0] * gradx_phi + normal_vector[1] * grady_phi;
-      Vector<Real> grad_uh = grad * heat.ch()(indices);
+      Vector<Real> grad_uh = grad * ch(indices);
 
       Matrix<Real> grad_t =
           edge_vector[0] * gradx_phi + edge_vector[1] * grady_phi;
-      Vector<Real> grad_uh_t = grad_t * heat.ch()(indices);
+      Vector<Real> grad_uh_t = grad_t * ch(indices);
 
       if (neighbour == -1) { // Boundary edge.
 
@@ -738,15 +730,15 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
           n_indices.emplace_back(starts[n_index] + h);
 
         // Neighbour's numerical solution and gradients.
-        Vector<Real> n_uh = n_phi * heat.ch()(n_indices);
+        Vector<Real> n_uh = n_phi * ch(n_indices);
 
         Matrix<Real> n_grad =
             normal_vector[0] * n_gradx_phi + normal_vector[1] * n_grady_phi;
-        Vector<Real> n_grad_uh = n_grad * heat.ch()(n_indices);
+        Vector<Real> n_grad_uh = n_grad * ch(n_indices);
 
         Matrix<Real> n_grad_t =
             edge_vector[0] * n_gradx_phi + edge_vector[1] * n_grady_phi;
-        Vector<Real> n_grad_uh_t = n_grad_t * heat.ch()(n_indices);
+        Vector<Real> n_grad_uh_t = n_grad_t * ch(n_indices);
 
         // Local estimator, R_{K, J}^2.
         this->m_estimates[j] +=
@@ -768,7 +760,7 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
     this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
 
     // Degrees.
-    Vector<Real> degrees{element_dofs};
+    Vector<Real> degrees{indices.size()};
     std::size_t counter = 0;
 
     for (std::size_t i = 0; i < m_mesh.elements[j].degree + 1; ++i)
@@ -778,7 +770,7 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
       }
 
     // Coefficients.
-    Vector<Real> coefficients = heat.ch()(indices);
+    Vector<Real> coefficients = ch(indices);
 
     for (auto &coefficient : coefficients.elements)
       coefficient = std::log(std::abs(coefficient));
@@ -791,12 +783,10 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
   this->m_estimate = std::sqrt(this->m_estimate);
 };
 
-void HeatEstimator::mesh_refine(Heat &heat, const Mesh &mesh, const Real &refine,
-                                const Real &speed) {
-#ifndef NDEBUG // Integrity check.
-  assert((refine > 0.0L) && (refine < 1.0L));
-  assert(speed > 0.0L);
-#endif
+/*
+void HeatEstimator::mesh_refine(Heat &heat, const Mesh &mesh, const Real
+&refine, const Real &speed) { #ifndef NDEBUG // Integrity check. assert((refine
+> 0.0L) && (refine < 1.0L)); assert(speed > 0.0L); #endif
 
   // Mesh
   Mesh old_mesh = mesh;
@@ -822,7 +812,7 @@ void HeatEstimator::mesh_refine(Heat &heat, const Mesh &mesh, const Real &refine
   old_mesh = this->m_mesh;
   mesh_refine_size(h_mask);
   heat.prolong_solution_h(this->m_mesh, old_mesh, heat.M(), h_mask);
-};
+};*/
 
 /**
  * @brief Compute fisher equation error estimates.
@@ -831,7 +821,8 @@ void HeatEstimator::mesh_refine(Heat &heat, const Mesh &mesh, const Real &refine
  * @param fisher Fisher equation object.
  */
 void FisherEstimator::computeEstimates(const DataFKPP &data,
-                                       const Fisher &fisher) {
+                                       const Fisher &fisher,
+                                       const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating estimates." << std::endl;
 #endif
@@ -842,12 +833,11 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(m_mesh.elements.size());
-  starts.emplace_back(0);
+  std::vector<std::size_t> starts(m_mesh.elements.size());
+  starts[0] = 0;
 
   for (std::size_t j = 1; j < m_mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + m_mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + m_mesh.elements[j - 1].dofs();
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = m_mesh.neighbours;
@@ -873,15 +863,11 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
-    // Local dofs.
-    std::size_t element_dofs = m_mesh.elements[j].dofs();
-
     // Global matrix indices.
-    std::vector<std::size_t> indices;
-    indices.reserve(element_dofs);
+    std::vector<std::size_t> indices(m_mesh.elements[j].dofs());
 
-    for (std::size_t k = 0; k < element_dofs; ++k)
-      indices.emplace_back(starts[j] + k);
+    for (std::size_t k = 0; k < m_mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
 
     // Polygon.
     Polygon polygon = m_mesh.element(j);
@@ -908,12 +894,12 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
       Vector<Real> alpha = data.alpha(physical_x, physical_y, fisher.t());
 
       // Local time derivative.
-      Vector<Real> local_uh = phi * fisher.ch()(indices);
+      Vector<Real> local_uh = phi * ch(indices);
       Vector<Real> local_uh_old = phi * fisher.ch_old()(indices);
       Vector<Real> partial_uh_t = (local_uh - local_uh_old) / data.dt;
 
       // Local numerical laplacian.
-      Vector<Real> lap_uh = lap_phi * fisher.ch()(indices);
+      Vector<Real> lap_uh = lap_phi * ch(indices);
 
       // Local numerical non-linear term.
       Vector<Real> nl_uh = alpha * local_uh * (1.0 - local_uh);
@@ -958,7 +944,7 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
 
       auto [normal_vector, edge_vector, physical_x, physical_y] =
           faces_physical_points(edges[k], nodes_1d);
-          
+
       // Weights scaling.
       Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
 
@@ -971,15 +957,15 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
         scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
       // Local numerical solution and gradients.
-      Vector<Real> uh = phi * fisher.ch()(indices);
+      Vector<Real> uh = phi * ch(indices);
 
       Matrix<Real> grad =
           normal_vector[0] * gradx_phi + normal_vector[1] * grady_phi;
-      Vector<Real> grad_uh = grad * fisher.ch()(indices);
+      Vector<Real> grad_uh = grad * ch(indices);
 
       Matrix<Real> grad_t =
           edge_vector[0] * gradx_phi + edge_vector[1] * grady_phi;
-      Vector<Real> grad_uh_t = grad_t * fisher.ch()(indices);
+      Vector<Real> grad_uh_t = grad_t * ch(indices);
 
       if (neighbour == -1) { // Boundary edge.
 
@@ -1029,15 +1015,15 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
           n_indices.emplace_back(starts[n_index] + h);
 
         // Neighbour's numerical solution and gradients.
-        Vector<Real> n_uh = n_phi * fisher.ch()(n_indices);
+        Vector<Real> n_uh = n_phi * ch(n_indices);
 
         Matrix<Real> n_grad =
             normal_vector[0] * n_gradx_phi + normal_vector[1] * n_grady_phi;
-        Vector<Real> n_grad_uh = n_grad * fisher.ch()(n_indices);
+        Vector<Real> n_grad_uh = n_grad * ch(n_indices);
 
         Matrix<Real> n_grad_t =
             edge_vector[0] * n_gradx_phi + edge_vector[1] * n_grady_phi;
-        Vector<Real> n_grad_uh_t = n_grad_t * fisher.ch()(n_indices);
+        Vector<Real> n_grad_uh_t = n_grad_t * ch(n_indices);
 
         // Local estimator, R_{K, J}^2.
         this->m_estimates[j] +=
@@ -1059,7 +1045,7 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
     this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
 
     // Degrees.
-    Vector<Real> degrees{element_dofs};
+    Vector<Real> degrees{indices.size()};
     std::size_t counter = 0;
 
     for (std::size_t i = 0; i < m_mesh.elements[j].degree + 1; ++i)
@@ -1069,7 +1055,7 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
       }
 
     // Coefficients.
-    Vector<Real> coefficients = fisher.ch()(indices);
+    Vector<Real> coefficients = ch(indices);
 
     for (auto &coefficient : coefficients.elements)
       coefficient = std::log(std::abs(coefficient));

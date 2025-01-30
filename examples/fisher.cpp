@@ -79,14 +79,14 @@ int main(int argc, char **argv) {
       fisher.assembly_force(data, mesh);
 
       // Linear system equation solution.
-      fisher.solver(data, mesh, ch_oold, F_old);
+      Vector<Real> ch = fisher.solver(data, mesh, ch_oold, F_old);
 
       // Compute error.
-      error.computeErrors(data, mesh, fisher);
+      error.computeErrors(data, mesh, fisher, ch);
 
       // Update solution.
       ch_oold = fisher.ch_old();
-      fisher.ch_old() = fisher.ch();
+      fisher.ch_old() = ch;
     }
 
 // Solution structure (output).
@@ -102,8 +102,8 @@ int main(int argc, char **argv) {
     output << "\n" << error << "\n";
 
     output << "Residual: "
-           << norm(fisher.M() * fisher.ch() + fisher.A() * fisher.ch() +
-                   fisher.M_alpha() * fisher.ch() * (1 - fisher.ch()) -
+           << norm(fisher.M() * fisher.ch_old() + fisher.A() * fisher.ch_old() +
+                   fisher.M_alpha() * fisher.ch_old() * (1 - fisher.ch_old()) -
                    fisher.forcing())
            << std::endl;
   }

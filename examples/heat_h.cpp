@@ -47,74 +47,92 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, diagram, data.degree};
 
   // Matrices.
-  Heat heat(mesh);
-  heat.assembly(data, mesh);
+  std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
+  heat->assembly(data, mesh);
 
   // Initial condition.
-  Vector<Real> ch_old = heat.modal(mesh, data.c_ex);
+  Vector<Real> ch_old = heat->modal(mesh, data.c_ex);
 
   // Forcing term.
-  heat.assembly_force(data, mesh);
+  heat->assembly_force(data, mesh);
 
   int counter = 1;
+  Real t = 0.0;
 
   int steps = static_cast<int>(round(data.t_f / data.dt));
   for (int i = 1; i <= steps; i++) {
 
     // Time step.
-    heat.t() += data.dt;
-    std::cout << "TIME: " << heat.t() << std::endl;
+    t += data.dt;
+    heat->t() = t;
+    std::cout << "TIME: " << heat->t() << std::endl;
 
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Update forcing term.
-    Vector<Real> F_old = heat.forcing();
-    heat.assembly_force(data, mesh);
+    Vector<Real> F_old = heat->forcing();
+    heat->assembly_force(data, mesh);
 
     // Linear system equation solution.
-    heat.solver(data, mesh, ch_old, F_old);
+    Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
 
     // Errors.
     HeatError error(mesh);
 
     // Compute error.
-    error.computeErrors(data, mesh, heat);
+    error.computeErrors(data, mesh, *heat, ch);
 
     if (counter % data.VisualizationStep == 0) {
       // Output.
       output << "\n" << error << "\n";
 
       output << "Residual: "
-             << norm(heat.M() * heat.ch() + heat.A() * heat.ch() -
-                     heat.forcing())
+             << norm(heat->M() * ch + heat->A() * ch -
+                     heat->forcing())
              << std::endl;
     }
 
+    /*
+    HeatSolution solution{mesh};
+    solution.computeSolution(data, mesh, *heat, ch);
+    std::string solfile =
+        "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
+    solution.write(solfile);
+    */
+
     // Compute estimates.
     HeatEstimator estimates(mesh);
-    estimates.computeEstimates(data, heat, ch_old);
+    estimates.computeEstimates(data, *heat, ch, ch_old);
 
     // Refine.
     Mask h_mask = error.L2errors() > 0.75L * max(error.L2errors());
     estimates.mesh_refine_size(h_mask);
-    Mesh new_mesh = estimates.mesh();
+
+    if (estimates.mesh().dofs() >= 24000)
+      continue;
 
     // Update matrices.
-    heat.assembly(data, new_mesh);
+    heat.reset(new Heat(estimates.mesh()));
+    heat->t() = t;
+    heat->assembly(data, estimates.mesh());
 
     // Prolong solution.
-    heat.prolong_solution_h(new_mesh, mesh, heat.M(), h_mask);
-
-    // Update solution.
-    ch_old.resize(heat.ch().length);
-    ch_old = heat.ch();
+    ch_old.resize(estimates.mesh().dofs());
+    ch_old = heat->prolong_solution_h(estimates.mesh(), mesh, heat->M(), ch, h_mask);
 
     // Update forcing.
-    heat.forcing().resize(new_mesh.dofs());
-    heat.assembly_force(data, new_mesh);
+    heat->assembly_force(data, estimates.mesh());
 
     // Update mesh.
-    mesh = new_mesh;
+    mesh = std::move(estimates.mesh());
+    
+    /*
+    HeatSolution solution2{mesh};
+    solution2.computeSolution(data, mesh, *heat, ch_old);
+    solfile =
+        "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
+    solution2.write(solfile);
+    */
 
     ++counter;
   }

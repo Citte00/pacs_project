@@ -50,7 +50,7 @@ public:
   // Assembly the forcing term.
   void assembly_force(const DataFKPP &, const Mesh &);
   // Solver of the Heat equation.
-  void solver(const DataFKPP &, const Mesh &, const Vector<Real> &,
+  Vector<Real> solver(const DataFKPP &, const Mesh &, const Vector<Real> &,
               const Vector<Real> &, const Real &TOL = 1E-15);
   // Get source function modal coefficient.
   Vector<Real> modal_source(const DataFKPP &, const Mesh &) const;

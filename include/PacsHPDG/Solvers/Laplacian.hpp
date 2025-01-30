@@ -27,22 +27,7 @@ public:
   // CONSTRUCTOR.
   Laplace(const Mesh &mesh_)
       : m_mass{mesh_.dofs(), mesh_.dofs()}, m_stiff{mesh_.dofs(), mesh_.dofs()},
-        m_dg_stiff{mesh_.dofs(), mesh_.dofs()} {
-    // Reserve space for mass matrix.
-    this->m_mass.inner.reserve(DOFS_MAX);
-    this->m_mass.outer.reserve(DOFS_MAX);
-    this->m_mass.values.reserve(DOFS_MAX);
-
-    // Reserve space for stiff matrix.
-    this->m_stiff.inner.reserve(DOFS_MAX);
-    this->m_stiff.outer.reserve(DOFS_MAX);
-    this->m_stiff.values.reserve(DOFS_MAX);
-
-    // Reserve space for dg_stiff matrix.
-    this->m_dg_stiff.inner.reserve(DOFS_MAX);
-    this->m_dg_stiff.outer.reserve(DOFS_MAX);
-    this->m_dg_stiff.values.reserve(DOFS_MAX);
-  };
+        m_dg_stiff{mesh_.dofs(), mesh_.dofs()} {};
 
   // GETTERS.
   Sparse<Real> M() const { return this->m_mass; };
@@ -53,6 +38,8 @@ public:
   // Blocks.
   std::vector<std::array<std::vector<std::size_t>, 2>>
   block_mass(const Mesh &) const;
+  // Initialize matrices.
+  void initialize(const Mesh &);
   // Assembly the laplace system matrix.
   void assembly(const DataLaplace &, const Mesh &);
   // Assembly the forcing term.
