@@ -65,6 +65,8 @@ int main(int argc, char **argv) {
     heat.t() += data.dt;
     std::cout << "TIME: " << heat.t() << std::endl;
 
+    std::cout << "Elements: " << mesh.elements.size() << std::endl;
+
     // Update forcing term.
     Vector<Real> F_old = heat.forcing();
     heat.assembly_force(data, mesh);
@@ -91,30 +93,28 @@ int main(int argc, char **argv) {
     // Compute estimates.
     HeatEstimator estimates(mesh);
     estimates.computeEstimates(data, heat, ch_old);
-    estimates.write(outputVTK, true);
 
     // Refine.
     Mask h_mask = error.L2errors() > 0.75L * max(error.L2errors());
     estimates.mesh_refine_size(h_mask);
-
-    // Prolong solution.
     Mesh new_mesh = estimates.mesh();
-    heat.prolong_solution_h(new_mesh, mesh, h_mask);
-
-    // Update mesh.
-    mesh = new_mesh;
 
     // Update matrices.
-    heat.assembly(data, mesh);
-    auto blocks = heat.block_mass(mesh);
+    heat.assembly(data, new_mesh);
+
+    // Prolong solution.
+    heat.prolong_solution_h(new_mesh, mesh, heat.M(), h_mask);
 
     // Update solution.
     ch_old.resize(heat.ch().length);
-    ch_old = solve(heat.M(), heat.ch(), blocks, DB);
+    ch_old = heat.ch();
 
     // Update forcing.
-    heat.forcing().resize(mesh.dofs());
-    heat.assembly_force(data, mesh);
+    heat.forcing().resize(new_mesh.dofs());
+    heat.assembly_force(data, new_mesh);
+
+    // Update mesh.
+    mesh = new_mesh;
 
     ++counter;
   }
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
   HeatSolution solution{mesh};
   solution.computeSolution(data, mesh, heat);
   std::string solfile =
-      "output/square_s_" + std::to_string(data.degree) + ".sol";
+      "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
   solution.write(solfile);
 #endif
 }

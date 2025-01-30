@@ -818,10 +818,10 @@ void HeatEstimator::mesh_refine(Heat &heat, const Mesh &mesh, const Real &refine
 
   // Refinements and update of solution.
   mesh_refine_degree(p_mask);
-  heat.prolong_solution_p(this->m_mesh, old_mesh, p_mask);
+  heat.prolong_solution_p(this->m_mesh, old_mesh, heat.M(), p_mask);
   old_mesh = this->m_mesh;
   mesh_refine_size(h_mask);
-  heat.prolong_solution_h(this->m_mesh, old_mesh, h_mask);
+  heat.prolong_solution_h(this->m_mesh, old_mesh, heat.M(), h_mask);
 };
 
 /**
