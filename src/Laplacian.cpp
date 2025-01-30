@@ -51,12 +51,10 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   Sparse<Real> SA{dofs, dofs};
 
   // Starting indices.
-  std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
-
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
   for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Volume integrals.
 // Loop over the elements.
@@ -67,14 +65,10 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
     // Global matrix indices.
-    std::vector<std::size_t> indices(element_dofs);
-    // Global matrix indices.
     std::vector<std::size_t> indices(mesh.elements[j].dofs());
     for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
       indices[k] = starts[j] + k;
 
-    // Polygon.
-    Polygon polygon = mesh.element(j);
     // Polygon.
     Polygon polygon = mesh.element(j);
 

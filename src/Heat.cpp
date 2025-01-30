@@ -11,6 +11,32 @@
 
 namespace pacs {
 
+void Heat::initialize(const Mesh &mesh) {
+  // Dofs.
+  std::size_t dofs = mesh.dofs();
+
+  // Reshape matrices.
+  m_mass.reshape(dofs, dofs);
+  m_stiff.reshape(dofs, dofs);
+  m_dg_stiff.reshape(dofs, dofs);
+
+  // Resize vector.
+  m_forcing.resize(dofs);
+};
+
+void Heat::initialize(const Mesh &mesh) {
+  // Dofs.
+  std::size_t dofs = mesh.dofs();
+
+  // Reshape matrices.
+  m_mass.reshape(dofs, dofs);
+  m_stiff.reshape(dofs, dofs);
+  m_dg_stiff.reshape(dofs, dofs);
+
+  // Resize vector.
+  m_forcing.resize(dofs);
+};
+
 /**
  * @brief Initialize Heat object.
  *
@@ -40,11 +66,6 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 #ifndef NVERBOSE
   std::cout << "Computing the Heat equation matrices." << std::endl;
 #endif
-
-  // Reshaping matrices.
-  this->m_mass.reshape(mesh.dofs(), mesh.dofs());
-  this->m_stiff.reshape(mesh.dofs(), mesh.dofs());
-  this->m_dg_stiff.reshape(mesh.dofs(), mesh.dofs());
 
   // Number of quadrature nodes.
   std::size_t num_elements = mesh.elements.size();
