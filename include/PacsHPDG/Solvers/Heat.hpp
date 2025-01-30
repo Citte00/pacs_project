@@ -25,8 +25,9 @@ protected:
 public:
   // CONSTRUCTOR.
   Heat(const Mesh &mesh_)
-      : Laplace(mesh_), m_forcing{mesh_.dofs()}, m_ch{mesh_.dofs()} {
-    this->m_t = 0.0;
+      : Laplace(mesh_), m_forcing{mesh_.dofs()}, m_ch{mesh_.dofs()}, m_t{0.0} {
+    this->m_forcing.elements.reserve(DOFS_MAX);
+    this->m_ch.elements.reserve(DOFS_MAX);
   };
 
   // GETTERS.
@@ -53,11 +54,11 @@ public:
   // Construct matrix with base indeces for each degree.
   Matrix<int> transition(const std::size_t &);
   // prolong solution for p.
-  void prolong_solution_p(const Mesh &, const Mesh &, const Mask &);
+  void prolong_solution_p(const Mesh &, const Mesh &, const Sparse<Real> &,
+                          const Mask &);
   // prolong solution for h.
-  void prolong_solution_h(const Mesh &, const Mesh &, const Mask &);
-  // prolong solution.
-  // void prolong_solution(const Mesh &, const Mesh &, const Mask &, const Mask &);
+  void prolong_solution_h(const Mesh &, const Mesh &, const Sparse<Real> &,
+                          const Mask &);
 };
 } // namespace pacs
 

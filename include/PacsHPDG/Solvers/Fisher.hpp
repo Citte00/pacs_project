@@ -27,6 +27,14 @@ public:
       : Heat(mesh_), m_nl_mass{mesh_.dofs(), mesh_.dofs()},
         m_ch_old{mesh_.dofs()} {
     this->m_t = -data_.dt;
+
+    // Reserve space for nl_mass matrix.
+    this->m_nl_mass.inner.reserve(DOFS_MAX);
+    this->m_nl_mass.outer.reserve(DOFS_MAX);
+    this->m_nl_mass.values.reserve(DOFS_MAX);
+
+    // Reserve space for ch_old vector.
+    this->m_ch_old.elements.reserve(DOFS_MAX);
   };
 
   // GETTER.

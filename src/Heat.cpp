@@ -47,12 +47,7 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 
   // Starting indices.
   std::vector<std::size_t> starts;
-  starts.reserve(mesh.elements.size());
-  starts.emplace_back(0);
-
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts.emplace_back(starts[j - 1] + mesh.elements[j - 1].dofs());
-
+  starts.reserve(mesh.elements.size());git 
     // Volume integrals.
 
     // Loop over the elements.
@@ -678,7 +673,7 @@ Matrix<int> Heat::transition(const std::size_t &degree) {
  * @param mask_p Vector identifying element to refine through degree.
  */
 void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
-                              const Mask &mask_p) {
+                              const Sparse<Real> &M, const Mask &mask_p) {
 
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn(new_mesh.elements.size(), 0);
@@ -707,11 +702,8 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
     new_starts.emplace_back(new_starts[j - 1] +
                             new_mesh.elements[j - 1].dofs());
 
+  // Loop over elements.
   for (std::size_t j = 0; j < new_mesh.elements.size(); j++) {
-
-    // Check to refine.
-    if (!mask_p[j])
-      continue;
 
     // 2D quadrature weights and nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -732,6 +724,12 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
 
     for (std::size_t k = 0; k < new_element_dofs; ++k)
       new_indices.emplace_back(new_starts[j] + k);
+
+        // Check to refine.
+    if (!mask_p[j]){
+      this->m_ch(new_indices, ch(old_indices));
+      continue;
+    }
 
     // Polygon.
     Polygon polygon = new_mesh.element(j);
@@ -778,6 +776,9 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
     }
 
     // Update.
+    local_coefficients =
+        solve(M(new_indices, new_indices), local_coefficients, LUD);
+
     this->m_ch(new_indices, local_coefficients);
   }
 };
@@ -790,7 +791,7 @@ void Heat::prolong_solution_p(const Mesh &new_mesh, const Mesh &old_mesh,
  * @param mask_h Vector identifying element to refine through size.
  */
 void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
-                              const Mask &mask_h) {
+                              const Sparse<Real> &M, const Mask &mask_h) {
 
   // Number of quadrature nodes.
   std::vector<std::size_t> nqn_new(new_mesh.elements.size(), 0);
@@ -918,6 +919,8 @@ void Heat::prolong_solution_h(const Mesh &new_mesh, const Mesh &old_mesh,
             scaled_phi.transpose() * (phi_old * this->m_ch(old_indices));
       }
       // Update temporal solution vector.
+      local_coefficients =
+          solve(M(new_indices, new_indices), local_coefficients, LUD);
       new_ch(new_indices, local_coefficients);
     }
     // Update number of elements.
