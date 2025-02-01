@@ -10,13 +10,13 @@ endif
 # FLAGS.
 
 # Disables solution output.
-CPPFLAGS += -DNSOLUTIONS
+#CPPFLAGS += -DNSOLUTIONS
 
 # Disables verbosity.
 CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
-#CPPFLAGS += -DNDEBUG
+CPPFLAGS += -DNDEBUG
 
 # PARALLEL COMPUTING.
 
@@ -29,29 +29,29 @@ CPPFLAGS += -DNVERBOSE
 # endif
 
 # Parallel computing using OpenMP. Enabled by default.
-#ifneq ($(OpenMP),) # $(OpenMP) set to /path/to/libomp. Apple's clang.
-#CXXFLAGS += -Xclang -fopenmp
-#DEBUG_CXXFLAGS += -fopenmp
-#CPPFLAGS += -I$(OpenMP)/include
-#LDFLAGS += -L$(OpenMP)/lib
-#LDLIBS += -lomp
-#else
-#ifneq ($(mkPrefix),) # Parallel computing using OpenMP with modules.
-#CXXFLAGS += -fopenmp
-#DEBUG_CXXFLAGS += -fopenmp
-#LDFLAGS += -L$(mkToolchainPrefix)/lib
-#LDLIBS += -lgomp
-#else
-#ifneq ($(shell g++ --version | grep GCC),) # Parallel computing using GCC's default OpenMP.
-#CXXFLAGS += -fopenmp
-#DEBUG_CXXFLAGS += -fopenmp
-#LDLIBS += -lgomp
-#else
+ifneq ($(OpenMP),) # $(OpenMP) set to /path/to/libomp. Apple's clang.
+CXXFLAGS += -Xclang -fopenmp
+DEBUG_CXXFLAGS += -Xclang -fopenmp
+CPPFLAGS += -I$(OpenMP)/include
+LDFLAGS += -L$(OpenMP)/lib
+LDLIBS += -lomp
+else
+ifneq ($(mkPrefix),) # Parallel computing using OpenMP with modules.
+CXXFLAGS += -fopenmp
+DEBUG_CXXFLAGS += -fopenmp
+LDFLAGS += -L$(mkToolchainPrefix)/lib
+LDLIBS += -lgomp
+else
+ifneq ($(shell g++ --version | grep GCC),) # Parallel computing using GCC's default OpenMP.
+CXXFLAGS += -fopenmp
+DEBUG_CXXFLAGS += -fopenmp
+LDLIBS += -lgomp
+else
 CXXFLAGS += -Wno-unknown-pragmas
 DEBUG_CXXFLAGS += -Wno-unknown-pragmas
-#endif
-#endif
-#endif
+endif
+endif
+endif
 
 # Directories.
 OUTPUT_DIR = ./output

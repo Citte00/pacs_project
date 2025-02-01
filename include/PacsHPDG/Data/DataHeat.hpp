@@ -110,11 +110,11 @@ struct DataHeat {
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 2;
+  size_t degree = 3;
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  int VisualizationStep = 1;
+  int VisualizationStep = 10;
   int NqnVisualization = 5;
 };
 

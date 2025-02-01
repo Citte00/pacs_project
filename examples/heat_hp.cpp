@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 // Solution structure (output).
 #ifndef NSOLUTIONS
   HeatSolution solution{mesh};
-  solution.computeSolution(data, mesh, heat);
+  solution.computeSolution(data, mesh, heat, ch_old);
   std::string solfile =
       "output/square_s_" + std::to_string(data.degree) + ".sol";
   solution.write(solfile);
