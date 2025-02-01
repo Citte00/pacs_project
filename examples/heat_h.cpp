@@ -92,47 +92,35 @@ int main(int argc, char **argv) {
              << std::endl;
     }
 
-    /*
-    HeatSolution solution{mesh};
-    solution.computeSolution(data, mesh, *heat, ch);
-    std::string solfile =
-        "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
-    solution.write(solfile);
-    */
-
     // Compute estimates.
-    HeatEstimator estimates(mesh);
-    estimates.computeEstimates(data, *heat, ch, ch_old);
+    HeatEstimator estimator(mesh);
+    estimator.computeEstimates(data, *heat, ch, ch_old);
 
     // Refine.
-    Mask h_mask = error.L2errors() > 0.75L * max(error.L2errors());
-    estimates.mesh_refine_size(h_mask);
+    Mask h_mask = estimator.estimates() > 0.75L * sum(estimator.estimates()) /
+                                              estimator.mesh().elements.size();
+    estimator.mesh_refine_size(h_mask);
 
-    if (estimates.mesh().dofs() >= 24000)
+    if (estimator.mesh().dofs() >= 2 * DOFS_MAX){
+      ch_old = ch;
+      ++counter;
       continue;
+    }
 
     // Update matrices.
-    heat.reset(new Heat(estimates.mesh()));
+    heat.reset(new Heat(estimator.mesh()));
     heat->t() = t;
-    heat->assembly(data, estimates.mesh());
+    heat->assembly(data, estimator.mesh());
 
     // Prolong solution.
-    ch_old.resize(estimates.mesh().dofs());
-    ch_old = heat->prolong_solution_h(estimates.mesh(), mesh, heat->M(), ch, h_mask);
+    ch_old.resize(estimator.mesh().dofs());
+    ch_old = heat->prolong_solution_h(estimator.mesh(), mesh, heat->M(), ch, h_mask);
 
     // Update forcing.
-    heat->assembly_force(data, estimates.mesh());
+    heat->assembly_force(data, estimator.mesh());
 
     // Update mesh.
-    mesh = std::move(estimates.mesh());
-    
-    /*
-    HeatSolution solution2{mesh};
-    solution2.computeSolution(data, mesh, *heat, ch_old);
-    solfile =
-        "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
-    solution2.write(solfile);
-    */
+    mesh = std::move(estimator.mesh());
 
     ++counter;
   }
@@ -140,9 +128,14 @@ int main(int argc, char **argv) {
 // Solution structure (output).
 #ifndef NSOLUTIONS
   HeatSolution solution{mesh};
-  solution.computeSolution(data, mesh, heat);
+  solution.computeSolution(data, mesh, *heat, ch_old);
   std::string solfile =
       "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
   solution.write(solfile);
 #endif
+
+  // Final mesh.
+  std::string meshfile =
+      "output/square_h_" + std::to_string(mesh.elements.size()) + ".poly";
+  mesh.write(meshfile);
 }

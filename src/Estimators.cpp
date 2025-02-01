@@ -579,7 +579,7 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
       // Local time derivative.
       Vector<Real> local_uh = phi * ch(indices);
       Vector<Real> local_uh_old = phi * ch_old(indices);
-      Vector<Real> partial_uh_t = (local_uh - local_uh_old) / data.dt;
+      Vector<Real> partial_uh_t = (- local_uh + local_uh_old) / data.dt;
 
       // Local source approximation.
       Vector<Real> f_bar = phi * f_modals(indices);
@@ -757,7 +757,6 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
     }
 
     this->m_estimate += this->m_estimates[j];
-    this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
 
     // Degrees.
     Vector<Real> degrees{indices.size()};

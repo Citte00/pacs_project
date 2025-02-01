@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 // Solution structure (output).
 #ifndef NSOLUTIONS
     FisherSolution solution{mesh};
-    solution.computeSolution(data, mesh, fisher);
+    solution.computeSolution(data, mesh, fisher, fisher.ch_old());
     std::string solfile = "output/square_s_" + std::to_string(data.degree) +
                           "_" + std::to_string(j) + ".sol";
     solution.write(solfile);
