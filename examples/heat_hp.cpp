@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     HeatError error(mesh);
 
     // Compute error.
-    error.computeErrors(data, mesh, heat, ch);
+    error.error(data, mesh, heat, ch);
 
     if (counter % data.VisualizationStep == 0) {
       // Output.

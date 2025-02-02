@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 #endif
 
     // Compute error.
-    error.computeErrors(data, mesh, laplacian, numerical);
+    error.error(data, mesh, laplacian, numerical);
 
     // Output.
     output << "\n" << error << "\n";

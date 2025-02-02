@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
     // Errors.
     LaplaceError error(mesh);
-    error.computeErrors(data, mesh, laplacian, numerical);
+    error.error(data, mesh, laplacian, numerical);
 
     // Output.
     output << "\n" << error << "\n";

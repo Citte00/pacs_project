@@ -1,27 +1,30 @@
 /**
  * @file Errors.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief 
+ * @brief
  * @date 2025-01-15
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #include <PacsHPDG.hpp>
 
 namespace pacs {
-    /**
-     * @brief Compute Laplace equation errors.
-     * 
-     * @param data Laplace equation data struct.
-     * @param mesh Mesh struct.
-     * @param laplacian Laplace equation object.
-     * @param numerical Numerical solution.
-     */
-void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, const Laplace &laplacian, const Vector<Real> &numerical) {
+
+/**
+ * @brief Compute Laplace equation L2 and DG errors.
+ *
+ * @param data Laplace equation data struct.
+ * @param mesh Mesh struct.
+ * @param laplacian Laplace equation object.
+ * @param numerical Numerical solution.
+ */
+void LaplaceError::error(const DataLaplace &data, const Mesh &mesh,
+                         const Laplace &laplacian,
+                         const Vector<Real> &numerical) {
 #ifndef NVERBOSE
-  std::cout << "Evaluating errors." << std::endl;
+  std::cout << "Evaluating L2 and DG errors." << std::endl;
 #endif
 
   // Matrices.
@@ -37,6 +40,22 @@ void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, cons
 
   // L2 Error.
   this->m_l2_error = std::sqrt(dot(error, mass * error));
+};
+
+/**
+ * @brief Compute Laplace equation L2 and H1 errors.
+ *
+ * @param data Laplace equation data struct.
+ * @param mesh Mesh struct.
+ * @param laplacian Laplace equation object.
+ * @param numerical Numerical solution.
+ */
+void LaplaceError::errors(const DataLaplace &data, const Mesh &mesh,
+                          const Laplace &laplacian,
+                          const Vector<Real> &numerical) {
+#ifndef NVERBOSE
+  std::cout << "Evaluating L2 and H1 errors." << std::endl;
+#endif
 
   // Starting indices.
   std::vector<std::size_t> starts(mesh.elements.size());
@@ -83,11 +102,11 @@ void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, cons
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -118,16 +137,17 @@ void LaplaceError::computeErrors(const DataLaplace &data, const Mesh &mesh, cons
 };
 
 /**
- * @brief Compute Heat equation errors.
+ * @brief Compute Heat equation L2 and DG errors.
  *
  * @param data Heat equation data struct.
  * @param mesh Mesh struct.
  * @param heat Heat equation object.
+ * @param numerical Numerical solution.
  */
-void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
-                                 const Heat &heat, const Vector<Real> &ch) {
+void HeatError::error(const DataHeat &data, const Mesh &mesh, const Heat &heat,
+                      const Vector<Real> &numerical) {
 #ifndef NVERBOSE
-  std::cout << "Evaluating errors." << std::endl;
+  std::cout << "Evaluating L2 and DG errors." << std::endl;
 #endif
 
   // Matrices.
@@ -136,14 +156,28 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
 
   // Error vector.
   Vector<Real> u_modals = heat.modal(mesh, data.c_ex);
-
-  Vector<Real> error = u_modals - ch;
+  Vector<Real> error = u_modals - numerical;
 
   // DG Error.
   this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
 
   // L2 Error.
   this->m_l2_error = std::sqrt(dot(error, mass * error));
+};
+
+/**
+ * @brief Compute Heat equation L2 and H1 errors.
+ *
+ * @param data Heat equation data struct.
+ * @param mesh Mesh struct.
+ * @param heat Heat equation object.
+ * @param numerical Numerical solution.
+ */
+void HeatError::errors(const DataHeat &data, const Mesh &mesh, const Heat &heat,
+                       const Vector<Real> &numerical) {
+#ifndef NVERBOSE
+  std::cout << "Evaluating L2 and H1 errors." << std::endl;
+#endif
 
   // Starting indices.
   std::vector<std::size_t> starts(mesh.elements.size());
@@ -205,11 +239,11 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
 
       // Solutions.
       Vector<Real> u = data.c_ex(physical_x, physical_y, heat.t());
-      Vector<Real> uh = phi * ch(indices);
+      Vector<Real> uh = phi * numerical(indices);
 
       Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y, heat.t()) +
                             data.dc_dy_ex(physical_x, physical_y, heat.t());
-      Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch(indices);
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * numerical(indices);
 
       // Local L2 error.
       this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
@@ -225,35 +259,46 @@ void HeatError::computeErrors(const DataHeat &data, const Mesh &mesh,
 };
 
 /**
- * @brief Compute Fisher equation errors.
+ * @brief Compute Fisher equation L2, DG and energy errors.
  *
  * @param data Fisher equation data struct.
  * @param mesh Mesh struct.
  * @param fisher Fisher equation object.
+ * @param numerical Numerical Solution.
  */
-void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
-                                const Fisher &fisher, const Vector<Real> &ch) {
+void FisherError::error(const DataFKPP &data, const Mesh &mesh,
+                         const Fisher &fisher, const Vector<Real> &numerical) {
 #ifndef NVERBOSE
-  std::cout << "Evaluating errors." << std::endl;
+  std::cout << "Evaluating L2, DG and energy errors." << std::endl;
 #endif
-
-  // Matrices.
-  Sparse<Real> mass = fisher.M();
+  // Matrix.
   Sparse<Real> dg_stiff = fisher.DG();
 
   // Error vector.
   Vector<Real> u_modals = fisher.modal(mesh, data.c_ex);
 
-  Vector<Real> error = u_modals - ch;
+  Vector<Real> error = u_modals - numerical;
 
   // DG Error.
   this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
 
-  // L2 Error.
-  this->m_l2_error = std::sqrt(dot(error, mass * error));
-
   // Energy error.
   this->m_energy += data.dt * this->m_dg_error * this->m_dg_error;
+};
+
+/**
+ * @brief Compute Fisher equation L2 and H1 errors.
+ *
+ * @param data Fisher equation data struct.
+ * @param mesh Mesh struct.
+ * @param fisher Fisher equation object.
+ * @param numerical Numerical Solution.
+ */
+void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
+                                const Fisher &fisher, const Vector<Real> &numerical) {
+#ifndef NVERBOSE
+  std::cout << "Evaluating L2 and H1 errors." << std::endl;
+#endif
 
   // Starting indices.
   std::vector<std::size_t> starts(mesh.elements.size());
@@ -315,11 +360,11 @@ void FisherError::computeErrors(const DataFKPP &data, const Mesh &mesh,
 
       // Solutions.
       Vector<Real> u = data.c_ex(physical_x, physical_y, fisher.t());
-      Vector<Real> uh = phi * ch(indices);
+      Vector<Real> uh = phi * numerical(indices);
 
       Vector<Real> grad_u = data.dc_dx_ex(physical_x, physical_y, fisher.t()) +
                             data.dc_dy_ex(physical_x, physical_y, fisher.t());
-      Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch(indices);
+      Vector<Real> grad_uh = (gradx_phi + grady_phi) * numerical(indices);
 
       // Local L2 error.
       this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));

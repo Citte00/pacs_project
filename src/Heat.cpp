@@ -37,7 +37,8 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 #endif
 
   // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+  std::size_t num_elements = mesh.elements.size();
+  std::vector<std::size_t> nqn(num_elements, 0);
   std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
@@ -55,16 +56,16 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   Sparse<Real> SA{dofs, dofs};
 
   // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
+  std::vector<std::size_t> starts(num_elements);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+  for (std::size_t j = 1; j < num_elements; ++j)
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
     // Volume integrals.
     // Loop over the elements.
-#pragma omp parallel for
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+#pragma omp parallel for schedule(dynamic)
+  for (std::size_t j = 0; j < num_elements; ++j) {
 
     // 2D Quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -73,6 +74,7 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
     std::vector<std::size_t> indices(mesh.elements[j].dofs());
     for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
       indices[k] = starts[j] + k;
+
     // Polygon.
     const Polygon &polygon = mesh.element(j);
 
@@ -84,11 +86,11 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
     Matrix<Real> local_A{indices.size(), indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -237,9 +239,7 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   this->m_mass = std::move(M);
   this->m_dg_stiff = std::move(A);
   this->m_dg_stiff += SA;
-  this->m_stiff = std::move(this->m_dg_stiff);
-  this->m_stiff -= IA;
-  this->m_stiff -= IA.transpose();
+  this->m_stiff = this->m_dg_stiff - IA - IA.transpose();
 
   // Compression.
   this->m_mass.compress();
