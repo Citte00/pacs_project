@@ -22,15 +22,14 @@ int main(int argc, char **argv) {
   // Retrieve problem data from structure.
   DataHeat data;
 
-  std::ofstream output{"output/square_heat_" + std::to_string(data.degree) +
-                       ".error"};
+  std::ostringstream oss;
+  oss << "output/square_heat_" << data.degree;
+  std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - uniform refinement." << "\n";
 
   std::cout << "Square domain - uniform refinement." << std::endl;
-  std::cout << "Output under output/square_heat_" + std::to_string(data.degree) +
-                   ".error."
-            << std::endl;
+  std::cout << "Output under " << oss.str() << ".error." << std::endl;
 
   // Domain.
   Polygon domain{data.domain};
@@ -49,7 +48,7 @@ int main(int argc, char **argv) {
   for (std::size_t j = 0; j < diagrams.size(); ++j) {
 
     // Mesh.
-    Mesh mesh{domain, diagrams[j], data.degree};
+    Mesh mesh{domain, std::move(diagrams[j]), data.degree};
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Matrices.
@@ -64,7 +63,7 @@ int main(int argc, char **argv) {
     Vector<Real> F_old{heat.forcing().length};
 
     int steps = static_cast<int>(round(data.t_f/data.dt));
-    for (int i = 1; i <= steps; i++) {
+    for (int i = 1; i <= steps; ++i) {
 
       // Time step.
       heat.t() += data.dt;
@@ -94,12 +93,13 @@ int main(int argc, char **argv) {
 #endif
 
     // Compute error.
-    error.computeErrors(data, mesh, heat, ch_old);
+    error.error(data, mesh, heat, ch_old);
 
     // Output.
-    output << "\n" << error << "\n";
-
-    output << "Residual: " << norm(heat.M() * ch_old + heat.A() * ch_old - heat.forcing())
+    output << "\n"
+           << error << "\n"
+           << "Residual: "
+           << norm(heat.M() * ch_old + heat.A() * ch_old - heat.forcing())
            << std::endl;
   }
 }

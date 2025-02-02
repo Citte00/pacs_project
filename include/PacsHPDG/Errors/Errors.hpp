@@ -67,10 +67,12 @@ public:
   Vector<Real> H1errors() const { return this->m_h1_errors; };
 
   // METHODS.
-
-  // Compute errors.
-  void computeErrors(const DataLaplace &, const Mesh &, const Laplace &,
-                     const Vector<Real> &);
+  // Compute L2 and DG errors.
+  void error(const DataLaplace &, const Mesh &, const Laplace &,
+             const Vector<Real> &);
+  // Compute L2 and H1 errors.
+  void errors(const DataLaplace &, const Mesh &, const Laplace &,
+              const Vector<Real> &);
 
   // Friend operator<< for polymorphic printing.
   friend std::ostream &operator<<(std::ostream &ost,
@@ -94,9 +96,11 @@ public:
   HeatError(const Mesh &mesh_) : LaplaceError(mesh_) {};
 
   // METHODS.
-
-  // Compute errors.
-  void computeErrors(const DataHeat &, const Mesh &, const Heat &,
+  // Compute L2 and DG errors.
+  void error(const DataHeat &, const Mesh &, const Heat &,
+             const Vector<Real> &);
+  // Compute L2 and H1 errors.
+  void errors(const DataHeat &, const Mesh &, const Heat &,
                      const Vector<Real> &);
 };
 
@@ -118,10 +122,13 @@ public:
   Real &energy() { return this->m_energy; };
 
   // METHODS.
-  // Compute errors.
-  void computeErrors(const DataFKPP &, const Mesh &, const Fisher &,
-                     const Vector<Real> &);
-
+  // Compute L2, DG and energy errors.
+  void error(const DataFKPP &, const Mesh &, const Fisher &,
+             const Vector<Real> &);
+  // Compute L2 and H1 errors.
+  void errors(const DataFKPP &, const Mesh &, const Fisher &,
+              const Vector<Real> &);
+              
   // Friend operator<< for polymorphic printing.
   friend std::ostream &operator<<(std::ostream &ost, const FisherError &error) {
     ost << "Elements: " << error.L2errors().size() << std::endl;

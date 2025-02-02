@@ -12,6 +12,7 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <memory>
 #include <iostream>
 #include <string>
 
@@ -23,18 +24,14 @@ int main(int argc, char **argv) {
   // Retrieve problem data from structure.
   DataHeat data;
 
-  std::ofstream output{"output/square_heat_h_" + std::to_string(data.degree) +
-                       ".error"};
-
-  std::string outputVTK =
-      "output/square_heat_h_" + std::to_string(data.degree) + ".poly";
+  std::ostringstream oss;
+  oss << "output/square_heat_h_" << data.degree;
+  std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - element size adaptive refinement." << "\n";
 
   std::cout << "Square domain - element size adaptive refinement." << std::endl;
-  std::cout << "Output under output/square_heat_h_" +
-                   std::to_string(data.degree) + ".error."
-            << std::endl;
+  std::cout << "Output under " << oss.str() << ".error." << std::endl;
 
   // Domain.
   Polygon domain{data.domain};
@@ -44,7 +41,7 @@ int main(int argc, char **argv) {
       "meshes/square/square_" + std::to_string(data.elements) + ".poly");
 
   // Mesh.
-  Mesh mesh{domain, diagram, data.degree};
+  Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
   std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
@@ -56,17 +53,18 @@ int main(int argc, char **argv) {
   // Forcing term.
   heat->assembly_force(data, mesh);
 
+  // Parameters.
   int counter = 1;
   Real t = 0.0;
-
+  const int dofsLimit = 2 * DOFS_MAX;
   int steps = static_cast<int>(round(data.t_f / data.dt));
-  for (int i = 1; i <= steps; i++) {
+  
+  for (int i = 1; i <= steps; ++i) {
 
     // Time step.
     t += data.dt;
-    heat->t() = t;
-    std::cout << "TIME: " << heat->t() << std::endl;
-
+    std::cout << "TIME: " << (heat->t() = t) << std::endl;
+    // Number of elements.
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Update forcing term.
@@ -80,47 +78,53 @@ int main(int argc, char **argv) {
     HeatError error(mesh);
 
     // Compute error.
-    error.computeErrors(data, mesh, *heat, ch);
+    error.error(data, mesh, *heat, ch);
 
     if (counter % data.VisualizationStep == 0) {
       // Output.
-      output << "\n" << error << "\n";
-
-      output << "Residual: "
-             << norm(heat->M() * ch + heat->A() * ch -
-                     heat->forcing())
+      std::ostringstream buffer;
+      buffer << "\n"
+             << error << "\n"
+             << "Residual: "
+             << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
              << std::endl;
+      output << buffer.str();
     }
 
     // Compute estimates.
     HeatEstimator estimator(mesh);
     estimator.computeEstimates(data, *heat, ch, ch_old);
+    const auto &estimates = estimator.estimates();
 
     // Refine.
-    Mask h_mask = estimator.estimates() > 0.75L * sum(estimator.estimates()) /
+    Mask h_mask = estimates > 0.75L * sum(estimates) /
                                               estimator.mesh().elements.size();
-    estimator.mesh_refine_size(h_mask);
 
-    if (estimator.mesh().dofs() >= 2 * DOFS_MAX){
+    if (std::none_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; }) ||
+        estimator.mesh().dofs() >= dofsLimit) {
       ch_old = ch;
       ++counter;
       continue;
     }
 
+    // Refine mesh.
+    estimator.mesh_refine_size(h_mask);
+    const auto &new_mesh = estimator.mesh();
+
     // Update matrices.
-    heat.reset(new Heat(estimator.mesh()));
+    heat = std::make_unique<Heat>(new_mesh);
     heat->t() = t;
-    heat->assembly(data, estimator.mesh());
+    heat->assembly(data, new_mesh);
 
     // Prolong solution.
-    ch_old.resize(estimator.mesh().dofs());
-    ch_old = heat->prolong_solution_h(estimator.mesh(), mesh, heat->M(), ch, h_mask);
+    ch_old.resize(new_mesh.dofs());
+    ch_old = heat->prolong_solution_h(new_mesh, mesh, heat->M(), ch, h_mask);
 
     // Update forcing.
-    heat->assembly_force(data, estimator.mesh());
+    heat->assembly_force(data, new_mesh);
 
     // Update mesh.
-    mesh = std::move(estimator.mesh());
+    mesh = std::move(new_mesh);
 
     ++counter;
   }

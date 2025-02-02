@@ -22,15 +22,14 @@ int main(int argc, char **argv) {
   // Retrieve problem data from structure.
   DataFKPP data;
 
-  std::ofstream output{"output/square_fisher_" + std::to_string(data.degree) +
-                       ".error"};
+  std::ostringstream oss;
+  oss << "output/square_fisher_" << data.degree;
+  std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - uniform refinement." << "\n";
 
   std::cout << "Square domain - uniform refinement." << std::endl;
-  std::cout << "Output under output/square_fisher_" +
-                   std::to_string(data.degree) + ".error."
-            << std::endl;
+  std::cout << "Output under " << oss.str() << ".error." << std::endl;
 
   // Domain.
   Polygon domain{data.domain};
@@ -49,7 +48,7 @@ int main(int argc, char **argv) {
   for (std::size_t j = 0; j < diagrams.size(); ++j) {
 
     // Mesh.
-    Mesh mesh{domain, diagrams[j], data.degree};
+    Mesh mesh{domain, std::move(diagrams[j]), data.degree};
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Errors.
@@ -82,7 +81,7 @@ int main(int argc, char **argv) {
       Vector<Real> ch = fisher.solver(data, mesh, ch_oold, F_old);
 
       // Compute error.
-      error.computeErrors(data, mesh, fisher, ch);
+      error.error(data, mesh, fisher, ch);
 
       // Update solution.
       ch_oold = fisher.ch_old();
@@ -99,9 +98,9 @@ int main(int argc, char **argv) {
 #endif
 
     // Output.
-    output << "\n" << error << "\n";
-
-    output << "Residual: "
+    output << "\n"
+           << error << "\n"
+           << "Residual: "
            << norm(fisher.M() * fisher.ch_old() + fisher.A() * fisher.ch_old() +
                    fisher.M_alpha() * fisher.ch_old() * (1 - fisher.ch_old()) -
                    fisher.forcing())
