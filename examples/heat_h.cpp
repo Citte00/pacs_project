@@ -74,26 +74,35 @@ int main(int argc, char **argv) {
     // Linear system equation solution.
     Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
 
-    // Errors.
-    HeatError error(mesh);
-
-    // Compute error.
-    error.error(data, mesh, *heat, ch);
+    HeatSolution solution{mesh};
+    solution.computeSolution(data, mesh, *heat, ch_old);
+    std::string solfile =
+        "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
+    solution.write(solfile);
 
     if (counter % data.VisualizationStep == 0) {
+
+      // Errors.
+      HeatError error(mesh);
+
+      // Compute error.
+      error.error(data, mesh, *heat, ch);
+
       // Output.
-      std::ostringstream buffer;
-      buffer << "\n"
+      output << "\n"
              << error << "\n"
              << "Residual: "
              << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
              << std::endl;
-      output << buffer.str();
     }
 
     // Compute estimates.
     HeatEstimator estimator(mesh);
     estimator.computeEstimates(data, *heat, ch, ch_old);
+    std::string estimate = "output/square_heat_h_" +
+                           std::to_string(estimator.mesh().elements.size()) +
+                           ".poly";
+    estimator.write(estimate, true);
     const auto &estimates = estimator.estimates();
 
     // Refine.
@@ -131,11 +140,7 @@ int main(int argc, char **argv) {
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-  HeatSolution solution{mesh};
-  solution.computeSolution(data, mesh, *heat, ch_old);
-  std::string solfile =
-      "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
-  solution.write(solfile);
+
 #endif
 
   // Final mesh.

@@ -120,7 +120,7 @@ struct DataFKPP {
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 2;
+  size_t degree = 4;
   Real penalty_coeff = 10.0;
 
   // Visualization settings

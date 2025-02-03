@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   Real refine = 0.75L;
 
   // Mesh.
-  Mesh mesh{domain, diagram, data.degree};
+  Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Sequence of meshes.
   for (std::size_t index = 0; index < TESTS_MAX; ++index) {
@@ -84,11 +84,11 @@ int main(int argc, char **argv) {
     error.error(data, mesh, laplacian, numerical);
 
     // Output.
-    output << "\n" << error << "\n";
-
-    output << "Laplacian: " << laplacian.A().rows << " x "
-           << laplacian.A().columns << "\n";
-    output << "Residual: " << norm(laplacian.A() * numerical - forcing)
+    output << "\n"
+           << error << "\n"
+           << "Laplacian: " << laplacian.A().rows << " x "
+           << laplacian.A().columns << "\n"
+           << "Residual: " << norm(laplacian.A() * numerical - forcing)
            << std::endl;
 
     // Exit.

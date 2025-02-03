@@ -29,7 +29,6 @@ void Laplace::initialize(const Mesh &mesh) {
  * @return std::array<Sparse<Real>, 3>
  */
 void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
-
 #ifndef NVERBOSE
   std::cout << "Computing the laplacian matrix." << std::endl;
 #endif
@@ -322,6 +321,95 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
 }
 
 /**
+ * @brief Assembly the mass matrix.
+ * 
+ * @param data Laplace equation data structure. 
+ * @param mesh Mesh structure.
+ */
+void Laplace::assembly_mass(const Mesh &mesh) {
+#ifndef NVERBOSE
+  std::cout << "Computing the mass matrix." << std::endl;
+#endif
+
+  // Number of quadrature nodes.
+  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
+  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
+                 [](const Element &elem) { return 2 * elem.degree + 1; });
+
+  // Degrees of freedom.
+  std::size_t dofs = mesh.dofs();
+
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
+
+  // Matrices.
+  Sparse<Real> M{dofs, dofs};
+
+  // Starting indices.
+  std::vector<std::size_t> starts(mesh.elements.size());
+  starts[0] = 0;
+  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+
+// Volume integrals.
+// Loop over the elements.
+#pragma omp parallel for
+  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+
+    // 2D quadrature nodes and weights.
+    auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+
+    // Global matrix indices.
+    std::vector<std::size_t> indices(mesh.elements[j].dofs());
+    for (std::size_t k = 0; k < mesh.elements[j].dofs(); ++k)
+      indices[k] = starts[j] + k;
+
+    // Polygon.
+    Polygon polygon = mesh.element(j);
+
+    // Element sub-triangulation.
+    std::vector<Polygon> triangles = triangulate(polygon);
+
+    // Local matrices.
+    Matrix<Real> local_M{indices.size(), indices.size()};
+
+    // Loop over the sub-triangulation.
+    for (std::size_t k = 0; k < triangles.size(); ++k) {
+
+      // Jacobian's determinant and physical nodes.
+      auto [jacobian_det, physical_x, physical_y] =
+          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+
+      // Weights scaling.
+      Vector<Real> scaled = jacobian_det * weights_2d;
+
+      // Basis functions.
+      auto [phi, gradx_phi, grady_phi] =
+          basis_2d(mesh, j, {physical_x, physical_y});
+
+      // Some products.
+      Matrix<Real> scaled_phi{phi};
+
+      for (std::size_t l = 0; l < scaled_phi.columns; ++l) {
+        scaled_phi.column(l, scaled_phi.column(l) * scaled);
+      }
+
+      // Local matrix assembly.
+      local_M += scaled_phi.transpose() * phi;
+      // Global matrix assembly.
+      M.insert(indices, indices, local_M);
+    }
+  }
+
+  // Matrices.
+  this->m_mass = std::move(M);
+
+  // Compression.
+  this->m_mass.compress();
+};
+
+
+/**
  * @brief Extrapolates blocks (indices) based on mass structure.
  *
  * @param mesh Mesh.
@@ -358,9 +446,7 @@ Laplace::block_mass(const Mesh &mesh) const {
   }
 
   return blocks;
-}
-  return blocks;
-}
+};
 
 /**
  * @brief Assemblies the RHS.

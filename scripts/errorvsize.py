@@ -2,10 +2,10 @@
 
 """
 @file errorvsize.py
-@author Andrea Di Antonio (github.com/diantonioandrea)
-@date 2024-06-19
+@author Lorenzo Citterio (github.com/Citte00)
+@date 2025-02-02
 
-@copyright Copyright (c) 2024
+@copyright Copyright (c) 2025
 """
 
 import matplotlib
@@ -27,6 +27,7 @@ degree: int = -1
 # Errors.
 l2_errors: list[float] = []
 dg_errors: list[float] = []
+energy_errors: list[float] = []
 
 # File.
 if len(sys.argv) <= 1:
@@ -66,6 +67,9 @@ for line in lines:
         elif "DG Error" in line:
             dg_errors.append(float(data[-1]))
 
+        elif "Energy Error" in line:
+            energy_errors.append(float(data[-1]))
+
         elif "Degree" in line:
             degree = int(data[-1])
 
@@ -79,26 +83,34 @@ red: list[float] = [220 / 255, 50 / 255, 47 / 255]
 # Comparison.
 l2_comparison: list[float] = []
 dg_comparison: list[float] = []
+energy_comparison: list[float] = []
 
 for size in sizes:
     l2_comparison.append((size / sizes[-1]) ** (degree + 1) * l2_errors[-1])
     dg_comparison.append((size / sizes[-1]) ** degree * dg_errors[-1])
+    if energy_errors:
+        energy_comparison.append((size / sizes[-1]) ** degree * energy_errors[-1])
 
 # Ticks.
 sizes_ticks = [sizes[0], sizes[-1]]
 
 l2_ticks = [l2_errors[0], l2_errors[-1]]
 dg_ticks = [dg_errors[0], dg_errors[-1]]
+energy_ticks = [energy_errors[0], energy_errors[-1]] if energy_errors else []
 
 # Labels.
 sizes_labels = [f"{tick:.3f}" for tick in sizes_ticks]
 
 l2_labels = [f"{tick:.1e}" for tick in l2_ticks]
 dg_labels = [f"{tick:.1e}" for tick in dg_ticks]
+energy_labels = [f"{tick:.1e}" for tick in energy_ticks] if energy_errors else []
 
 # Plot.
-fig, axes = plt.subplots(1, 2)
-fig.suptitle("L2 and DG errors vs. size")
+fig, axes = plt.subplots(1, 3 if energy_errors else 2, figsize=(16,8))
+if energy_errors:
+    fig.suptitle("L2, DG and Energy errors vs. size")
+else:
+    fig.suptitle("L2 and DG errors vs. size")
 
 # L2.
 axes[0].plot(sizes, l2_errors, color=black, marker="*", linewidth=1, label="$L^2$ error") # Error.
@@ -107,6 +119,12 @@ axes[0].plot(sizes, l2_comparison, color=red, linestyle="--", linewidth=0.5, lab
 # DG.
 axes[1].plot(sizes, dg_errors, color=black, marker="*", linewidth=1, label="$DG$ error") # Error.
 axes[1].plot(sizes, dg_comparison, color=red, linestyle="--", linewidth=0.5, label=f"$h^{degree}$") # Comparison.
+
+# Energy error.
+if energy_errors:
+    axes[2].plot(sizes, energy_errors, color=black, marker="*", linewidth=1, label="Energy error")  # Error.
+    axes[2].plot(sizes, energy_comparison, color=red, linestyle="--", linewidth=0.5, label=f"$h^{degree}$")  # Comparison.
+
 
 if "lshape" in sys.argv[1]:
     dg_comparison: list[float] = []
@@ -117,7 +135,7 @@ if "lshape" in sys.argv[1]:
     axes[1].plot(sizes, dg_comparison, color=red, linestyle="--", linewidth=0.5, label="$h^{2/3}$") # Comparison.
 
 # Parameters.
-for j in range(2):
+for j in range(2 + (1 if energy_errors else 0)):
 
     # Loglog scale.
     axes[j].set_xscale("log")

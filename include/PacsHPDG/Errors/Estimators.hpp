@@ -64,8 +64,8 @@ public:
   void mesh_refine_size(const Mask &);
   void mesh_refine_degree(const Mask &);
 
-  // Mesh refinement.
-  void mesh_refine(const LaplaceEstimator &, const Real &refine = 0.75,
+  // Elements to refine refinement.
+  std::array<Mask, 2> find_elem_to_refine(const LaplaceEstimator &, const Real &refine = 0.75,
                    const Real &speed = 1.0);
 
   // Friend operator<< for output printing.
@@ -92,9 +92,6 @@ public:
   // METHODS.
   // Compute error estimates.
   void computeEstimates(const DataHeat &, const Heat &, const Vector<Real> &, const Vector<Real> &);
-  // Refine mesh.
-  void mesh_refine(Heat &, const Mesh &,
-                   const Real &refine = 0.75, const Real &speed = 1.0);
 };
 
 /**

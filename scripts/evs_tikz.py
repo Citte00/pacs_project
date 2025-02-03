@@ -3,8 +3,8 @@
 """
 @file evs_tikz.py
 @brief errorvsize TikZ Python wrapper.
-@author Andrea Di Antonio (github.com/diantonioandrea)
-@date 2024-07-03
+@author Lorenzo Citterio (github.com/Citte00)
+@date 2025-02-02
 
 @copyright Copyright (c) 2024
 """
@@ -16,9 +16,16 @@ if len(sys.argv) <= 1:
     print(f"Usage: {sys.argv[0]} /path/to/file.")
     sys.exit(0)
 
+# Default template path
+template_path = "templates/sizes_tikz.tex"
+
+# Check if '--energy' argument is passed
+if "--energy" in sys.argv:
+    template_path = "templates/sizes_tikz_energy.tex"
+
 # Template.
 try:
-    file = open("templates/sizes_tikz.tex", "r+")
+    file = open(template_path, "r+")
     template: str = file.read()
     file.close()
 
@@ -32,6 +39,7 @@ sizes: list[float] = []
 # Errors.
 l2_errors: list[float] = []
 dg_errors: list[float] = []
+energy_errors: list[float] = []
 
 # Degree.
 degree: int = -1
@@ -39,6 +47,7 @@ degree: int = -1
 # Plots.
 l2_plots: list[str] = []
 dg_plots: list[str] = []
+energy_plots: list[str] =[]
 
 try:
     if sys.argv[1].split(".")[-1] != "error":
@@ -70,6 +79,9 @@ for line in lines:
         elif "DG Error" in line:
             dg_errors.append(float(data[-1]))
 
+        elif "Energy Error" in line:
+            energy_errors.append(float(data[-1]))
+
         elif "Degree" in line:
             degree = int(data[-1])
 
@@ -90,7 +102,7 @@ for size in sizes:
 l2_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
 l2_errors_string += "{" + " ".join((f"({sizes[j]},{l2_errors[j]})" for j in range(len(sizes)))) + "};"
 l2_errors_string += "\n"
-l2_errors_string += "\\addlegendentry{$\\LT$ Error}\n"
+l2_errors_string += "\\addlegendentry{$L^2$ Error}\n"
 
 dg_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
 dg_errors_string += "{" + " ".join((f"({sizes[j]},{dg_errors[j]})" for j in range(len(sizes)))) + "};"
@@ -128,6 +140,25 @@ if "lshape" in sys.argv[1]:
 # Text.
 template = template.replace("% PLOTS_L2", "".join(l2_plots))
 template = template.replace("% PLOTS_DG", "".join(dg_plots))
+
+# Energy error.
+if "--energy" in sys.argv:
+    energy_comparison: list[float] = []
+
+    energy_comparison.append((size / sizes[-1]) ** degree * energy_errors[-1])
+
+    energy_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
+    energy_errors_string += "{" + " ".join((f"({sizes[j]},{energy_errors[j]})" for j in range(len(sizes)))) + "};"
+    energy_errors_string += "\n"
+    energy_errors_string += "\\addlegendentry{Energy Error}\n"
+    energy_plots.append(energy_errors_string)
+
+    energy_comparison_string: str = f"\n\\addplot[solarized-base02, dashed] coordinates "
+    energy_comparison_string += "{"+ f"({sizes[0]},{energy_comparison[0]}) ({sizes[-1]},{energy_comparison[-1]})" + "};\n"
+    energy_comparison_string += "\\addlegendentry{$\\mathcal{O}(h^{" + str(degree) + "})$}\n"
+    energy_plots.append(energy_comparison_string)
+
+    template = template.replace("% PLOTS_ENERGY", "".join(energy_plots))
 
 # Output.
 file = open(sys.argv[1].replace(".error", "_evs.tex"), "w+")

@@ -27,10 +27,10 @@ namespace pacs {
 void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
 
   // Number of quadrature nodes.
-  std::size_t degree = GAUSS_ORDER;
+  std::size_t nqn = data.NqnVisualization;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
   // Starting indices.
   std::vector<std::size_t> starts(mesh.elements.size());
@@ -40,9 +40,9 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices(degree*degree);
+  std::vector<std::size_t> local_indices(nqn*nqn);
 
-  for (std::size_t h = 0; h < degree * degree; ++h)
+  for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices[h] = h;
 
   // Loop over the elements.
@@ -113,7 +113,7 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 };
@@ -132,10 +132,10 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
 #endif
 
   // Number of quadrature nodes.
-  std::size_t degree = GAUSS_ORDER;
+  std::size_t nqn = GAUSS_ORDER;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
   // Starting indices.
   std::vector<std::size_t> starts(mesh.elements.size());
@@ -145,9 +145,9 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices(degree * degree);
+  std::vector<std::size_t> local_indices(nqn * nqn);
 
-  for (std::size_t h = 0; h < degree * degree; ++h)
+  for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices[h] = h;
 
   // Loop over the elements.
@@ -218,7 +218,7 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 };
@@ -235,10 +235,10 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
                                      const Vector<Real> &ch) {
 
   // Number of quadrature nodes.
-  std::size_t degree = GAUSS_ORDER;
+  std::size_t nqn = GAUSS_ORDER;
 
   // Quadrature nodes.
-  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(degree);
+  auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);
 
   // Starting indices.
   std::vector<std::size_t> starts(mesh.elements.size());
@@ -248,9 +248,9 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Local vectors indices.
-  std::vector<std::size_t> local_indices(degree * degree);
+  std::vector<std::size_t> local_indices(nqn * nqn);
 
-  for (std::size_t h = 0; h < degree * degree; ++h)
+  for (std::size_t h = 0; h < nqn * nqn; ++h)
     local_indices[h] = h;
 
   // Loop over the elements.
@@ -321,7 +321,7 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 };

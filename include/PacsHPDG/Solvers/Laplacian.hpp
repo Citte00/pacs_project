@@ -42,6 +42,8 @@ public:
   void initialize(const Mesh &);
   // Assembly the laplace system matrix.
   void assembly(const DataLaplace &, const Mesh &);
+  // Assembly the mass matrix.
+  void assembly_mass(const Mesh &);
   // Assembly the forcing term.
   Vector<Real> assembly_force(const DataLaplace &, const Mesh &) const;
   // Solver of the Laplace equation.
