@@ -1,0 +1,39 @@
+% Errors v Size template for TikZ.
+
+    % L2 Error Plot
+    \begin{subfigure}[b]{0.3\textwidth}
+    \begin{tikzpicture}[scale = .6]
+    \begin{loglogaxis}[
+        xlabel={$h$},
+        legend pos=north west,
+    ]
+    % PLOTS_L2
+    \end{loglogaxis}
+    \end{tikzpicture}
+    \caption{$L^2$ Error}
+    \end{subfigure}
+    \hfill
+    % DG Error Plot
+    \begin{subfigure}[b]{0.3\textwidth}
+    \begin{tikzpicture}[scale = .6]
+    \begin{loglogaxis}[
+        xlabel={$h$},
+        legend pos=north west,
+    ]
+    % PLOTS_DG
+    \end{loglogaxis}
+    \end{tikzpicture}
+    \caption{DG Error}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.3\textwidth}
+    \begin{tikzpicture}[scale = .6]
+    \begin{loglogaxis}[
+        xlabel={$h$},
+        legend pos=north west,
+    ]
+    % PLOTS_ENERGY
+    \end{loglogaxis}
+    \end{tikzpicture}
+    \caption{Energy Error}
+    \end{subfigure}

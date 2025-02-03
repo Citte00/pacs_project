@@ -88,14 +88,14 @@ for line in lines:
         continue
 
     # Color.
-    color: tuple[int] = list(cm.Blues(norm(float(data[-1]))))
+    color: tuple[int] = list(cm.turbo(norm(float(data[-1]))))
     color[3] = 0.75 # Reduces alpha.
 
     # Plot.
     ax.fill(x, y, facecolor=color, edgecolor=black, linewidth=0.25)
 
 # Create a ScalarMappable for the colorbar
-sm = plt.cm.ScalarMappable(cmap=cm.Blues, norm=norm)
+sm = plt.cm.ScalarMappable(cmap=cm.turbo, norm=norm)
 sm.set_array([])
 
 # Add colorbar
@@ -103,6 +103,25 @@ cbar = fig.colorbar(sm, ax=ax, ticks=np.linspace(min(estimates), max(estimates),
 cbar.ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2e'))  # Adjust precision as needed
 
 ax.set_aspect('equal', adjustable='box')
+
+# Background and axes styling
+fig.patch.set_facecolor("#3A3A3A")  # Charcoal gray (lighter black)
+ax.set_facecolor("#3A3A3A")  # Match background
+
+# Set text and borders to light gray/white for contrast
+ax.spines["top"].set_color("#D3D3D3")
+ax.spines["bottom"].set_color("#D3D3D3")
+ax.spines["left"].set_color("#D3D3D3")
+ax.spines["right"].set_color("#D3D3D3")
+
+# Change tick and axis label colors
+ax.xaxis.label.set_color("white")
+ax.yaxis.label.set_color("white")
+ax.tick_params(colors="white")
+
+# Set colorbar text to white for readability
+cbar.ax.yaxis.label.set_color("white")
+cbar.ax.tick_params(colors="white")
 
 # Output.
 if matplotlib.get_backend() == "agg":
