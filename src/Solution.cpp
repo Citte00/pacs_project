@@ -113,7 +113,7 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 };
@@ -321,7 +321,7 @@ void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
 
       // Local indices update.
       for (auto &index : local_indices)
-        index += degree * degree;
+        index += nqn * nqn;
     }
   }
 };
