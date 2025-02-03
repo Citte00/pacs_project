@@ -42,7 +42,7 @@ public:
   void assembly_force(const DataHeat &, const Mesh &);
   // Solver of the Heat equation.
   Vector<Real> solver(const DataHeat &, const Mesh &, const Vector<Real> &,
-              const Vector<Real> &, const Real &TOL = 1E-15);
+                      const Vector<Real> &, const Real &TOL = 1E-15);
   // Get functions modal coefficients.
   Vector<Real> modal(const Mesh &, const TriFunctor &) const;
   // Get source function modal coefficient.
@@ -51,12 +51,11 @@ public:
   // Construct matrix with base indeces for each degree.
   Matrix<int> transition(const std::size_t &) const;
   // prolong solution for p.
-  Vector<Real> prolong_solution_p(const Mesh &, const Mesh &, const Sparse<Real> &, const Vector<Real> &,
-                          const Mask &) const;
+  Vector<Real> prolong_solution_p(const Mesh &, const Mesh &,
+                                  const Vector<Real> &, const Mask &) const;
   // prolong solution for h.
   Vector<Real> prolong_solution_h(const Mesh &, const Mesh &,
-                                  const Sparse<Real> &, const Vector<Real> &,
-                                  const Mask &) const;
+                                  const Vector<Real> &, const Mask &) const;
 };
 } // namespace pacs
 

@@ -194,8 +194,7 @@ std::array<Mask, 2> LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator
 
   // Masks.
   Mask p_mask = this->m_fits > speed;
-  Mask h_mask = (this->m_estimates * this->m_estimates) >
-                refine * sum(this->m_estimates * this->m_estimates) /
+  Mask h_mask = this->m_estimates > refine * this->m_estimates /
                     this->m_mesh.elements.size();
 
   // Strategy.
@@ -427,7 +426,6 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
     }
 
     this->m_estimate += this->m_estimates[j];
-    this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
 
     // Degrees.
     Vector<Real> degrees{indices.size()};
@@ -1008,7 +1006,6 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
     }
 
     this->m_estimate += this->m_estimates[j];
-    this->m_estimates[j] = std::sqrt(this->m_estimates[j]);
 
     // Degrees.
     Vector<Real> degrees{indices.size()};

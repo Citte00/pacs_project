@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   // Diagrams.
   std::vector<std::vector<Polygon>> diagrams;
 
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_125.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_300.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_250.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_500.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_1000.poly"));
@@ -82,6 +82,13 @@ int main(int argc, char **argv) {
 
       // Compute error.
       error.error(data, mesh, fisher, ch);
+
+      FisherEstimator estimator(mesh);
+      estimator.computeEstimates(data, fisher, ch);
+      std::string estimate = "output/square_fisher_" +
+                             std::to_string(estimator.mesh().elements.size()) +
+                             ".poly";
+      estimator.write(estimate, true);
 
       // Update solution.
       ch_oold = fisher.ch_old();

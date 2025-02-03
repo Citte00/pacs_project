@@ -96,12 +96,10 @@ int main(int argc, char **argv) {
     // p refinement.
     estimator.mesh_refine_degree(p_mask);
     Mesh new_mesh = estimator.mesh();
-    
-    heat = std::make_unique<Heat>(new_mesh);
-    heat->assembly_mass(new_mesh);
-    
+
+    // Prolong solution.
     ch_old.resize(new_mesh.dofs());
-    ch_old = heat->prolong_solution_p(new_mesh, mesh, heat->M(), ch, p_mask);
+    ch_old = heat->prolong_solution_p(new_mesh, mesh, ch, p_mask);
     
     mesh = std::move(new_mesh);
 
@@ -109,11 +107,14 @@ int main(int argc, char **argv) {
     estimator.mesh_refine_degree(p_mask);
     new_mesh = std::move(estimator.mesh());
 
-    heat = std::make_unique<Heat>(new_mesh);
-    heat->assembly(data, new_mesh);
-    
+    // Prolong solution.
     ch_old.resize(new_mesh.dofs());
-    ch_old = heat->prolong_solution_p(new_mesh, mesh, heat->M(), ch, p_mask);
+    ch_old = heat->prolong_solution_p(new_mesh, mesh, ch_old, p_mask);
+
+    // Update matrices.
+    heat = std::make_unique<Heat>(new_mesh);
+    heat->t() = t;
+    heat->assembly(data, new_mesh);
 
     // Update forcing.
     heat->forcing().resize(mesh.dofs());
