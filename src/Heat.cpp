@@ -11,6 +11,11 @@
 
 namespace pacs {
 
+/**
+ * @brief Initialize Heat object.
+ * 
+ * @param mesh Mesh struct. 
+ */
 void Heat::initialize(const Mesh &mesh) {
   // Dofs.
   std::size_t dofs = mesh.dofs();

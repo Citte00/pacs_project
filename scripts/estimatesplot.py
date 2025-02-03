@@ -12,6 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import Normalize
+import numpy as np
 import sys
 import os
 
@@ -47,19 +48,22 @@ fig, ax = plt.subplots()
 # Normalize the colormap
 estimates: list[float] = []
 
+if "--estimates" in sys.argv:
+    for line in lines:
+        if line:
+            if line[0] == "@":
+                continue
 
-for line in lines:
-    if line:
-        if line[0] == "@":
+        data: list[str] = line.split(" ")
+        
+        try:
+            estimates.append(float(data[-1]))
+
+        except ValueError:
             continue
 
-    data: list[str] = line.split(" ")
-    
-    try:
-        estimates.append(float(data[-1]))
-
-    except ValueError:
-        continue
+if not estimates:
+    estimates = [0.0, 1.0]
 
 norm = Normalize(vmin=min(estimates), vmax=max(estimates))
 
@@ -86,13 +90,8 @@ for line in lines:
         continue
 
     # Color.
-    try:
-        estimate = float(data[-1])  # Handle estimates as floats.
-        color: tuple[float] = list(cm.Blues(norm(estimate)))
-    except ValueError:
-        color: tuple[float] = [1, 1, 1, 1]
-
-    color[3] = 0.75  # Reduces alpha.
+    color: tuple[int] = [1, 1, 1, 1] if "--estimates" not in sys.argv else list(cm.Blues(norm(float(data[-1]))))
+    color[3] = 0.75 # Reduces alpha.
 
     # Plot.
     ax.fill(x, y, facecolor=color, edgecolor=black, linewidth=0.25)
@@ -102,7 +101,8 @@ sm = plt.cm.ScalarMappable(cmap=cm.Blues, norm=norm)
 sm.set_array([])
 
 # Add colorbar
-fig.colorbar(sm, ax=ax, alpha=0.75)
+if "--estimates" in sys.argv:
+    fig.colorbar(sm, ax=ax, ticks=np.linspace(min(estimates), max(estimates), num=5), alpha=0.75)
 
 ax.set_aspect('equal', adjustable='box')
 

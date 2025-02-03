@@ -185,7 +185,7 @@ void LaplaceEstimator::mesh_refine_degree(const Mask &mask) {
  * @param refine Refinement percentage.
  * @param speed Solution's smoothness.
  */
-void LaplaceEstimator::mesh_refine(const LaplaceEstimator &estimator,
+std::array<Mask, 2> LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator &estimator,
                                    const Real &refine, const Real &speed) {
 #ifndef NDEBUG // Integrity check.
   assert((refine > 0.0L) && (refine < 1.0L));
@@ -207,9 +207,7 @@ void LaplaceEstimator::mesh_refine(const LaplaceEstimator &estimator,
       h_mask[j] = false;
   }
 
-  // Refinements.
-  mesh_refine_degree(p_mask);
-  mesh_refine_size(h_mask);
+  return {h_mask, p_mask};
 };
 
 /**
@@ -579,7 +577,7 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
       // Local time derivative.
       Vector<Real> local_uh = phi * ch(indices);
       Vector<Real> local_uh_old = phi * ch_old(indices);
-      Vector<Real> partial_uh_t = (- local_uh + local_uh_old) / data.dt;
+      Vector<Real> partial_uh_t = (local_uh - local_uh_old) / data.dt;
 
       // Local source approximation.
       Vector<Real> f_bar = phi * f_modals(indices);
@@ -781,37 +779,6 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
 
   this->m_estimate = std::sqrt(this->m_estimate);
 };
-
-/*
-void HeatEstimator::mesh_refine(Heat &heat, const Mesh &mesh, const Real
-&refine, const Real &speed) { #ifndef NDEBUG // Integrity check. assert((refine
-> 0.0L) && (refine < 1.0L)); assert(speed > 0.0L); #endif
-
-  // Mesh
-  Mesh old_mesh = mesh;
-
-  // Masks.
-  Mask p_mask = this->m_fits > speed;
-  Mask h_mask = (this->m_estimates * this->m_estimates) >
-                refine * sum(this->m_estimates * this->m_estimates) /
-                    this->m_mesh.elements.size();
-
-  // Strategy.
-  for (std::size_t j = 0; j < this->m_mesh.elements.size(); ++j) {
-    if (!h_mask[j]) // p-Refine only error-marked elements.
-      p_mask[j] = false;
-
-    if (p_mask[j] && h_mask[j]) // p > h.
-      h_mask[j] = false;
-  }
-
-  // Refinements and update of solution.
-  mesh_refine_degree(p_mask);
-  heat.prolong_solution_p(this->m_mesh, old_mesh, heat.M(), p_mask);
-  old_mesh = this->m_mesh;
-  mesh_refine_size(h_mask);
-  heat.prolong_solution_h(this->m_mesh, old_mesh, heat.M(), h_mask);
-};*/
 
 /**
  * @brief Compute fisher equation error estimates.

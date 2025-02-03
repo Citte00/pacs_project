@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   for (std::size_t j = 0; j < diagrams.size(); ++j) {
 
     // Mesh.
-    Mesh mesh{domain, diagrams[j], data.degree};
+    Mesh mesh{domain, std::move(diagrams[j]), data.degree};
 
     // Matrices.
     Laplace laplacian(mesh);

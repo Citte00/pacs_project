@@ -23,18 +23,14 @@ int main(int argc, char **argv) {
   // Retrieve problem data from structure.
   DataHeat data;
 
-  std::ofstream output{"output/square_heat_hp_" + std::to_string(data.degree) +
-                       ".error"};
-
-  std::string outputVTK =
-      "output/square_heat_hp_" + std::to_string(data.degree) + ".poly";
+  std::ostringstream oss;
+  oss << "output/square_heat_hp_" << data.degree;
+  std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - hp-adaptive refinement." << "\n";
 
   std::cout << "Square domain - hp-adaptive refinement." << std::endl;
-  std::cout << "Output under output/square_heat_hp_" +
-                   std::to_string(data.degree) + ".error."
-            << std::endl;
+  std::cout << "Output under " << oss.str() << ".error." << std::endl;
 
   // Domain.
   Polygon domain{data.domain};
@@ -47,69 +43,84 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, diagram, data.degree};
 
   // Matrices.
-  Heat heat(mesh);
-  heat.assembly(data, mesh);
+  std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
+  heat->assembly(data, mesh);
 
   // Initial condition.
-  Vector<Real> ch_old = heat.modal(mesh, data.c_ex);
+  Vector<Real> ch_old = heat->modal(mesh, data.c_ex);
 
   // Forcing term.
-  heat.assembly_force(data, mesh);
+  heat->assembly_force(data, mesh);
 
+  // Parameters.
   int counter = 1;
-
+  Real t = 0.0;
   int steps = static_cast<int>(round(data.t_f / data.dt));
+
   for (int i = 1; i <= steps; i++) {
 
     // Time step.
-    heat.t() += data.dt;
-    std::cout << "TIME: " << heat.t() << std::endl;
+    t += data.dt;
+    std::cout << "TIME: " << (heat->t() = t) << std::endl;
 
     // Update forcing term.
-    Vector<Real> F_old = heat.forcing();
-    heat.assembly_force(data, mesh);
+    Vector<Real> F_old = heat->forcing();
+    heat->assembly_force(data, mesh);
 
     // Linear system equation solution.
-    Vector<Real> ch = heat.solver(data, mesh, ch_old, F_old);
-
-    // Errors.
-    HeatError error(mesh);
-
-    // Compute error.
-    error.error(data, mesh, heat, ch);
+    Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
 
     if (counter % data.VisualizationStep == 0) {
-      // Output.
-      output << "\n" << error << "\n";
 
-      output << "Residual: "
-             << norm(heat.M() * ch + heat.A() * ch -
-                     heat.forcing())
+      // Errors.
+      HeatError error(mesh);
+
+      // Compute error.
+      error.error(data, mesh, *heat, ch);
+
+      // Output.
+      output << "\n"
+             << error << "\n"
+             << "Residual: "
+             << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
              << std::endl;
     }
 
-    // Compute estimates.
-    HeatEstimator estimates(mesh);
-    estimates.computeEstimates(data, heat, ch, ch_old);
-    estimates.write(outputVTK, true);
+    // Compute estimator.
+    HeatEstimator estimator(mesh);
+    estimator.computeEstimates(data, *heat, ch, ch_old);
 
     // hp-Refine and prolong solution.
-    //estimates.mesh_refine(heat, mesh);
+    auto [h_mask, p_mask] = estimator.find_elem_to_refine(estimator);
 
-    // Update mesh.
-    mesh = estimates.mesh();
+    // p refinement.
+    estimator.mesh_refine_degree(p_mask);
+    Mesh new_mesh = estimator.mesh();
+    
+    heat = std::make_unique<Heat>(new_mesh);
+    heat->assembly_mass(new_mesh);
+    
+    ch_old.resize(new_mesh.dofs());
+    ch_old = heat->prolong_solution_p(new_mesh, mesh, heat->M(), ch, p_mask);
+    
+    mesh = std::move(new_mesh);
 
-    // Update matrices.
-    heat.assembly(data, mesh);
-    auto blocks = heat.block_mass(mesh);
+    // h refinement.
+    estimator.mesh_refine_degree(p_mask);
+    new_mesh = std::move(estimator.mesh());
 
-    // Update solution.
-    ch_old.resize(ch.length);
-    ch_old = ch;
+    heat = std::make_unique<Heat>(new_mesh);
+    heat->assembly(data, new_mesh);
+    
+    ch_old.resize(new_mesh.dofs());
+    ch_old = heat->prolong_solution_p(new_mesh, mesh, heat->M(), ch, p_mask);
 
     // Update forcing.
-    heat.forcing().resize(mesh.dofs());
-    heat.assembly_force(data, mesh);
+    heat->forcing().resize(mesh.dofs());
+    heat->assembly_force(data, new_mesh);
+
+    // Update mesh.
+    mesh = std::move(new_mesh);
 
     ++counter;
   }

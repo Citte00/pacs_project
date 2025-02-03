@@ -11,7 +11,6 @@
 #include <PacsHPDG.hpp>
 
 namespace pacs {
-
 /**
  * @brief Compute Laplace equation L2 and DG errors.
  *
@@ -271,16 +270,20 @@ void FisherError::error(const DataFKPP &data, const Mesh &mesh,
 #ifndef NVERBOSE
   std::cout << "Evaluating L2, DG and energy errors." << std::endl;
 #endif
-  // Matrix.
+
+  // Matrices.
+  Sparse<Real> mass = fisher.M();
   Sparse<Real> dg_stiff = fisher.DG();
 
   // Error vector.
   Vector<Real> u_modals = fisher.modal(mesh, data.c_ex);
-
   Vector<Real> error = u_modals - numerical;
 
   // DG Error.
   this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
+
+  // L2 Error.
+  this->m_l2_error = std::sqrt(dot(error, mass * error));
 
   // Energy error.
   this->m_energy += data.dt * this->m_dg_error * this->m_dg_error;
