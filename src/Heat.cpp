@@ -13,8 +13,8 @@ namespace pacs {
 
 /**
  * @brief Initialize Heat object.
- * 
- * @param mesh Mesh struct. 
+ *
+ * @param mesh Mesh struct.
  */
 void Heat::initialize(const Mesh &mesh) {
   // Dofs.
@@ -470,11 +470,11 @@ Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
     Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -529,7 +529,7 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Loop over the elements.
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
     // Quadrature nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -549,11 +549,11 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
     Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -593,7 +593,6 @@ Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
  * @return Matrix<int>
  */
 Matrix<int> Heat::transition(const std::size_t &degree) const {
-
 #ifndef NVERBOSE
   std::cout << "Computing transition matrix." << std::endl;
 #endif
@@ -672,12 +671,18 @@ Matrix<int> Heat::transition(const std::size_t &degree) const {
  */
 Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
                                       const Mesh &old_mesh,
-                                      const Sparse<Real> &M,
                                       const Vector<Real> &ch,
                                       const Mask &mask_p) const {
+#ifndef NVERBOSE
+  std::cout << "Prolong solution to new dofs." << std::endl;
+#endif
+
+  // Number of elements.
+  std::size_t old_elem = old_mesh.elements.size();
+  std::size_t new_elem = new_mesh.elements.size();
 
   // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(new_mesh.elements.size(), 0);
+  std::vector<std::size_t> nqn(new_elem, 0);
   std::transform(new_mesh.elements.begin(), new_mesh.elements.end(),
                  nqn.begin(),
                  [](const Element &elem) { return 2 * elem.degree + 1; });
@@ -686,24 +691,20 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
   Vector<Real> new_ch(new_mesh.dofs());
 
   // Starting indices.
-  std::vector<std::size_t> old_starts;
-  old_starts.reserve(old_mesh.elements.size());
-  old_starts.emplace_back(0);
+  std::vector<std::size_t> old_starts(old_elem);
+  old_starts[0] = 0;
 
-  for (std::size_t j = 1; j < old_mesh.elements.size(); ++j)
-    old_starts.emplace_back(old_starts[j - 1] +
-                            old_mesh.elements[j - 1].dofs());
+  for (std::size_t j = 1; j < old_elem; ++j)
+    old_starts[j] = old_starts[j - 1] + old_mesh.elements[j - 1].dofs();
 
-  std::vector<std::size_t> new_starts;
-  new_starts.reserve(new_mesh.elements.size());
-  new_starts.emplace_back(0);
+  std::vector<std::size_t> new_starts(new_elem);
+  new_starts[0] = 0;
 
-  for (std::size_t j = 1; j < new_mesh.elements.size(); ++j)
-    new_starts.emplace_back(new_starts[j - 1] +
-                            new_mesh.elements[j - 1].dofs());
+  for (std::size_t j = 1; j < new_elem; ++j)
+    new_starts[j] = new_starts[j - 1] + new_mesh.elements[j - 1].dofs();
 
   // Loop over elements.
-  for (std::size_t j = 0; j < new_mesh.elements.size(); j++) {
+  for (std::size_t j = 0; j < new_elem; j++) {
 
     // 2D quadrature weights and nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -713,17 +714,13 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
     std::size_t new_element_dofs = new_mesh.elements[j].dofs();
 
     // Global matrix indices.
-    std::vector<std::size_t> old_indices;
-    old_indices.reserve(old_element_dofs);
-
-    std::vector<std::size_t> new_indices;
-    new_indices.reserve(new_element_dofs);
-
+    std::vector<std::size_t> old_indices(old_element_dofs);
     for (std::size_t k = 0; k < old_element_dofs; ++k)
-      old_indices.emplace_back(old_starts[j] + k);
+      old_indices[k] = old_starts[j] + k;
 
+    std::vector<std::size_t> new_indices(new_element_dofs);
     for (std::size_t k = 0; k < new_element_dofs; ++k)
-      new_indices.emplace_back(new_starts[j] + k);
+      new_indices[k] = new_starts[j] + k;
 
     // Check to refine.
     if (!mask_p[j]) {
@@ -737,15 +734,18 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
 
+    // Local mass matrix.
+    Matrix<Real> local_mass{new_indices.size(), new_indices.size()};
+
     // Local coefficients.
-    Vector<Real> local_coefficients{new_element_dofs};
+    Vector<Real> local_coefficients{new_indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -772,13 +772,12 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
       u_edge(indexes, ch(old_indices));
 
       // Local coefficients.
+      local_mass += scaled_phi.transpose() * phi;
       local_coefficients += scaled_phi.transpose() * (phi * u_edge);
     }
 
-    // Update.
-    local_coefficients =
-        solve(M(new_indices, new_indices), local_coefficients, LUD);
-
+    // Update the solution.
+    local_coefficients = solve(local_mass, local_coefficients);
     new_ch(new_indices, local_coefficients);
   }
   return new_ch;
@@ -793,39 +792,45 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
  */
 Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
                                       const Mesh &old_mesh,
-                                      const Sparse<Real> &M,
                                       const Vector<Real> &ch,
                                       const Mask &mask_h) const {
+#ifndef NVERBOSE
+  std::cout << "Prolong solution to new elements." << std::endl;
+#endif
+
+  // Number of elements.
+  std::size_t old_elem = old_mesh.elements.size();
+  std::size_t new_elem = new_mesh.elements.size();
 
   // Number of quadrature nodes.
-  std::vector<std::size_t> nqn_new(new_mesh.elements.size(), 0);
+  std::vector<std::size_t> nqn_new(new_elem, 0);
   std::transform(new_mesh.elements.begin(), new_mesh.elements.end(),
                  nqn_new.begin(),
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
-  std::vector<std::size_t> nqn_old(old_mesh.elements.size(), 0);
+  std::vector<std::size_t> nqn_old(old_elem, 0);
   std::transform(old_mesh.elements.begin(), old_mesh.elements.end(),
                  nqn_old.begin(),
                  [](const Element &elem) { return 2 * elem.degree + 1; });
 
   // Starting indices for old mesh.
-  std::vector<std::size_t> old_starts(old_mesh.elements.size());
+  std::vector<std::size_t> old_starts(old_elem);
   old_starts[0] = 0;
-  for (std::size_t j = 1; j < old_mesh.elements.size(); ++j)
+  for (std::size_t j = 1; j < old_elem; ++j)
     old_starts[j] = old_starts[j - 1] + old_mesh.elements[j - 1].dofs();
 
   // Starting indices for new mesh.
-  std::vector<std::size_t> new_starts(new_mesh.elements.size());
+  std::vector<std::size_t> new_starts(new_elem);
   new_starts[0] = 0;
-  for (std::size_t j = 1; j < new_mesh.elements.size(); ++j)
+  for (std::size_t j = 1; j < new_elem; ++j)
     new_starts[j] = new_starts[j - 1] + new_mesh.elements[j - 1].dofs();
 
-  // Creating new solution vector adding first non-refined element.
+  // Creating new solution vector.
   Vector<Real> new_ch{new_mesh.dofs()};
   std::size_t new_elem_idx = 0;
 
-  for (std::size_t j = 0; j < old_mesh.elements.size(); ++j) {
-    // Copy non-refined element.
+  // Copy non-refined element.
+  for (std::size_t j = 0; j < old_elem; ++j) {
     if (!mask_h[j]) {
       std::size_t start = old_starts[j];
       std::size_t count = old_mesh.elements[j].dofs();
@@ -837,7 +842,7 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
   }
 
   // Loop over old elements.
-  for (std::size_t j = 0; j < old_mesh.elements.size(); j++) {
+  for (std::size_t j = 0; j < old_elem; j++) {
 
     // Refinement check.
     if (!mask_h[j])
@@ -858,10 +863,11 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
                                    : old_mesh.elements[j].edges.size() + 1;
 
     // Loop over new elements.
-    for (std::size_t i = 0; i < new_elements; i++, new_elem_idx++) {
+    for (std::size_t i = 0; i < new_elements; ++i, ++new_elem_idx) {
 
       // 2D quadrature weights and nodes.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn_new[new_elem_idx]);
+      auto [nodes_x_2d, nodes_y_2d, weights_2d] =
+          quadrature_2d(nqn_new[new_elem_idx]);
 
       // Local dofs.
       std::vector<std::size_t> new_indices(
@@ -876,22 +882,25 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
       // Element sub-triangulation.
       std::vector<Polygon> triangles = triangulate(polygon);
 
+      // Local mass matrix.
+      Matrix<Real> local_mass{new_indices.size(), new_indices.size()};
+
       // Local coefficients.
       Vector<Real> local_coefficients{new_indices.size()};
 
       // Loop over the sub-triangulation.
-      for (std::size_t k = 0; k < triangles.size(); ++k) {
+      for (const auto &triangle : triangles) {
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangles[k],
-                                         {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
         Vector<Real> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(new_mesh, new_elem_idx, {physical_x, physical_y})[0];
+        Matrix<Real> phi =
+            basis_2d(new_mesh, new_elem_idx, {physical_x, physical_y})[0];
         Matrix<Real> phi_old =
             basis_2d(old_mesh, j, {physical_x, physical_y})[0];
         Matrix<Real> scaled_phi{phi};
@@ -900,12 +909,12 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local coefficients.
+        local_mass += scaled_phi.transpose() * phi;
         local_coefficients +=
             scaled_phi.transpose() * (phi_old * ch(old_indices));
       }
-      // Update temporal solution vector.
-      local_coefficients =
-          solve(M(new_indices, new_indices), local_coefficients);
+      // Update solution vector.
+      local_coefficients = solve(local_mass, local_coefficients);
       new_ch(new_indices, local_coefficients);
     }
   }

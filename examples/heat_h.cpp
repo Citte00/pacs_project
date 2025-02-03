@@ -74,12 +74,6 @@ int main(int argc, char **argv) {
     // Linear system equation solution.
     Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
 
-    HeatSolution solution{mesh};
-    solution.computeSolution(data, mesh, *heat, ch_old);
-    std::string solfile =
-        "output/square_h_" + std::to_string(mesh.elements.size()) + ".sol";
-    solution.write(solfile);
-
     if (counter % data.VisualizationStep == 0) {
 
       // Errors.
@@ -99,10 +93,6 @@ int main(int argc, char **argv) {
     // Compute estimates.
     HeatEstimator estimator(mesh);
     estimator.computeEstimates(data, *heat, ch, ch_old);
-    std::string estimate = "output/square_heat_h_" +
-                           std::to_string(estimator.mesh().elements.size()) +
-                           ".poly";
-    estimator.write(estimate, true);
     const auto &estimates = estimator.estimates();
 
     // Refine.
@@ -127,7 +117,7 @@ int main(int argc, char **argv) {
 
     // Prolong solution.
     ch_old.resize(new_mesh.dofs());
-    ch_old = heat->prolong_solution_h(new_mesh, mesh, heat->M(), ch, h_mask);
+    ch_old = heat->prolong_solution_h(new_mesh, mesh, ch, h_mask);
 
     // Update forcing.
     heat->assembly_force(data, new_mesh);
