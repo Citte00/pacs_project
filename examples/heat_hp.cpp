@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <string>
 
 int main(int argc, char **argv) {
@@ -40,7 +41,7 @@ int main(int argc, char **argv) {
       "meshes/square/square_" + std::to_string(data.elements) + ".poly");
 
   // Mesh.
-  Mesh mesh{domain, diagram, data.degree};
+  Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
   std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
@@ -55,6 +56,8 @@ int main(int argc, char **argv) {
   // Parameters.
   int counter = 1;
   Real t = 0.0;
+  std::size_t dofsLimit = 3E5;
+  std::size_t degree = 0;
   int steps = static_cast<int>(round(data.t_f / data.dt));
 
   for (int i = 1; i <= steps; i++) {
@@ -62,6 +65,12 @@ int main(int argc, char **argv) {
     // Time step.
     t += data.dt;
     std::cout << "TIME: " << (heat->t() = t) << std::endl;
+    // Number of elements.
+    std::cout << "Elements: " << mesh.elements.size() << std::endl;
+    // Degree.
+    for (const auto &element : mesh.elements)
+      degree = (element.degree > degree) ? element.degree : degree;
+    std::cout << "Degree: " << degree << std::endl;
 
     // Update forcing term.
     Vector<Real> F_old = heat->forcing();
@@ -84,46 +93,75 @@ int main(int argc, char **argv) {
              << "Residual: "
              << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
              << std::endl;
-    }
 
-    // Compute estimator.
-    HeatEstimator estimator(mesh);
-    estimator.computeEstimates(data, *heat, ch, ch_old);
+      // Compute estimator.
+      HeatEstimator estimator(mesh);
+      estimator.computeEstimates(data, *heat, ch, ch_old);
 
-    // hp-Refine and prolong solution.
-    auto [h_mask, p_mask] = estimator.find_elem_to_refine(estimator);
+      // Determine elements to refine.
+      auto [h_mask, p_mask] = estimator.find_elem_to_refine(estimator);
 
-    // p refinement.
-    estimator.mesh_refine_degree(p_mask);
-    Mesh new_mesh = estimator.mesh();
+      if (estimator.mesh().dofs() >= dofsLimit) {
+        ch_old = ch;
+        ++counter;
+        continue;
+      }
 
-    // Prolong solution.
-    ch_old.resize(new_mesh.dofs());
-    ch_old = heat->prolong_solution_p(new_mesh, mesh, ch, p_mask);
+      // Check if refinement is needed.
+      bool refine_p =
+          std::any_of(p_mask.begin(), p_mask.end(), [](bool v) { return v; });
+      bool refine_h =
+          std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });
+
+      if (refine_p || refine_h) {
+        // Iniialize new_mesh.
+        Mesh new_mesh = mesh;
+        
+        // Initialize ch_old.
+        ch_old = ch;
+        
+        // Perform p-refinement if necessary
+        if (refine_p) {
+          estimator.mesh_refine_degree(p_mask);
+          new_mesh = estimator.mesh();
+
+          // Prolong solution for p-refinement
+          ch_old.resize(new_mesh.dofs());
+          ch_old = heat->prolong_solution_p(new_mesh, mesh, ch_old, p_mask);
+        }
+
+        // Perform h-refinement if necessary
+        if (refine_h) {
+          estimator.mesh_refine_size(h_mask);
+          new_mesh = estimator.mesh();
+
+          // Prolong solution for h-refinement
+          ch_old.resize(new_mesh.dofs());
+          ch_old = heat->prolong_solution_h(new_mesh, mesh, ch_old, p_mask);
+        }
+
+        // Update matrices only if refinement occurs
+        heat = std::make_unique<Heat>(new_mesh);
+        heat->t() = t;
+        heat->assembly(data, new_mesh);
+
+        // Update forcing
+        heat->forcing().resize(new_mesh.dofs());
+        heat->assembly_force(data, new_mesh);
+
+        // Move mesh to new refined version
+        mesh = std::move(new_mesh);
+
+        // Write mesh file only if refined
+        std::string meshfile = "output/square_heat_hp_" +
+                               std::to_string(mesh.elements.size()) + ".poly";
+        mesh.write(meshfile, true);
+      }
+
+    } else { ch_old = ch; }
     
-    mesh = std::move(new_mesh);
-
-    // h refinement.
-    estimator.mesh_refine_degree(p_mask);
-    new_mesh = std::move(estimator.mesh());
-
-    // Prolong solution.
-    ch_old.resize(new_mesh.dofs());
-    ch_old = heat->prolong_solution_p(new_mesh, mesh, ch_old, p_mask);
-
-    // Update matrices.
-    heat = std::make_unique<Heat>(new_mesh);
-    heat->t() = t;
-    heat->assembly(data, new_mesh);
-
-    // Update forcing.
-    heat->forcing().resize(mesh.dofs());
-    heat->assembly_force(data, new_mesh);
-
-    // Update mesh.
-    mesh = std::move(new_mesh);
-
     ++counter;
+
   }
 
 // Solution structure (output).

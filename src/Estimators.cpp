@@ -194,7 +194,7 @@ std::array<Mask, 2> LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator
 
   // Masks.
   Mask p_mask = this->m_fits > speed;
-  Mask h_mask = this->m_estimates > refine * this->m_estimates /
+  Mask h_mask = this->m_estimates > refine * sum(this->m_estimates) /
                     this->m_mesh.elements.size();
 
   // Strategy.
