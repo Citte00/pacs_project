@@ -21,11 +21,6 @@ namespace pacs {
 
 struct DataHeat {
 
-  // Definition.
-  using SpatialTemporalFunction = GenFunc<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
-  using SpatialFunction =
-      GenFunc<Vector<Real>, Vector<Real>, Vector<Real>>;
-
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int elements = 300;
