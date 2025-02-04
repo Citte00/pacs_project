@@ -13,37 +13,6 @@ namespace pacs {
 
 /**
  * @brief Initialize Heat object.
- * 
- * @param mesh Mesh struct. 
- */
-void Heat::initialize(const Mesh &mesh) {
-  // Dofs.
-  std::size_t dofs = mesh.dofs();
-
-  // Reshape matrices.
-  m_mass.reshape(dofs, dofs);
-  m_stiff.reshape(dofs, dofs);
-  m_dg_stiff.reshape(dofs, dofs);
-
-  // Resize vector.
-  m_forcing.resize(dofs);
-};
-
-void Heat::initialize(const Mesh &mesh) {
-  // Dofs.
-  std::size_t dofs = mesh.dofs();
-
-  // Reshape matrices.
-  m_mass.reshape(dofs, dofs);
-  m_stiff.reshape(dofs, dofs);
-  m_dg_stiff.reshape(dofs, dofs);
-
-  // Resize vector.
-  m_forcing.resize(dofs);
-};
-
-/**
- * @brief Initialize Heat object.
  *
  * @param mesh Mesh struct.
  */
@@ -61,9 +30,9 @@ void Heat::initialize(const Mesh &mesh) {
 };
 
 /**
- * @brief Assembly of the system matrices.
+ * @brief Assembly of the heat equation matrices.
  *
- * @param data Heat equation data structure.
+ * @param Data Data structure.
  * @param mesh Mesh structure.
  * @return std::array<Sparse<Real>, 3>
  */

@@ -49,22 +49,19 @@ fig, ax = plt.subplots(figsize=(10,8))
 # Normalize the colormap
 estimates: list[float] = []
 
-if "--estimates" in sys.argv:
-    for line in lines:
-        if line:
-            if line[0] == "@":
-                continue
 
-        data: list[str] = line.split(" ")
-        
-        try:
-            estimates.append(float(data[-1]))
-
-        except ValueError:
+for line in lines:
+    if line:
+        if line[0] == "@":
             continue
 
-if not estimates:
-    estimates = [0.0, 1.0]
+    data: list[str] = line.split(" ")
+    
+    try:
+        estimates.append(float(data[-1]))
+
+    except ValueError:
+        continue
 
 norm = Normalize(vmin=min(estimates), vmax=max(estimates))
 

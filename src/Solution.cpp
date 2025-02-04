@@ -27,7 +27,7 @@ namespace pacs {
 void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
 
   // Number of quadrature nodes.
-  std::size_t nqn = GAUSS_ORDER;
+  std::size_t nqn = data.NqnVisualization;
 
   // Quadrature nodes.
   auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn);

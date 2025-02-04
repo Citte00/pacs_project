@@ -11,7 +11,7 @@
 #define INCLUDE_PACSHPDG_ERRORS_HPP
 
 // Error estimator.
-#include "./Errors/Estimators.hpp"
+#include "./Errors/Errors.hpp"
 
 // Error estimator.
 #include "./Errors/Estimators.hpp"
