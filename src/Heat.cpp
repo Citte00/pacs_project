@@ -283,7 +283,7 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
   Vector<Real> forcing{mesh.dofs()};
 
 // Loop over the elements.
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
     // 2D Local quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -449,7 +449,7 @@ Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
 // Loop over the elements.
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
     // Quadrature nodes.
@@ -703,7 +703,8 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
   for (std::size_t j = 1; j < new_elem; ++j)
     new_starts[j] = new_starts[j - 1] + new_mesh.elements[j - 1].dofs();
 
-  // Loop over elements.
+// Loop over elements.
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < new_elem; j++) {
 
     // 2D quadrature weights and nodes.
@@ -778,6 +779,7 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
 
     // Update the solution.
     local_coefficients = solve(local_mass, local_coefficients);
+#pragma omp critical
     new_ch(new_indices, local_coefficients);
   }
   return new_ch;
@@ -841,7 +843,8 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
     }
   }
 
-  // Loop over old elements.
+// Loop over old elements.
+#pragma omp parallel schedule(dynamic)
   for (std::size_t j = 0; j < old_elem; j++) {
 
     // Refinement check.

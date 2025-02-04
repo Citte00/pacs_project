@@ -16,7 +16,7 @@ CPPFLAGS += -DNSOLUTIONS
 CPPFLAGS += -DNVERBOSE
 
 # Disables debugging. Enhances performance.
-CPPFLAGS += -DNDEBUG
+#CPPFLAGS += -DNDEBUG
 
 # PARALLEL COMPUTING.
 
@@ -31,21 +31,21 @@ CPPFLAGS += -DNDEBUG
 # Parallel computing using OpenMP. Enabled by default.
 ifneq ($(OpenMP),) # $(OpenMP) set to /path/to/libomp. Apple's clang.
 CXXFLAGS += -Xclang -fopenmp
-DEBUG_CXXFLAGS += -Xclang -fopenmp
+DEBUG_CXXFLAGS += -fopenmp
 CPPFLAGS += -I$(OpenMP)/include
 LDFLAGS += -L$(OpenMP)/lib
-LDLIBS += -lomp
+LDLIBS += -lgomp -lpthread
 else
 ifneq ($(mkPrefix),) # Parallel computing using OpenMP with modules.
 CXXFLAGS += -fopenmp
 DEBUG_CXXFLAGS += -fopenmp
 LDFLAGS += -L$(mkToolchainPrefix)/lib
-LDLIBS += -lgomp
+LDLIBS += -lgomp -lpthread
 else
 ifneq ($(shell g++ --version | grep GCC),) # Parallel computing using GCC's default OpenMP.
 CXXFLAGS += -fopenmp
 DEBUG_CXXFLAGS += -fopenmp
-LDLIBS += -lgomp
+LDLIBS += -lgomp -lpthread
 else
 CXXFLAGS += -Wno-unknown-pragmas
 DEBUG_CXXFLAGS += -Wno-unknown-pragmas

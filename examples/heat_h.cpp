@@ -12,8 +12,8 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
-#include <memory>
 #include <iostream>
+#include <memory>
 #include <string>
 
 int main(int argc, char **argv) {
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   Real t = 0.0;
   const int dofsLimit = 2 * DOFS_MAX;
   int steps = static_cast<int>(round(data.t_f / data.dt));
-  
+
   for (int i = 1; i <= steps; ++i) {
 
     // Time step.
@@ -88,54 +88,53 @@ int main(int argc, char **argv) {
              << "Residual: "
              << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
              << std::endl;
-    }
 
-    // Compute estimates.
-    HeatEstimator estimator(mesh);
-    estimator.computeEstimates(data, *heat, ch, ch_old);
-    const auto &estimates = estimator.estimates();
-    std::string estimate =
-        "output/heat_" + std::to_string(mesh.elements.size()) + "@" + std::to_string(data.degree) + ".poly";
-    estimator.write(estimate, true);
+      // Compute estimates.
+      HeatEstimator estimator(mesh);
+      estimator.computeEstimates(data, *heat, ch, ch_old);
+      const auto &estimates = estimator.estimates();
+      std::string estimate = "output/heat_" +
+                             std::to_string(mesh.elements.size()) + "@" +
+                             std::to_string(data.degree) + ".poly";
+      estimator.write(estimate, true);
 
-    // Refine.
-    Mask h_mask = estimates > 0.75L * sum(estimates) /
-                                              estimator.mesh().elements.size();
+      // Refine.
+      Mask h_mask =
+          estimates > 0.6L * max(estimates);
 
-    if (std::none_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; }) ||
-        estimator.mesh().dofs() >= dofsLimit) {
+      bool refine_h =
+          std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });
+
+      if (!refine_h || estimator.mesh().dofs() >= dofsLimit) {
+        ch_old = ch;
+        ++counter;
+        continue;
+      }
+
+      // Refine mesh.
+      estimator.mesh_refine_size(h_mask);
+      const auto &new_mesh = estimator.mesh();
+
+      // Update matrices.
+      heat = std::make_unique<Heat>(new_mesh);
+      heat->t() = t;
+      heat->assembly(data, new_mesh);
+
+      // Prolong solution.
+      ch_old.resize(new_mesh.dofs());
+      ch_old = heat->prolong_solution_h(new_mesh, mesh, ch, h_mask);
+
+      // Update forcing.
+      heat->assembly_force(data, new_mesh);
+
+      // Update mesh.
+      mesh = std::move(new_mesh);
+
+    } else {
       ch_old = ch;
-      ++counter;
-      continue;
     }
-
-    // Refine mesh.
-    estimator.mesh_refine_size(h_mask);
-    const auto &new_mesh = estimator.mesh();
-
-    // Update matrices.
-    heat = std::make_unique<Heat>(new_mesh);
-    heat->t() = t;
-    heat->assembly(data, new_mesh);
-
-    // Prolong solution.
-    ch_old.resize(new_mesh.dofs());
-    ch_old = heat->prolong_solution_h(new_mesh, mesh, ch, h_mask);
-
-    // Update forcing.
-    heat->assembly_force(data, new_mesh);
-
-    // Update mesh.
-    mesh = std::move(new_mesh);
-
     ++counter;
   }
-
-// Solution structure (output).
-#ifndef NSOLUTIONS
-
-#endif
-
   // Final mesh.
   std::string meshfile =
       "output/square_h_" + std::to_string(mesh.elements.size()) + ".poly";
