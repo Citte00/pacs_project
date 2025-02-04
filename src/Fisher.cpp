@@ -41,6 +41,7 @@ void Fisher::assembly(const DataFKPP &data, const Mesh &mesh) {
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
 
   // Matrices.
+  Sparse<Real> M_prj{dofs, dofs};
   Sparse<Real> M{dofs, dofs};
   Sparse<Real> A{dofs, dofs};
   Sparse<Real> IA{dofs, dofs};

@@ -55,6 +55,7 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
       mesh.neighbours;
 
   // Matrices.
+  Sparse<Real> M{dofs, dofs};
   Sparse<Real> A{dofs, dofs};
   Sparse<Real> IA{dofs, dofs};
   Sparse<Real> SA{dofs, dofs};
