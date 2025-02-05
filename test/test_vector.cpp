@@ -12,11 +12,13 @@
 
 #include <iostream>
 
+using namespace pacs;
+
 int main() {
 
     // Constructing two vectors.
-    pacs::Vector<pacs::Real> first{4, 1.0};
-    pacs::Vector<pacs::Real> second{4};
+    Vector<Real> first{4, 1.0};
+    Vector<Real> second{4};
 
     second[1] = 2.0;
     second[2] = -2.0;

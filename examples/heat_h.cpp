@@ -16,16 +16,16 @@
 #include <memory>
 #include <string>
 
+// To save typing the full qualified names.
+using namespace pacs;
+
 int main(int argc, char **argv) {
-
-  // To save typing the full qualified names.
-  using namespace pacs;
-
+  
   // Retrieve problem data from structure.
   DataHeat data;
 
   std::ostringstream oss;
-  oss << "output/square_heat_h_" << data.degree;
+  oss << "output/heat_h_" << data.elements << "@" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - element size adaptive refinement." << "\n";
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
       HeatEstimator estimator(mesh);
       estimator.computeEstimates(data, *heat, ch, ch_old);
       const auto &estimates = estimator.estimates();
-      std::string estimate = "output/heat_" +
+      std::string estimate = "output/heat_h_" +
                              std::to_string(mesh.elements.size()) + "@" +
                              std::to_string(data.degree) + ".poly";
       estimator.write(estimate, true);
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
       bool refine_h =
           std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });
 
-      if (!refine_h || estimator.mesh().dofs() >= dofsLimit) {
+      if (!refine_h || mesh.dofs() >= dofsLimit) {
         ch_old = ch;
         ++counter;
         continue;

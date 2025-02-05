@@ -14,16 +14,16 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char **argv) {
+// To save typing the full qualified names.
+using namespace pacs;
 
-  // To save typing the full qualified names.
-  using namespace pacs;
+int main(int argc, char **argv) {
 
   // Retrieve problem data from structure.
   DataFKPP data;
 
   std::ostringstream oss;
-  oss << "output/square_fisher_" << data.degree;
+  oss << "output/fisher_" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - uniform refinement." << "\n";
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   // Diagrams.
   std::vector<std::vector<Polygon>> diagrams;
 
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_300.poly"));
+  diagrams.emplace_back(mesh_diagram("meshes/square/square_125.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_250.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_500.poly"));
   diagrams.emplace_back(mesh_diagram("meshes/square/square_1000.poly"));

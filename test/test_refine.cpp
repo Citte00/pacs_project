@@ -13,18 +13,20 @@
 #include <iostream>
 #include <vector>
 
+using namespace pacs;
+
 int main() {
 
     // Constructs a domain.
-    pacs::Point a{0.0, 0.0};
-    pacs::Point b{1.0, 0.0};
-    pacs::Point c{1.0, 1.0};
-    pacs::Point d{0.0, 1.0};
+    Point a{0.0, 0.0};
+    Point b{1.0, 0.0};
+    Point c{1.0, 1.0};
+    Point d{0.0, 1.0};
 
-    pacs::Polygon domain{{a, b, c, d}};
+    Polygon domain{{a, b, c, d}};
     
     // Constructing a mesh.
-    pacs::Mesh mesh{domain, pacs::mesh_diagram("meshes/square/square_300.poly")};
+    Mesh mesh{domain, mesh_diagram("meshes/square/square_300.poly")};
     std::cout << "Dofs: " << mesh.dofs() << std::endl;
 
     // Refining some elements.
@@ -35,12 +37,11 @@ int main() {
     refinement[2] = true;
 
     // Refinement.
-    pacs::LaplaceEstimator estimator(mesh);
-    estimator.mesh_refine_size(mesh, refinement);
+    LaplaceEstimator estimator(mesh);
+    estimator.mesh_refine_size(refinement);
 
     std::cout << "Dofs: " << mesh.dofs() << std::endl;
 
     // Mesh output.
     mesh.write("output/refined.poly");
-
 }

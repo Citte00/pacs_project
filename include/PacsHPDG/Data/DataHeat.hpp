@@ -105,16 +105,16 @@ struct DataHeat {
 
   // Time discretization
   Real t_0 = 0.0;
-  Real t_f = 2e-3;
+  Real t_f = 1e-5;
   Real dt = 1e-5;
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 3;
+  size_t degree = 4;
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  int VisualizationStep = 10;
+  int VisualizationStep = 1;
   int NqnVisualization = 5;
 };
 

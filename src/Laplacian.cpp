@@ -33,16 +33,24 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   std::cout << "Computing the laplacian matrix." << std::endl;
 #endif
 
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
+  // Starting indices.
+  std::vector<std::size_t> starts(num_elem);
+  starts[0] = 0;
+
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Degrees of freedom.
   std::size_t dofs = mesh.dofs();
-
-  // Neighbours.
-  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
   // Matrices.
   Sparse<Real> M{dofs, dofs};
@@ -50,16 +58,14 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
   Sparse<Real> IA{dofs, dofs};
   Sparse<Real> SA{dofs, dofs};
 
-  // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
-  starts[0] = 0;
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+  // Neighbours.
+  std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-// Volume integrals.
-// Loop over the elements.
-#pragma omp parallel for
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  // Volume integrals.
+
+  // Loop over the elements.
+#pragma omp parallel for schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -80,11 +86,11 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
     Matrix<Real> local_A{indices.size(), indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -224,11 +230,8 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
 
   // Matrices.
   this->m_mass = std::move(M);
-  this->m_dg_stiff = std::move(A);
-  this->m_dg_stiff += SA;
-  this->m_stiff = std::move(this->m_dg_stiff);
-  this->m_stiff -= IA;
-  this->m_stiff -= IA.transpose();
+  this->m_dg_stiff = std::move(A) + SA;
+  this->m_stiff = std::move(this->m_dg_stiff) - IA - IA.transpose();
 
   // Compression.
   this->m_mass.compress();
@@ -244,14 +247,13 @@ void Laplace::assembly(const DataLaplace &data, const Mesh &mesh) {
  */
 std::vector<std::array<std::vector<std::size_t>, 2>>
 Laplace::block_mass(const Mesh &mesh) const {
-
 #ifndef NVERBOSE
   std::cout << "Evaluating the mass blocks." << std::endl;
 #endif
 
   // Blocks.
-  std::vector<std::array<std::vector<std::size_t>, 2>> blocks;
-  blocks.reserve(mesh.elements.size());
+  std::vector<std::array<std::vector<std::size_t>, 2>> blocks(
+      mesh.elements.size());
   std::size_t start = 0;
 
   // Precomputing dofs.
@@ -267,8 +269,7 @@ Laplace::block_mass(const Mesh &mesh) const {
     for (std::size_t k = 0; k < dofs[j]; ++k)
       indices[k] = start + k;
 
-    blocks.emplace_back(
-        std::array<std::vector<std::size_t>, 2>{indices, indices});
+    blocks[j] = std::array<std::vector<std::size_t>, 2>{indices, indices};
     start += dofs[j];
   }
 
@@ -288,32 +289,36 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
   std::cout << "Computing the forcing term." << std::endl;
 #endif
 
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
+  // Starting indices.
+  std::vector<std::size_t> starts(num_elem);
+  starts[0] = 0;
+
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Degrees of freedom.
   std::size_t dofs = mesh.dofs();
 
-  // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
-  starts[0]= 0;
-
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+  // Forcing term.
+  Vector<Real> forcing{dofs};
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
-  // Forcing term.
-  Vector<Real> forcing{dofs};
+  // Volume integrals.
 
-// Volume integrals.
-
-// Loop over the elements.
-#pragma omp parallel for
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  // Loop over the elements.
+#pragma omp parallel for schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -333,11 +338,11 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
     Vector<Real> local_f{indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -430,6 +435,10 @@ Vector<Real> Laplace::assembly_force(const DataLaplace &data,
  */
 Vector<Real> Laplace::solver(const Mesh &mesh, const Vector<Real> &b,
                              const Real &TOL) const {
+#ifndef NVERBOSE
+  std::cout << "Solving the algebraic system." << std::endl;
+#endif
+
   // Mass blocks.
   auto blocks = block_mass(mesh);
 
@@ -445,24 +454,31 @@ Vector<Real> Laplace::solver(const Mesh &mesh, const Vector<Real> &b,
  * @return Vector<Real>
  */
 Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) const {
+#ifndef NVERBOSE
+  std::cout << "Retrieving modal coefficients." << std::endl;
+#endif
 
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
+  // Starting indices.
+  std::vector<std::size_t> starts(num_elem);
+  starts[0] = 0;
+
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Coefficients.
   Vector<Real> coefficients{mesh.dofs()};
 
-  // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
-  starts[0] = 0;
-
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
-
 // Loop over the elements.
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
 
     // 2D quadrature nodes and weights.
@@ -483,11 +499,11 @@ Vector<Real> Laplace::modal(const Mesh &mesh, const BiFunctor &function) const {
     Vector<Real> local_coefficients{indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;

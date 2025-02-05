@@ -40,7 +40,7 @@ public:
 
   // METHODS.
   // Save numerical and exact solution for plotting.
-  void computeSolution(const DataLaplace &, const Mesh &, const Vector<Real> &);
+  void solution(const DataLaplace &, const Mesh &, const Vector<Real> &);
   // Output solution in a .sol file.
   void write(const std::string &);
 };
@@ -51,7 +51,7 @@ class HeatSolution : public LaplaceSolution {
     HeatSolution(const Mesh &mesh_) : LaplaceSolution(mesh_) {};
 
     // METHODS.
-    void computeSolution(const DataHeat &, const Mesh &, const Heat &,
+    void solution(const DataHeat &, const Mesh &, const Heat &,
                          const Vector<Real> &);
 };
 
@@ -61,7 +61,7 @@ public:
   FisherSolution(const Mesh &mesh_) : HeatSolution(mesh_) {};
 
   // METHODS.
-  void computeSolution(const DataFKPP &, const Mesh &, const Fisher &,
+  void solution(const DataFKPP &, const Mesh &, const Fisher &,
                        const Vector<Real> &);
 };
 

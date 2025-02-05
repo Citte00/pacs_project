@@ -15,9 +15,10 @@
 int main() {
 
     // Sparse.
+    using namespace pacs;
 
     // Constructs a Matrix.
-    pacs::Sparse<pacs::Real> sparse{2, 2};
+    Sparse<Real> sparse{2, 2};
 
     sparse.insert(0, 0, 4.0);
     sparse.insert(0, 1, 1.0);
@@ -27,13 +28,13 @@ int main() {
     sparse.compress();
 
     // Constructs a Vector.
-    pacs::Vector<pacs::Real> vector{2};
+    Vector<Real> vector{2};
 
     vector[0] = 1.0;
     vector[1] = 2.0;
 
     // Linear system (Ax = b) solution.
-    std::cout << pacs::solve(sparse, vector, pacs::GMRES) << std::endl; // GMRES.
+    std::cout << solve(sparse, vector, GMRES) << std::endl; // GMRES.
 
     // Dense.
     
@@ -46,7 +47,7 @@ int main() {
     dense(1, 1) = 3.0;
 
     // Linear system (Ax = b) solution.
-    std::cout << pacs::solve(dense, vector, pacs::QRD) << std::endl; // QR.
-    std::cout << pacs::solve(dense, vector, pacs::LUD) << std::endl; // LU.
+    std::cout << solve(dense, vector, QRD) << std::endl; // QR.
+    std::cout << solve(dense, vector, LUD) << std::endl; // LU.
     
 }

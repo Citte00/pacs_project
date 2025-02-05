@@ -14,16 +14,16 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char **argv) {
+// To save typing the full qualified names.
+using namespace pacs;
 
-  // To save typing the full qualified names.
-  using namespace pacs;
+int main(int argc, char **argv) {
 
   // Retrieve problem data from structure.
   DataHeat data;
 
   std::ostringstream oss;
-  oss << "output/square_heat_" << data.degree;
+  oss << "output/heat_" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - uniform refinement." << "\n";

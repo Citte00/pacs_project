@@ -15,20 +15,21 @@
 
 int main() {
 
-    // Constructs a domain.
-    pacs::Point a{-1.0, -1.0};
-    pacs::Point b{0.0, -1.0};
-    pacs::Point c{0.0, 0.0};
-    pacs::Point d{1.0, 0.0};
-    pacs::Point e{1.0, 1.0};
-    pacs::Point f{-1.0, 1.0};
+  using namespace pacs;
 
-    pacs::Polygon domain{{a, b, c, d, e, f}};
-    
-    // Constructing a mesh.
-    pacs::Mesh mesh{domain, pacs::mesh_diagram(domain, 100, true)};
+  // Constructs a domain.
+  Point a{-1.0, -1.0};
+  Point b{0.0, -1.0};
+  Point c{0.0, 0.0};
+  Point d{1.0, 0.0};
+  Point e{1.0, 1.0};
+  Point f{-1.0, 1.0};
 
-    // Mesh output.
-    mesh.write("output/mesh.poly");
+  Polygon domain{{a, b, c, d, e, f}};
 
+  // Constructing a mesh.
+  Mesh mesh{domain, mesh_diagram(domain, 100, true)};
+
+  // Mesh output.
+  mesh.write("output/mesh.poly");
 }

@@ -56,23 +56,27 @@ void LaplaceError::errors(const DataLaplace &data, const Mesh &mesh,
   std::cout << "Evaluating L2 and H1 errors." << std::endl;
 #endif
 
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
   // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
-
   // Quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
   // Sizes.
-  Vector<Real> sizes{mesh.elements.size()};
+  Vector<Real> sizes{num_elem};
 
   for (std::size_t j = 0; j < sizes.length; ++j) {
     Element element{mesh.elements[j]};
@@ -83,7 +87,8 @@ void LaplaceError::errors(const DataLaplace &data, const Mesh &mesh,
   }
 
   // Loop over the elements.
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  #pragma omp parallel for schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -178,23 +183,27 @@ void HeatError::errors(const DataHeat &data, const Mesh &mesh, const Heat &heat,
   std::cout << "Evaluating L2 and H1 errors." << std::endl;
 #endif
 
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
   // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
-
   // Quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
   // Sizes.
-  Vector<Real> sizes{mesh.elements.size()};
+  Vector<Real> sizes{num_elem};
 
   for (std::size_t j = 0; j < sizes.length; ++j) {
     Element element{mesh.elements[j]};
@@ -205,7 +214,8 @@ void HeatError::errors(const DataHeat &data, const Mesh &mesh, const Heat &heat,
   }
 
   // Loop over the elements.
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+#pragma omp parallel for schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -223,11 +233,11 @@ void HeatError::errors(const DataHeat &data, const Mesh &mesh, const Heat &heat,
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -303,23 +313,27 @@ void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
   std::cout << "Evaluating L2 and H1 errors." << std::endl;
 #endif
 
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
   // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
-
   // Quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
   // Sizes.
-  Vector<Real> sizes{mesh.elements.size()};
+  Vector<Real> sizes{num_elem};
 
   for (std::size_t j = 0; j < sizes.length; ++j) {
     Element element{mesh.elements[j]};
@@ -330,7 +344,8 @@ void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
   }
 
   // Loop over the elements.
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  #pragma omp parallel for schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -348,11 +363,11 @@ void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle :triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;

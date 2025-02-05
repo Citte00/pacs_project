@@ -24,7 +24,7 @@ namespace pacs {
  * @param mesh Mesh struct.
  * @param numerical numerical solution.
  */
-void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
+void LaplaceSolution::solution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
 
   // Number of quadrature nodes.
   std::size_t nqn = data.NqnVisualization;
@@ -125,7 +125,7 @@ void LaplaceSolution::computeSolution(const DataLaplace &data, const Mesh &mesh,
  * @param mesh Mesh struct.
  * @param numerical numerical solution.
  */
-void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
+void HeatSolution::solution(const DataHeat &data, const Mesh &mesh,
                                    const Heat &heat, const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating solutions." << std::endl;
@@ -230,7 +230,7 @@ void HeatSolution::computeSolution(const DataHeat &data, const Mesh &mesh,
  * @param mesh Mesh struct.
  * @param fisher Fisher equation object.
  */
-void FisherSolution::computeSolution(const DataFKPP &data, const Mesh &mesh,
+void FisherSolution::solution(const DataFKPP &data, const Mesh &mesh,
                                      const Fisher &fisher,
                                      const Vector<Real> &ch) {
 

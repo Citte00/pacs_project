@@ -14,24 +14,22 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char **argv) {
+// To save typing the full qualified names.
+using namespace pacs;
 
-  // To save typing the full qualified names.
-  using namespace pacs;
+int main(int argc, char **argv) {
 
   // Retrieve problem data from structure.
   DataLaplace data;
 
-  // "Splash".
-  std::ofstream output{"output/square_h_" + std::to_string(data.elements) +
-                       "@" + std::to_string(data.degree) + ".error"};
+  std::ostringstream oss;
+  oss << "output/laplacian_h_" << data.elements << "@" << data.degree;
+  std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - element size adaptive refinement." << "\n";
 
   std::cout << "Square domain - element size adaptive refinement." << std::endl;
-  std::cout << "Output under output/square_h_" + std::to_string(data.degree) +
-                   ".error."
-            << std::endl;
+  std::cout << "Output under " << oss.str() << ".error." << std::endl;
 
   // Domain.
   Polygon domain{data.domain};

@@ -179,14 +179,15 @@ void LaplaceEstimator::mesh_refine_degree(const Mask &mask) {
 };
 
 /**
- * @brief hp-Adaptively refine a mesh.
+ * @brief Choose elements to refine.
  *
  * @param estimator Error estimator.
  * @param refine Refinement percentage.
  * @param speed Solution's smoothness.
  */
-std::array<Mask, 2> LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator &estimator,
-                                   const Real &refine, const Real &speed) {
+std::array<Mask, 2>
+LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator &estimator,
+                                      const Real &refine, const Real &speed) {
 #ifndef NDEBUG // Integrity check.
   assert((refine > 0.0L) && (refine < 1.0L));
   assert(speed > 0.0L);
@@ -194,8 +195,8 @@ std::array<Mask, 2> LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator
 
   // Masks.
   Mask p_mask = this->m_fits > speed;
-  Mask h_mask = this->m_estimates > refine * sum(this->m_estimates) /
-                    this->m_mesh.elements.size();
+  Mask h_mask = this->m_estimates >
+                refine * sum(this->m_estimates) / this->m_mesh.elements.size();
 
   // Strategy.
   for (std::size_t j = 0; j < this->m_mesh.elements.size(); ++j) {
@@ -223,23 +224,27 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
   std::cout << "Evaluating estimates." << std::endl;
 #endif
 
-  // Quadrature nodes.
-  std::vector<std::size_t> nqn(m_mesh.elements.size(), 0);
-  std::transform(m_mesh.elements.begin(), m_mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = m_mesh.elements.size();
 
   // Starting indices.
-  std::vector<std::size_t> starts(m_mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < m_mesh.elements.size(); ++j)
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * m_mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
     starts[j] = starts[j - 1] + m_mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * m_mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = m_mesh.neighbours;
 
   // Sizes.
-  Vector<Real> sizes{m_mesh.elements.size()};
+  Vector<Real> sizes{num_elem};
 
   for (std::size_t j = 0; j < sizes.length; ++j) {
     Element element{m_mesh.elements[j]};
@@ -256,8 +261,12 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
   Vector<Real> f_modals = laplacian.modal(m_mesh, data.source_f);
   Vector<Real> g_modals = laplacian.modal(m_mesh, data.DirBC);
 
+  // Estimate.
+  Real estimate = 0.0;
+
   // Loop over the elements.
-  for (std::size_t j = 0; j < m_mesh.elements.size(); ++j) {
+#pragma omp parallel for reduction(+ : estimate) schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -274,12 +283,15 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
 
+    // Thread-local variable to accumulate estimates.
+    Real local_estimate = 0.0;
+
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -298,11 +310,11 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
       Vector<Real> f_bar = phi * f_modals(indices);
 
       // Local estimator, R_{K, E}^2.
-      this->m_estimates[j] += sizes[j] * sizes[j] *
-                              dot(scaled, (f_bar + lap_uh) * (f_bar + lap_uh));
+      local_estimate += sizes[j] * sizes[j] *
+                        dot(scaled, (f_bar + lap_uh) * (f_bar + lap_uh));
 
       // Local data oscillation, O_{K, E}^2.
-      this->m_estimates[j] +=
+      local_estimate +=
           sizes[j] * sizes[j] * dot(scaled, (f - f_bar) * (f - f_bar));
     }
 
@@ -364,39 +376,36 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
         Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
 
         // Local estimator, R_{K, J}^2.
-        this->m_estimates[j] +=
+        local_estimate +=
             penalties[k] * dot(scaled, (uh - g_bar) * (uh - g_bar));
 
         // // Local estimator, R_{K, N}^2.
         // this->m_estimates[j] += sizes[j] * dot(scaled, grad_uh * grad_uh);
 
         // Local estimator, R_{K, T}^2.
-        this->m_estimates[j] +=
+        local_estimate +=
             sizes[j] * dot(scaled, (grad_uh_t - grad_g_t_bar) *
                                        (grad_uh_t - grad_g_t_bar));
 
         // Local data oscillation, O_{K, J}^2.
-        this->m_estimates[j] +=
-            penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
+        local_estimate += penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
 
         // Local data oscillation, O_{K, T}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_g_t - grad_g_t_bar) * (grad_g_t - grad_g_t_bar));
+        local_estimate += sizes[j] * dot(scaled, (grad_g_t - grad_g_t_bar) *
+                                                     (grad_g_t - grad_g_t_bar));
 
       } else {
         // Neighbour's basis function.
         auto [n_phi, n_gradx_phi, n_grady_phi] =
             basis_2d(m_mesh, neighbour, {physical_x, physical_y});
 
-        std::vector<std::size_t> n_indices;
         std::size_t n_index = element_neighbours[k][1];
         std::size_t n_dofs =
             m_mesh.elements[n_index].dofs(); // Neighbour's dofs.
 
-        n_indices.reserve(n_dofs);
+        std::vector<std::size_t> n_indices(n_dofs);
         for (std::size_t h = 0; h < n_dofs; ++h)
-          n_indices.emplace_back(starts[n_index] + h);
+          n_indices[h] = starts[n_index] + h;
 
         // Neighbour's numerical solution and gradients.
         Vector<Real> n_uh = n_phi * numerical(n_indices);
@@ -410,22 +419,20 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
         Vector<Real> n_grad_uh_t = n_grad_t * numerical(n_indices);
 
         // Local estimator, R_{K, J}^2.
-        this->m_estimates[j] +=
-            penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
+        local_estimate += penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
 
         // Local estimator, R_{K, N}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_uh - n_grad_uh) * (grad_uh - n_grad_uh));
+        local_estimate += sizes[j] * dot(scaled, (grad_uh - n_grad_uh) *
+                                                     (grad_uh - n_grad_uh));
 
         // Local estimator, R_{K, T}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_uh_t - n_grad_uh_t) * (grad_uh_t - n_grad_uh_t));
+        local_estimate += sizes[j] * dot(scaled, (grad_uh_t - n_grad_uh_t) *
+                                                     (grad_uh_t - n_grad_uh_t));
       }
     }
 
-    this->m_estimate += this->m_estimates[j];
+    this->m_estimates[j] = local_estimate;
+    estimate += local_estimate;
 
     // Degrees.
     Vector<Real> degrees{indices.size()};
@@ -448,7 +455,7 @@ void LaplaceEstimator::computeEstimates(const DataLaplace &data,
     this->m_fits[j] = -fit[1];
   }
 
-  this->m_estimate = std::sqrt(this->m_estimate);
+  this->m_estimate = std::sqrt(estimate);
 };
 
 /**
@@ -503,23 +510,27 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
   std::cout << "Evaluating estimates." << std::endl;
 #endif
 
-  // Quadrature nodes.
-  std::vector<std::size_t> nqn(m_mesh.elements.size(), 0);
-  std::transform(m_mesh.elements.begin(), m_mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = m_mesh.elements.size();
 
   // Starting indices.
-  std::vector<std::size_t> starts(m_mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < m_mesh.elements.size(); ++j)
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * m_mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
     starts[j] = starts[j - 1] + m_mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * m_mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = m_mesh.neighbours;
 
   // Sizes.
-  Vector<Real> sizes{m_mesh.elements.size()};
+  Vector<Real> sizes{num_elem};
 
   for (std::size_t j = 0; j < sizes.length; ++j) {
     Element element{m_mesh.elements[j]};
@@ -533,8 +544,12 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
   Vector<Real> f_modals = heat.modal_source(data, m_mesh);
   Vector<Real> g_modals = heat.modal(m_mesh, data.DirBC);
 
+  // Estimate.
+  Real estimate = 0.0;
+
   // Loop over the elements.
-  for (std::size_t j = 0; j < m_mesh.elements.size(); ++j) {
+#pragma omp parallel for reduction(+ : estimate) schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -551,12 +566,15 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
 
+    // Local estimate.
+    Real local_estimate = 0.0;
+
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -581,12 +599,12 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
       Vector<Real> f_bar = phi * f_modals(indices);
 
       // Local estimator, R_{K, E}^2.
-      this->m_estimates[j] += sizes[j] * sizes[j] *
-                              dot(scaled, (f_bar - partial_uh_t + lap_uh) *
-                                              (f_bar - partial_uh_t + lap_uh));
+      local_estimate += sizes[j] * sizes[j] *
+                        dot(scaled, (f_bar - partial_uh_t + lap_uh) *
+                                        (f_bar - partial_uh_t + lap_uh));
 
       // Local data oscillation, O_{K, E}^2.
-      this->m_estimates[j] +=
+      local_estimate +=
           sizes[j] * sizes[j] * dot(scaled, (f - f_bar) * (f - f_bar));
     }
 
@@ -691,25 +709,23 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
         Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
 
         // Local estimator, R_{K, J}^2.
-        this->m_estimates[j] +=
+        local_estimate +=
             penalties[k] * dot(scaled, (uh - g_bar) * (uh - g_bar));
 
         // // Local estimator, R_{K, N}^2.
         // this->m_estimates[j] += sizes[j] * dot(scaled, grad_uh * grad_uh);
 
         // Local estimator, R_{K, T}^2.
-        this->m_estimates[j] +=
+        local_estimate +=
             sizes[j] * dot(scaled, (grad_uh_t - grad_g_t_bar) *
                                        (grad_uh_t - grad_g_t_bar));
 
         // Local data oscillation, O_{K, J}^2.
-        this->m_estimates[j] +=
-            penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
+        local_estimate += penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
 
         // Local data oscillation, O_{K, T}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_g_t - grad_g_t_bar) * (grad_g_t - grad_g_t_bar));
+        local_estimate += sizes[j] * dot(scaled, (grad_g_t - grad_g_t_bar) *
+                                                     (grad_g_t - grad_g_t_bar));
 
       } else {
         // Neighbour's basis function.
@@ -737,22 +753,20 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
         Vector<Real> n_grad_uh_t = n_grad_t * ch(n_indices);
 
         // Local estimator, R_{K, J}^2.
-        this->m_estimates[j] +=
-            penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
+        local_estimate += penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
 
         // Local estimator, R_{K, N}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_uh - n_grad_uh) * (grad_uh - n_grad_uh));
+        local_estimate += sizes[j] * dot(scaled, (grad_uh - n_grad_uh) *
+                                                     (grad_uh - n_grad_uh));
 
         // Local estimator, R_{K, T}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_uh_t - n_grad_uh_t) * (grad_uh_t - n_grad_uh_t));
+        local_estimate += sizes[j] * dot(scaled, (grad_uh_t - n_grad_uh_t) *
+                                                     (grad_uh_t - n_grad_uh_t));
       }
     }
 
-    this->m_estimate += this->m_estimates[j];
+    this->m_estimates[j] = local_estimate;
+    estimate += local_estimate;
 
     // Degrees.
     Vector<Real> degrees{indices.size()};
@@ -775,7 +789,7 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
     this->m_fits[j] = -fit[1];
   }
 
-  this->m_estimate = std::sqrt(this->m_estimate);
+  this->m_estimate = std::sqrt(estimate);
 };
 
 /**
@@ -791,17 +805,21 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
   std::cout << "Evaluating estimates." << std::endl;
 #endif
 
-  // Quadrature nodes.
-  std::vector<std::size_t> nqn(m_mesh.elements.size(), 0);
-  std::transform(m_mesh.elements.begin(), m_mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = m_mesh.elements.size();
 
   // Starting indices.
-  std::vector<std::size_t> starts(m_mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < m_mesh.elements.size(); ++j)
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * m_mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
     starts[j] = starts[j - 1] + m_mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * m_mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = m_mesh.neighbours;
@@ -821,8 +839,12 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
   Vector<Real> f_modals = fisher.modal_source(data, m_mesh);
   Vector<Real> g_modals = fisher.modal(m_mesh, data.DirBC);
 
+    // Estimate.
+  Real estimate = 0.0;
+
   // Loop over the elements.
-  for (std::size_t j = 0; j < m_mesh.elements.size(); ++j) {
+#pragma omp parallel for reduction(+ : estimate) schedule(dynamic)
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -839,12 +861,15 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
     // Element sub-triangulation.
     std::vector<Polygon> triangles = triangulate(polygon);
 
+    // Local estimate.
+    Real local_estimate = 0.0;
+
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -876,13 +901,13 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
       Vector<Real> f_bar = phi * f_modals(indices);
 
       // Local estimator, R_{K, E}^2.
-      this->m_estimates[j] +=
+      local_estimate +=
           sizes[j] * sizes[j] *
           dot(scaled, (f_bar - partial_uh_t + lap_uh + nl_uh) *
                           (f_bar - partial_uh_t + lap_uh + nl_uh));
 
       // Local data oscillation, O_{K, E}^2.
-      this->m_estimates[j] +=
+      local_estimate +=
           sizes[j] * sizes[j] * dot(scaled, (f - f_bar) * (f - f_bar));
     }
 
@@ -944,39 +969,36 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
         Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
 
         // Local estimator, R_{K, J}^2.
-        this->m_estimates[j] +=
+        local_estimate +=
             penalties[k] * dot(scaled, (uh - g_bar) * (uh - g_bar));
 
         // // Local estimator, R_{K, N}^2.
-        // this->m_estimates[j] += sizes[j] * dot(scaled, grad_uh * grad_uh);
+        // local_estimate += sizes[j] * dot(scaled, grad_uh * grad_uh);
 
         // Local estimator, R_{K, T}^2.
-        this->m_estimates[j] +=
+        local_estimate +=
             sizes[j] * dot(scaled, (grad_uh_t - grad_g_t_bar) *
                                        (grad_uh_t - grad_g_t_bar));
 
         // Local data oscillation, O_{K, J}^2.
-        this->m_estimates[j] +=
-            penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
+        local_estimate += penalties[k] * dot(scaled, (g - g_bar) * (g - g_bar));
 
         // Local data oscillation, O_{K, T}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_g_t - grad_g_t_bar) * (grad_g_t - grad_g_t_bar));
+        local_estimate += sizes[j] * dot(scaled, (grad_g_t - grad_g_t_bar) *
+                                                     (grad_g_t - grad_g_t_bar));
 
       } else {
         // Neighbour's basis function.
         auto [n_phi, n_gradx_phi, n_grady_phi] =
             basis_2d(m_mesh, neighbour, {physical_x, physical_y});
 
-        std::vector<std::size_t> n_indices;
         std::size_t n_index = element_neighbours[k][1];
         std::size_t n_dofs =
             m_mesh.elements[n_index].dofs(); // Neighbour's dofs.
 
-        n_indices.reserve(n_dofs);
+        std::vector<std::size_t> n_indices(n_dofs);
         for (std::size_t h = 0; h < n_dofs; ++h)
-          n_indices.emplace_back(starts[n_index] + h);
+          n_indices[h] = starts[n_index] + h;
 
         // Neighbour's numerical solution and gradients.
         Vector<Real> n_uh = n_phi * ch(n_indices);
@@ -990,22 +1012,20 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
         Vector<Real> n_grad_uh_t = n_grad_t * ch(n_indices);
 
         // Local estimator, R_{K, J}^2.
-        this->m_estimates[j] +=
-            penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
+        local_estimate += penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
 
         // Local estimator, R_{K, N}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_uh - n_grad_uh) * (grad_uh - n_grad_uh));
+        local_estimate += sizes[j] * dot(scaled, (grad_uh - n_grad_uh) *
+                                                     (grad_uh - n_grad_uh));
 
         // Local estimator, R_{K, T}^2.
-        this->m_estimates[j] +=
-            sizes[j] *
-            dot(scaled, (grad_uh_t - n_grad_uh_t) * (grad_uh_t - n_grad_uh_t));
+        local_estimate += sizes[j] * dot(scaled, (grad_uh_t - n_grad_uh_t) *
+                                                     (grad_uh_t - n_grad_uh_t));
       }
     }
 
-    this->m_estimate += this->m_estimates[j];
+    this->m_estimates[j] = local_estimate;
+    estimate += local_estimate;
 
     // Degrees.
     Vector<Real> degrees{indices.size()};
@@ -1028,7 +1048,8 @@ void FisherEstimator::computeEstimates(const DataFKPP &data,
     this->m_fits[j] = -fit[1];
   }
 
-  this->m_estimate = std::sqrt(this->m_estimate);
+  
+  this->m_estimate = std::sqrt(estimate);
 };
 
 } // namespace pacs

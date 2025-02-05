@@ -41,18 +41,24 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   std::cout << "Computing the Heat equation matrices." << std::endl;
 #endif
 
-  // Number of quadrature nodes.
-  std::size_t num_elements = mesh.elements.size();
-  std::vector<std::size_t> nqn(num_elements, 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
+  // Starting indices.
+  std::vector<std::size_t> starts(num_elem);
+  starts[0] = 0;
+
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Degrees of freedom.
   std::size_t dofs = mesh.dofs();
-
-  // Neighbours.
-  const std::vector<std::vector<std::array<int, 3>>> &neighbours =
-      mesh.neighbours;
 
   // Matrices.
   Sparse<Real> M{dofs, dofs};
@@ -60,17 +66,15 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
   Sparse<Real> IA{dofs, dofs};
   Sparse<Real> SA{dofs, dofs};
 
-  // Starting indices.
-  std::vector<std::size_t> starts(num_elements);
-  starts[0] = 0;
+  // Neighbours.
+  const std::vector<std::vector<std::array<int, 3>>> &neighbours =
+      mesh.neighbours;
 
-  for (std::size_t j = 1; j < num_elements; ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+  // Volume integrals.
 
-    // Volume integrals.
-    // Loop over the elements.
+  // Loop over the elements.
 #pragma omp parallel for schedule(dynamic)
-  for (std::size_t j = 0; j < num_elements; ++j) {
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D Quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -242,8 +246,7 @@ void Heat::assembly(const DataHeat &data, const Mesh &mesh) {
 
   // Matrices.
   this->m_mass = std::move(M);
-  this->m_dg_stiff = std::move(A);
-  this->m_dg_stiff += SA;
+  this->m_dg_stiff = std::move(A) + SA;
   this->m_stiff = this->m_dg_stiff - IA - IA.transpose();
 
   // Compression.
@@ -264,17 +267,21 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
   std::cout << "Computing the forcing term." << std::endl;
 #endif
 
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
 
   // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
+  std::vector<std::size_t> starts(num_elem);
   starts[0] = 0;
 
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
     starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Neighbours.
   std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
@@ -284,7 +291,7 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
 
 // Loop over the elements.
 #pragma omp parallel for schedule(dynamic)
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  for (std::size_t j = 0; j < num_elem; ++j) {
     // 2D Local quadrature nodes and weights.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
@@ -303,11 +310,11 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
     Vector<Real> local_f{indices.size()};
 
     // Loop over the sub-triangulation.
-    for (std::size_t k = 0; k < triangles.size(); ++k) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =
-          get_Jacobian_physical_points(triangles[k], {nodes_x_2d, nodes_y_2d});
+          get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
       // Weights scaling.
       Vector<Real> scaled = jacobian_det * weights_2d;
@@ -405,6 +412,10 @@ void Heat::assembly_force(const DataHeat &data, const Mesh &mesh) {
 Vector<Real> Heat::solver(const DataHeat &data, const Mesh &mesh,
                           const Vector<Real> &c_old,
                           const Vector<Real> &forcing_old, const Real &TOL) {
+#ifndef NVERBOSE
+  std::cout << "Solving the algebraic system." << std::endl;
+#endif
+
   // Mass blocks.
   auto blocks = block_mass(mesh);
 
@@ -432,25 +443,32 @@ Vector<Real> Heat::solver(const DataHeat &data, const Mesh &mesh,
  * @return Vector<Real>
  */
 Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
+#ifndef NVERBOSE
+  std::cout << "Retrieving modal coefficients." << std::endl;
+#endif
 
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
+  // Starting indices.
+  std::vector<std::size_t> starts(num_elem);
+  starts[0] = 0;
+
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Coefficients.
   Vector<Real> coefficients{mesh.dofs()};
 
-  // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
-  starts[0] = 0;
-
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
-
 // Loop over the elements.
 #pragma omp parallel for schedule(dynamic)
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  for (std::size_t j = 0; j < num_elem; ++j) {
 
     // Quadrature nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
@@ -513,24 +531,32 @@ Vector<Real> Heat::modal(const Mesh &mesh, const TriFunctor &function) const {
  * @return Vector<Real>
  */
 Vector<Real> Heat::modal_source(const DataHeat &data, const Mesh &mesh) const {
-  // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(mesh.elements.size(), 0);
-  std::transform(mesh.elements.begin(), mesh.elements.end(), nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+#ifndef NVERBOSE
+  std::cout << "Retrieving modal coeffficient of the source term." << std::endl;
+#endif
+
+  // Number of elements.
+  std::size_t num_elem = mesh.elements.size();
+
+  // Starting indices.
+  std::vector<std::size_t> starts(num_elem);
+  starts[0] = 0;
+
+  // Quadrature nodes.
+  std::vector<std::size_t> nqn(num_elem);
+  nqn[0] = 2 * mesh.elements[0].degree + 1;
+
+  for (std::size_t j = 1; j < num_elem; ++j) {
+    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * mesh.elements[j].degree + 1;
+  }
 
   // Coefficients.
   Vector<Real> coefficients{mesh.dofs()};
 
-  // Starting indices.
-  std::vector<std::size_t> starts(mesh.elements.size());
-  starts[0] = 0;
-
-  for (std::size_t j = 1; j < mesh.elements.size(); ++j)
-    starts[j] = starts[j - 1] + mesh.elements[j - 1].dofs();
-
 // Loop over the elements.
 #pragma omp parallel for schedule(dynamic)
-  for (std::size_t j = 0; j < mesh.elements.size(); ++j) {
+  for (std::size_t j = 0; j < num_elem; ++j) {
     // Quadrature nodes.
     auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
 
@@ -682,10 +708,8 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
   std::size_t new_elem = new_mesh.elements.size();
 
   // Number of quadrature nodes.
-  std::vector<std::size_t> nqn(new_elem, 0);
-  std::transform(new_mesh.elements.begin(), new_mesh.elements.end(),
-                 nqn.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  std::vector<std::size_t> nqn(new_elem);
+  nqn[0] = 2 * new_mesh.elements[0].degree + 1;
 
   // Resize new solution vector.
   Vector<Real> new_ch(new_mesh.dofs());
@@ -700,8 +724,10 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
   std::vector<std::size_t> new_starts(new_elem);
   new_starts[0] = 0;
 
-  for (std::size_t j = 1; j < new_elem; ++j)
+  for (std::size_t j = 1; j < new_elem; ++j) {
     new_starts[j] = new_starts[j - 1] + new_mesh.elements[j - 1].dofs();
+    nqn[j] = 2 * new_mesh.elements[j].degree + 1;
+  }
 
 // Loop over elements.
 #pragma omp parallel for schedule(dynamic)
@@ -805,27 +831,29 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
   std::size_t new_elem = new_mesh.elements.size();
 
   // Number of quadrature nodes.
-  std::vector<std::size_t> nqn_new(new_elem, 0);
-  std::transform(new_mesh.elements.begin(), new_mesh.elements.end(),
-                 nqn_new.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  std::vector<std::size_t> nqn_new(new_elem);
+  nqn_new[0] = 2 * new_mesh.elements[0].degree + 1;
 
-  std::vector<std::size_t> nqn_old(old_elem, 0);
-  std::transform(old_mesh.elements.begin(), old_mesh.elements.end(),
-                 nqn_old.begin(),
-                 [](const Element &elem) { return 2 * elem.degree + 1; });
+  std::vector<std::size_t> nqn_old(old_elem);
+  nqn_old[0] = 2 * old_mesh.elements[0].degree + 1;
 
   // Starting indices for old mesh.
   std::vector<std::size_t> old_starts(old_elem);
   old_starts[0] = 0;
-  for (std::size_t j = 1; j < old_elem; ++j)
-    old_starts[j] = old_starts[j - 1] + old_mesh.elements[j - 1].dofs();
 
   // Starting indices for new mesh.
   std::vector<std::size_t> new_starts(new_elem);
   new_starts[0] = 0;
-  for (std::size_t j = 1; j < new_elem; ++j)
+
+  for (std::size_t j = 1; j < old_elem; ++j) {
+    old_starts[j] = old_starts[j - 1] + old_mesh.elements[j - 1].dofs();
+    nqn_old[j] = 2 * old_mesh.elements[j].degree + 1;
+  }
+  
+  for (std::size_t j = 1; j < new_elem; ++j) {
     new_starts[j] = new_starts[j - 1] + new_mesh.elements[j - 1].dofs();
+    nqn_new[j] = 2 * new_mesh.elements[j].degree + 1;
+  }
 
   // Creating new solution vector.
   Vector<Real> new_ch{new_mesh.dofs()};
@@ -843,8 +871,7 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
     }
   }
 
-// Loop over old elements.
-#pragma omp parallel schedule(dynamic)
+  // Loop over old elements.
   for (std::size_t j = 0; j < old_elem; j++) {
 
     // Refinement check.

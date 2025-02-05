@@ -14,18 +14,20 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char **argv) {
+// To save typing the full qualified names.
+using namespace pacs;
 
-  // To save typing the full qualified names.
-  using namespace pacs;
+int main(int argc, char **argv) {
 
   // Retrieve problem data from structure.
   DataLaplace data;
 
   // "Splash".
-  std::ofstream output{"output/square_hp_" + std::to_string(data.elements) +
-                       "@" + std::to_string(data.degree) + ".error"};
-  output << "Square domain - hp-adaptive refinement with estimator." << "\n";
+  std::ostringstream oss;
+  oss << "output/laplacian_hp_" << data.elements << "@" << data.degree;
+  std::ofstream output(oss.str() + ".error");
+
+  output << "Square domain - hp-adaptive refinement." << "\n";
 
   std::cout << "Square domain - hp-adaptive refinement with estimator."
             << std::endl;
