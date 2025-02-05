@@ -145,7 +145,8 @@ template = template.replace("% PLOTS_DG", "".join(dg_plots))
 if "--energy" in sys.argv:
     energy_comparison: list[float] = []
 
-    energy_comparison.append((size / sizes[-1]) ** degree * energy_errors[-1])
+    for size in sizes:
+        energy_comparison.append((size / sizes[-1]) ** degree * energy_errors[-1])
 
     energy_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
     energy_errors_string += "{" + " ".join((f"({sizes[j]},{energy_errors[j]})" for j in range(len(sizes)))) + "};"
