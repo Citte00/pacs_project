@@ -65,8 +65,7 @@ public:
   void mesh_refine_degree(const Mask &);
 
   // Elements to refine refinement.
-  std::array<Mask, 2> find_elem_to_refine(const LaplaceEstimator &, const Real &refine = 0.75,
-                   const Real &speed = 1.0);
+  std::array<Mask, 2> find_elem_to_refine(const Real &refine = 0.75, const Real &speed = 1.0);
 
   // Friend operator<< for output printing.
   friend std::ostream &operator<<(std::ostream &ost,

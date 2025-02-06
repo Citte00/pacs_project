@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
     estimator.computeEstimates(data, laplacian, numerical);
 
     // Refinement.
-    auto [h_mask, p_mask] = estimator.find_elem_to_refine(estimator);
+    auto [h_mask, p_mask] = estimator.find_elem_to_refine();
     estimator.mesh_refine_degree(p_mask);
     estimator.mesh_refine_size(h_mask);
 

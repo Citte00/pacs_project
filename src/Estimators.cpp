@@ -186,8 +186,7 @@ void LaplaceEstimator::mesh_refine_degree(const Mask &mask) {
  * @param speed Solution's smoothness.
  */
 std::array<Mask, 2>
-LaplaceEstimator::find_elem_to_refine(const LaplaceEstimator &estimator,
-                                      const Real &refine, const Real &speed) {
+LaplaceEstimator::find_elem_to_refine(const Real &refine, const Real &speed) {
 #ifndef NDEBUG // Integrity check.
   assert((refine > 0.0L) && (refine < 1.0L));
   assert(speed > 0.0L);
