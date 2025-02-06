@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  std::unique_ptr<Fisher> fisher = std::make_unique<Fisher>(mesh);
+  std::unique_ptr<Fisher> fisher = std::make_unique<Fisher>(data, mesh);
   fisher->assembly(data, mesh);
 
   // Initial condition.
@@ -120,6 +120,7 @@ int main(int argc, char **argv) {
         Mesh new_mesh = mesh;
 
         // Initialize ch_old.
+        ch_oold = fisher->ch_old();
         fisher->ch_old() = ch;
 
         // Perform p-refinement if necessary
@@ -129,6 +130,9 @@ int main(int argc, char **argv) {
           new_mesh = estimator.mesh();
 
           // Prolong solution for p-refinement
+          ch_oold.resize(new_mesh.dofs());
+          ch_oold = fisher->prolong_solution_p(new_mesh, mesh, ch_oold, p_mask);
+
           fisher->ch_old().resize(new_mesh.dofs());
           fisher->ch_old() = fisher->prolong_solution_p(new_mesh, mesh, fisher->ch_old(), p_mask);
         }
@@ -139,12 +143,15 @@ int main(int argc, char **argv) {
           new_mesh = estimator.mesh();
 
           // Prolong solution for h-refinement
+          ch_oold.resize(new_mesh.dofs());
+          ch_oold = fisher->prolong_solution_h(new_mesh, mesh, ch_oold, h_mask);
+
           fisher->ch_old().resize(new_mesh.dofs());
           fisher->ch_old() = fisher->prolong_solution_h(new_mesh, mesh, fisher->ch_old(), p_mask);
         }
 
         // Update matrices only if refinement occurs
-        fisher = std::make_unique<Fisher>(new_mesh);
+        fisher = std::make_unique<Fisher>(data, new_mesh);
         fisher->t() = t;
         fisher->assembly(data, new_mesh);
 
@@ -161,6 +168,7 @@ int main(int argc, char **argv) {
         mesh.write(meshfile, true);
       }
     } else {
+      ch_oold = fisher->ch_old();
       fisher->ch_old() = ch;
     }
     ++counter;

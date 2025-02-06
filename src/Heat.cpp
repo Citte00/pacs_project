@@ -779,6 +779,7 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
 
       // Basis functions.
       Matrix<Real> phi = basis_2d(new_mesh, j, {physical_x, physical_y})[0];
+      Matrix<Real> phi_old = basis_2d(old_mesh, j, {physical_x, physical_y})[0];
       Matrix<Real> scaled_phi{phi};
 
       for (std::size_t l = 0; l < scaled_phi.columns; ++l)
@@ -800,7 +801,7 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
 
       // Local coefficients.
       local_mass += scaled_phi.transpose() * phi;
-      local_coefficients += scaled_phi.transpose() * (phi * u_edge);
+      local_coefficients += scaled_phi.transpose() * (phi_old * u_edge);
     }
 
     // Update the solution.

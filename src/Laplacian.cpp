@@ -10,17 +10,6 @@
 #include <PacsHPDG.hpp>
 
 namespace pacs {
-
-void Laplace::initialize(const Mesh &mesh) { 
-  // Dofs.
-  std::size_t dofs = mesh.dofs();
-  
-  // Reshape matrices.
-  m_mass.reshape(dofs, dofs);
-  m_stiff.reshape(dofs, dofs);
-  m_dg_stiff.reshape(dofs, dofs);
-};
-
 /**
  * @brief Returns the matrix for the Laplacian operator.
  *

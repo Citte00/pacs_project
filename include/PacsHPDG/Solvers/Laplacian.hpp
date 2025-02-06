@@ -38,8 +38,6 @@ public:
   // Blocks.
   std::vector<std::array<std::vector<std::size_t>, 2>>
   block_mass(const Mesh &) const;
-  // Initialize matrices.
-  void initialize(const Mesh &);
   // Assembly the laplace system matrix.
   void assembly(const DataLaplace &, const Mesh &);
   // Assembly the forcing term.

@@ -130,13 +130,14 @@ int main(int argc, char **argv) {
       // Update mesh.
       mesh = std::move(new_mesh);
 
+      // Final mesh.
+      std::string meshfile =
+          "output/square_h_" + std::to_string(mesh.elements.size()) + ".poly";
+      mesh.write(meshfile);
+
     } else {
       ch_old = ch;
     }
     ++counter;
   }
-  // Final mesh.
-  std::string meshfile =
-      "output/square_h_" + std::to_string(mesh.elements.size()) + ".poly";
-  mesh.write(meshfile);
 }

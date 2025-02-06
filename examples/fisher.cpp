@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   DataFKPP data;
 
   std::ostringstream oss;
-  oss << "output/fisher_" << data.degree;
+  oss << "output/fisher_2_" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - uniform refinement." << "\n";
@@ -37,11 +37,7 @@ int main(int argc, char **argv) {
   // Diagrams.
   std::vector<std::vector<Polygon>> diagrams;
 
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_125.poly"));
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_250.poly"));
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_500.poly"));
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_1000.poly"));
-  diagrams.emplace_back(mesh_diagram("meshes/square/square_2000.poly"));
+
   diagrams.emplace_back(mesh_diagram("meshes/square/square_4000.poly"));
 
   // Test.
