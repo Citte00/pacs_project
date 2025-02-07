@@ -114,54 +114,60 @@ int main(int argc, char **argv) {
           std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });
 
       if (refine_p || refine_h) {
-        // Iniialize new_mesh.
-        Mesh new_mesh = mesh;
-        
+
         // Initialize ch_old.
         ch_old = ch;
-        
+
         // Perform p-refinement if necessary
         if (refine_p) {
+          // Refine mesh.
           estimator.mesh_refine_degree(p_mask);
-          new_mesh = estimator.mesh();
 
           // Prolong solution for p-refinement
-          ch_old.resize(new_mesh.dofs());
-          ch_old = heat->prolong_solution_p(new_mesh, mesh, ch_old, p_mask);
+          ch_old.resize(estimator.mesh().dofs());
+          ch_old =
+              heat->prolong_solution_p(estimator.mesh(), mesh, ch_old, p_mask);
+
+          // Update mesh.
+          mesh = std::move(estimator.mesh());
         }
 
-        // Perform h-refinement if necessary
+        // Perform h-refinement if necessary.
         if (refine_h) {
+          // Refine mesh.
           estimator.mesh_refine_size(h_mask);
-          new_mesh = estimator.mesh();
+          std::cout << "Mesh size: " << estimator.mesh().elements.size()
+                    << std::endl;
 
-          // Prolong solution for h-refinement
-          ch_old.resize(new_mesh.dofs());
-          ch_old = heat->prolong_solution_h(new_mesh, mesh, ch_old, p_mask);
+          // Prolong solution for h-refinement.
+          ch_old.resize(estimator.mesh().dofs());
+          ch_old =
+              heat->prolong_solution_h(estimator.mesh(), mesh, ch_old, p_mask);
+
+          // Move mesh to new refined version.
+          mesh = std::move(estimator.mesh());
         }
 
-        // Update matrices only if refinement occurs
-        heat = std::make_unique<Heat>(new_mesh);
+        // Update matrices.
+        heat = std::make_unique<Heat>(mesh);
         heat->t() = t;
-        heat->assembly(data, new_mesh);
+        heat->assembly(data, mesh);
 
-        // Update forcing
-        heat->forcing().resize(new_mesh.dofs());
-        heat->assembly_force(data, new_mesh);
+        // Update forcing.
+        heat->forcing().resize(mesh.dofs());
+        heat->assembly_force(data, mesh);
 
-        // Move mesh to new refined version
-        mesh = std::move(new_mesh);
-
-        // Write mesh file only if refined
+        // Write mesh file only if refined.
         std::string meshfile = "output/square_heat_hp_" +
                                std::to_string(mesh.elements.size()) + ".poly";
         mesh.write(meshfile, true);
       }
 
-    } else { ch_old = ch; }
-    
-    ++counter;
+    } else {
+      ch_old = ch;
+    }
 
+    ++counter;
   }
 
 // Solution structure (output).

@@ -110,12 +110,12 @@ struct DataFKPP {
 
   // Time discretization
   Real t_0 = 0.0;
-  Real t_f = 2e-3;
+  Real t_f = 1e-5;
   Real dt = 1e-5;
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 4;
+  size_t degree = 3;
   Real penalty_coeff = 10.0;
 
   // Visualization settings

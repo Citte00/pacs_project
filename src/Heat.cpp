@@ -795,13 +795,9 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
         if (transitions(old_mesh.elements[j].degree - 1, i) == 1)
           indexes.emplace_back(i);
 
-      // Re-based solution vector: 0 for new basis, new_ch for old basis.
-      Vector<Real> u_edge{new_element_dofs};
-      u_edge(indexes, ch(old_indices));
-
       // Local coefficients.
       local_mass += scaled_phi.transpose() * phi;
-      local_coefficients += scaled_phi.transpose() * (phi_old * u_edge);
+      local_coefficients += scaled_phi.transpose() * (phi_old * ch(old_indices));
     }
 
     // Update the solution.

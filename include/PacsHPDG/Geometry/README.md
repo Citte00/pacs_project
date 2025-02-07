@@ -1,5 +1,7 @@
 # `include/PacsHPDG/Geometry/`
 
+This folder contains all the methods and definiton related to the geometry of the problem.
+
 ## Classes and structs
 
 ### [`include/PacsHPDG/Geometry/Shapes.hpp`](./Shapes.hpp)

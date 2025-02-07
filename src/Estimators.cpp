@@ -146,7 +146,7 @@ void LaplaceEstimator::mesh_refine_size(const Mask &mask) {
 
   // Refinement.
   const Mesh new_mesh{this->m_mesh.domain, diagram, degrees};
-  this->m_mesh = new_mesh;
+  this->m_mesh = std::move(new_mesh);
 };
 
 /**

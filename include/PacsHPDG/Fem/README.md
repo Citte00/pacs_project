@@ -9,12 +9,6 @@ class Functor {};
 class TwoFunctor {};
 ```
 
-### [`include/PacsHPDG/Fem/Solution.hpp`](./Solution.hpp)
-
-```cpp
-struct Solution {};
-```
-
 ## Methods
 
 ### [`include/PacsHPDG/Fem/Functor.hpp`](./Functor.hpp)
@@ -49,14 +43,15 @@ std::array<Vector<Real>, 2> quadrature_1d(const std::size_t &);
 std::array<Vector<Real>, 3> quadrature_2d(const std::size_t &);
 ```
 
-### [`include/PacsHPDG/Fem/Modal.hpp`](./Modal.hpp)
+### [`include/PacsHPDG/Fem/Utility.hpp`](./Utility.hpp)
 
 ```cpp
-Vector<Real> modal(const Mesh &, const Functor &);
-```
+// Penalty coefficients.
+Vector<Real> penalty(const Mesh &, const std::size_t &, const Real &);
 
-### [`include/PacsHPDG/Fem/Penalty.hpp`](./Penalty.hpp)
+// Get Jaconbian determinant and physical points.
+std::tuple<Real, Vector<Real>, Vector<Real>> get_Jacobian_physical_points(const Polygon &, const std::array<Vector<Real>, 2> &);
 
-```cpp
-Vector<Real> penalty(const Mesh &, const std::size_t &);
+// Get faces physical points.
+std::array<Vector<Real>, 4> faces_physical_points(const Segment &, const Vector<Real> &);
 ```

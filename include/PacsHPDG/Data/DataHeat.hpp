@@ -23,7 +23,7 @@ struct DataHeat {
 
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
-  int elements = 300;
+  int elements = 125;
   bool meshFromFile = true;
   std::string VTKMeshFileName = "Mesh.vtk";
   std::string meshFileSeq = "meshes/square/square_300.poly";
@@ -110,11 +110,11 @@ struct DataHeat {
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 4;
+  size_t degree = 2;
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  int VisualizationStep = 1;
+  int VisualizationStep = 10;
   int NqnVisualization = 5;
 };
 

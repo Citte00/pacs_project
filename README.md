@@ -18,8 +18,6 @@ This repository provides an implementation of the _hp-adaptive_ discontinuous Ga
     - [**Compilation and Execution**](#compilation-and-execution)
         - [Compilation Flags](#compilation-flags)
     - [Compiling the Code into a Library](#compiling-the-code-into-a-library)
-    - [**Compiling the Report**](#compiling-the-report)
-    - [Compiling the Presentation](#compiling-the-presentation)
 - [Using the Reporitory](#using-the-repository)
     - [Domains](#domains)
     - [**Examples**](#examples)
@@ -98,6 +96,12 @@ Compile tests with:
 make tests
 ```
 
+Compile a single test, which has to be set in the appropriate [Makefile](./Makefile) variable:
+
+```bash
+make single_test
+```
+
 Compile mesh generation scripts with:
 
 ```bash
@@ -136,28 +140,6 @@ which can be installed locally under `~` by:
 make install
 ```
 
-### Compiling the Report
-
-The report for the project can be compiled by:
-
-```bash
-cd report
-make
-```
-
-Ensure that [_latexmk_](https://ctan.org/pkg/latexmk/) is installed.
-
-### Compiling the Presentation
-
-Similarly, the presentation for the project can be compiled by:
-
-```bash
-cd presentation
-make
-```
-
-Again, ensure that _latexmk_ is installed.
-
 ## Using the Repository
 
 Here is a brief guide on using the executables in this repository. Note that tests were written solely to verify specific parts of the code, so their usage is not covered here.
@@ -172,6 +154,7 @@ This repository provides the following:
 
 - `square_domain.cpp`
 - `lshape_domain.cpp`
+- `rectangular_domain.cpp`
 
 For example, usage would look like:
 
@@ -187,47 +170,33 @@ This command generates a square mesh over $[0, 1] \times [0, 1]$ with $N = 250$.
 
 This command generates an L-shaped mesh over $[-1, 1] \times [-1, 1] \setminus [0, 1] \times [-1, 0]$ with $N = 125$.
 
+```bash
+./executables/rectangular_domain.out 500
+```
+
+This command generates a square mesh over $[0, 5] \times [0, 1]$ with $N = 500$.
+
+
 ### Examples
 
 Examples are divided into the following categories based on their equations and meshes:
 
 1. Uniform meshes:
-    - `square_smooth.cpp` Square domain, smooth solution[^solutions].
-    - `square.cpp` Square domain, non-smooth solution.
-    - `lshape_smooth.cpp` L-shaped domain, smooth solution.
-    - `lshape.cpp` L-shaped domain, non-smooth solution.
-2. _h-adaptively_ refined meshes with _a priori_ estimates based on $L^2$ error:
-    - `square_h.cpp` Square domain, non-smooth solution.
-    - `lshape_h.cpp` L-shaped domain, non-smooth solution.
-3. _h-adaptively_ refined meshes with _a priori_ estimates based on $H^1$ error:
-    - `square_gh.cpp` Square domain, non-smooth solution.
-    - `lshape_gh.cpp` L-shaped domain, non-smooth solution.
-4. _h-adaptively_ refined meshes with _a posteriori_ estimates:
-    - `square_eh.cpp` Square domain, non-smooth solution.
-    - `lshape_eh.cpp` L-shaped domain, non-smooth solution.
+    - `laplace.cpp` Solve the Laplace equation.
+    - `heat.cpp` Solve the Heat equation.
+    - `fisher.cpp` Solve the Fisher equation.
+2. _h-adaptively_ refined meshes with _a posteriori_ estimates:
+    - `laplace_h.cpp` Solve the Laplace equation.
+    - `heat_h.cpp` Solve the Heat equation.
+    - `fisher_h.cpp` Solve the Fisher equation.
 5. _hp-adaptively_ refined meshes with _a posteriori_ estimates:[^hp]
-    - `square_hp.cpp` Square domain, non-smooth solution.
-    - `lshape_hp.cpp` L-shaped domain, non-smooth solution.
-
-[^solutions]: Smooth and non-smooth solutions are discussed in the report.
+    - `laplace_hp.cpp` Solve the Laplace equation.
+    - `heat_hp.cpp` Solve the Heat equation.
+    - `fisher_hp.cpp` Solve the Fisher equation.
 
 [^hp]: The polynomial degree specified for _hp-adaptively_ refined meshes is treated as the starting degree.
 
-Category _1_ requires the user to specify the polynomial degree. An example command is:
-
-```bash
-./executables/square.out 3
-```
-
-which solves the Poisson problem on a sequence of uniformly refined square meshes with $k = 3$.
-
-Categories _2, ..., 5_ require the user to specify the polynomial degree and optionally a starting mesh identified by its elements. Meshes are stored under `data/square/` or `data/lshape/`. An example command is:
-
-```bash
-./executables/square_h.out 3 250
-```
-
-which solves the Poisson problem on a sequence of _h-adaptively_ refined square meshes with $k = 3$ and $N_0 = 250$.
+All the parameters related to the geometry of the problem are defined inside the problem data structures in `include/PacsHPDG/Data`; the `meshes/` folder contains various meshes already built for the different geometries, to use a different mesh one has just to change the mesh file in the desired examples scripts, where present. 
 
 :warning: These examples contribute to the graphs presented in the report.
 
@@ -239,6 +208,7 @@ Scripts are divided into the following categories based on their function:
 
 1. Mesh-related:
     - `polyplot.py`: Requires a `.poly` file from which it plots a mesh. Accepts `--degrees` for _hp-adaptively_ refined meshes.
+    - `estimatesplot.py`: Requires a `.poly` file from which it plots a mesh, with the relative error estimator distribution.
 2. Solution-related:
     - `solplot.py`: Requires a `.sol` file from which it plots a solution.
 3. Error trends:
@@ -294,32 +264,35 @@ std::vector<pacs::Polygon> diagram = pacs::mesh_diagram(domain, 100, reflect=tru
 
 ### Solving the Poisson Problem
 
-First, build the Laplacian matrix from your mesh[^laplacian][^real]:
+First, import the data related to the Laplace equation:
+```cpp
+DataLaplace data;
+```
 
-[^laplacian]: `laplacian` also builds some other matrices used for error evaluation.
+Then, construct the Laplacian objedct from your mesh[^laplacian][^real]:
+
+[^laplacian]: `Laplace laplacian(mesh)` initialize all the members needed to solve the Laplace equation. 
 [^real]: `pacs::Real` wraps `long double`.
 
+The matrices are then built with the following method:
+
 ```cpp
-std::array<pacs::Matrix<pacs::Real>, 3> matrices = pacs::laplacian(mesh);
-pacs::Matrix<pacs::Real> laplacian = matrices[1];
+laplacian.assembly(data, mesh);
+laplacian.M();
+laplacian.A();
+laplacian.DG();
 ```
 
-Next, construct the forcing term using specified source and Dirichlet boundary conditions:
+Next, construct the forcing term using specified source and Dirichlet boundary conditions, defined in the Lapalce equation data struct:
 
 ```cpp
-pacs::Vector<pacs::Real> forcing = pacs::forcing(mesh, source, dirichlet);
-```
-
-Here, `source` and `dirichlet` are functions representing the source term and Dirichlet boundary conditions, respectively, which follow the following scheme:
-
-```cpp
-pacs::Real function(const pacs::Real &, const pacs::Real &);
+pacs::Vector<pacs::Real> forcing = laplace.assembly_force(data, mesh);
 ```
 
 Finally, solve the linear system to find the solution vector:
 
 ```cpp
-pacs::Vector<pacs::Real> solution = pacs::solve(laplacian, forcing);
+pacs::Vector<pacs::Real> solution = laplacian.solve(mesh, forcing);
 ```
 
 This `solution` vector now contains the computed solution to the Poisson problem on the given mesh with specified boundary conditions and source term.
@@ -331,37 +304,30 @@ After solving the Poisson problem, you can evaluate _a posteriori_ error estimat
 First, evaluate the estimates:
 
 ```cpp
-pacs::Estimator estimator{mesh, M, numerical, source, dirichlet, {dirichlet_x, dirichlet_y}};
+pacs::LaplaceEstimator estimator(mesh);
+estimator.computeEstimates(data, laplacian, numerical);
 ```
 
-Pass the current mesh, the mass matrix, the source, and the Dirichlet boundary condition along with its derivatives to the `pacs::Estimator` constructor.
-
-Use the `mesh_refine` function to _hp-refine_ the mesh:
+Use the `find_elem_to_refine` method to find which elements need to be refined, then use methods `mesh_refine_degree` and `mesh_refine_size` to refine the mesh:
 
 ```cpp
-mesh_refine(mesh, estimator);
+auto [h_mask, p_mask] = estimator.find_elem_to_refine();
+estimator.mesh_refine_degree(p_mask);
+estimator.mesh_refine_size(h_mask);
 ```
+
+For Heat equation problem and Fisher-Kolmogorov equation problem the iter is pretty the same, with the add of other methods related to the fact that these are time dependant problems.
 
 ## Notes to the Reader
 
 ### On the Implementation of Basic Objects
 
-This repository implements basic objects such as vectors and matrices, which are also found in many other libraries. Additionally, it includes a polygonal mesher, though it may not be as powerful as existing alternatives. The decision to develop these components from scratch was driven by a desire to minimize dependencies and to create a project that I could truly call my own, showcasing what I learned during the course.
+This repository implements basic objects such as vectors and matrices, which are also found in many other libraries. Additionally, it includes a polygonal mesher, though it may not be as powerful as existing alternatives.
 
 ### On the Adaptation from **lymph**
 
-The implementation of the Laplacian problem and FEM tools in this project was adapted from the [**lymph**](https://lymph.bitbucket.io) library.
-
-### On the Examples Structure
-
-All the examples have the same structure, and they may seem quite repetitive and superfluous. There is no a priori reason to treat every single example as a different file, given the source code similarities despite the different functions. However, this approach makes each example easy to comprehend and does not pose an issue since examples do not need to be maintained, which again wouldn't be difficult thanks to modern IDEs and editors' capabilities.
-
-### On the Custom Laplacian Solver
-
-All the adaptive examples use `pacs::lapsolver` instead of a manual `pacs::solve`. This is a wrapper for `GMRES` with a `DBI`[^dbi] preconditioner, which is particularly useful given the ill-conditioning that _hp-adaptive_ methods suffer from.
-
-[^dbi]: A generic name for a Block-Jacobi preconditioner.
+The implementation of all the problems and FEM tools in this project was adapted from the [**lymph**](https://lymph.bitbucket.io) library.
 
 ### On Parallelism
 
-Parallelism through the STL plays a secondary role, primarily utilized for common operations involving standard containers. In contrast, parallelism via _OpenMP_ is fundamental, significantly boosting the performance of the polygonal mesher, the `DB` solver, and the `DBI` preconditioner.
+Parallelism through the STL plays a secondary role, primarily utilized for common operations involving standard containers. In contrast, parallelism via _OpenMP_ is fundamental, significantly boosting the performance of the polygonal mesher, the `DB` solver, the `DBI` preconditioner and all the assembler, when looping over the mesh's elements.

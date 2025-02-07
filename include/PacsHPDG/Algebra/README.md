@@ -1,5 +1,7 @@
 # `include/PacsHPDG/Algebra/`
 
+This folder includes all the class, methods and function related to the algebra part of the code.
+
 ## Structs
 
 ### [`include/PacsHPDG/Algebra/Vector.hpp`](./Vector.hpp)

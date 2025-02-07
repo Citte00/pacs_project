@@ -73,7 +73,7 @@ public:
     ost << "Dofs: " << estimator.dofs() << std::endl;
     ost << "Estimate: " << estimator.estimate() << std::endl;
     return ost;
-  };
+  }
 
   // Outputs the error estimate distribution.
   void write(const std::string &, const bool &estimates = false);
