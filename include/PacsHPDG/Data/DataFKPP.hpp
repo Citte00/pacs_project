@@ -110,7 +110,7 @@ struct DataFKPP {
 
   // Time discretization
   Real t_0 = 0.0;
-  Real t_f = 1e-5;
+  Real t_f = 1e-3;
   Real dt = 1e-5;
   Real theta = 0.5;
 
@@ -119,7 +119,7 @@ struct DataFKPP {
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  int VisualizationStep = 10;
+  int VisualizationStep = 5;
   int NqnVisualization = 5;
 };
 

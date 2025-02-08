@@ -93,10 +93,6 @@ int main(int argc, char **argv) {
       HeatEstimator estimator(mesh);
       estimator.computeEstimates(data, *heat, ch, ch_old);
       const auto &estimates = estimator.estimates();
-      std::string estimate = "output/heat_h_" +
-                             std::to_string(mesh.elements.size()) + "@" +
-                             std::to_string(data.degree) + ".poly";
-      estimator.write(estimate, true);
 
       // Refine.
       Mask h_mask =
@@ -131,8 +127,9 @@ int main(int argc, char **argv) {
       mesh = std::move(new_mesh);
 
       // Final mesh.
-      std::string meshfile =
-          "output/square_h_" + std::to_string(mesh.elements.size()) + ".poly";
+      std::string meshfile = "output/heat_h_" +
+                             std::to_string(mesh.elements.size()) + "@" +
+                             std::to_string(data.degree) + ".poly";
       mesh.write(meshfile);
 
     } else {

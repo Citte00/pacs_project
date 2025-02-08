@@ -129,23 +129,21 @@ int main(int argc, char **argv) {
               heat->prolong_solution_p(estimator.mesh(), mesh, ch_old, p_mask);
 
           // Update mesh.
-          mesh = std::move(estimator.mesh());
+          mesh = estimator.mesh();
         }
 
         // Perform h-refinement if necessary.
         if (refine_h) {
           // Refine mesh.
           estimator.mesh_refine_size(h_mask);
-          std::cout << "Mesh size: " << estimator.mesh().elements.size()
-                    << std::endl;
 
           // Prolong solution for h-refinement.
           ch_old.resize(estimator.mesh().dofs());
           ch_old =
-              heat->prolong_solution_h(estimator.mesh(), mesh, ch_old, p_mask);
+              heat->prolong_solution_h(estimator.mesh(), mesh, ch_old, h_mask);
 
-          // Move mesh to new refined version.
-          mesh = std::move(estimator.mesh());
+          // Update mesh.
+          mesh = estimator.mesh();
         }
 
         // Update matrices.

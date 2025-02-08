@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
           ch_oold = fisher->prolong_solution_h(new_mesh, mesh, ch_oold, h_mask);
 
           fisher->ch_old().resize(new_mesh.dofs());
-          fisher->ch_old() = fisher->prolong_solution_h(new_mesh, mesh, fisher->ch_old(), p_mask);
+          fisher->ch_old() = fisher->prolong_solution_h(new_mesh, mesh, fisher->ch_old(), h_mask);
         }
 
         // Update matrices only if refinement occurs
