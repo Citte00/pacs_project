@@ -1,36 +1,46 @@
-# `include/PacsHPDG/Errors/`
+The `include/PacsHPDG/Errors/` directory provides error computation, estimation, and solution handling functionalities. It contains classes and methods for evaluating numerical accuracy and refining the computational mesh.
 
-This folder contains the Error, Estimator and Solution classes. All these classes are built through inheritance.
+## Classes
 
-## Classes and structs
+The class hierarchy follows an inheritance structure, where more complex PDEs extend the functionality of simpler ones. This design allows code reuse and hierarchical refinement when working with error analysis.
 
 ### [`include/PacsHPDG/Error/Errors.hpp`](./Errors.hpp)
 
+These classes represent error computations for different equations.
+
 ```cpp
 class LaplaceError {};
-class HeatError {};
-class FisherError {};
+class HeatError : public LaplaceError {};
+class FisherError : public HeatError {};
 ```
 
 ### [`include/PacsHPDG/Error/Estimators.hpp`](./Estimators.hpp)
 
+These classes implement error estimation techniques for adaptive refinement.
+
 ```cpp
 class LaplaceEstimator {};
-class HeatEstimator {};
-class FisherEstimator {};
+class HeatEstimator : public LaplaceEstimator {};
+class FisherEstimator : public HeatEstimator {};
 ```
 
 ### [`include/PacsHPDG/Error/Solutions.hpp`](./Solutions.hpp)
 
+These classes store and manage numerical and exact solutions.
+
 ```cpp
 class LaplaceSolution {};
-class HeatSolution {};
-class FisherSolution {};
+class HeatSolution : public LaplaceSolution {};
+class FisherSolution : public HeatSolution {};
 ```
 
 ## Methods
 
+Provides functionality for error computation, estimation, and solution output.
+
 ### [`include/PacsHPDG/Error/Errors.hpp`](./Errors.hpp)
+
+These are the main methods for errors computation.
 
 ```cpp
   // Compute L2, DG and energy errors.
@@ -39,11 +49,13 @@ class FisherSolution {};
   // Compute L2 and H1 errors.
   void errors(const DataFKPP &, const Mesh &, const Fisher &,
               const Vector<Real> &);
-  // Friend operator<< for polymorphic printing.
+  // Friend operator<< for printing.
   friend std::ostream &operator<<(std::ostream &ost, const FisherError &error) 
 ```
 
 ### [`include/PacsHPDG/Error/Estimators.hpp`](./Estimators.hpp)
+
+These are the main methods for error estimation and mesh refinment.
 
 ```cpp
 // Compute error estimates.
@@ -68,6 +80,8 @@ class FisherSolution {};
 ```
 
 ### [`include/PacsHPDG/Error/Solutions.hpp`](./Solutions.hpp)
+
+These are the main methods to store and plot the numerical and exact solutions.
 
 ```cpp
   // Save numerical and exact solution for plotting.

@@ -89,14 +89,14 @@ for line in lines:
         continue
 
     # Color.
-    color: tuple[int] = [1, 1, 1, 1] if "--degrees" not in sys.argv else list(cm.Blues(norm(int(data[-1]))))
+    color: tuple[int] = [1, 1, 1, 1] if "--degrees" not in sys.argv else list(cm.turbo(norm(int(data[-1]))))
     color[3] = 0.75 # Reduces alpha.
 
     # Plot.
     ax.fill(x, y, facecolor=color, edgecolor=black, linewidth=0.25)
 
 # Create a ScalarMappable for the colorbar
-sm = plt.cm.ScalarMappable(cmap=cm.Blues, norm=norm)
+sm = plt.cm.ScalarMappable(cmap=cm.turbo, norm=norm)
 sm.set_array([])
 
 # Add colorbar

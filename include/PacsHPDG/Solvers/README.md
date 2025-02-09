@@ -1,10 +1,12 @@
-# `include/PacsHPDG/Solvers/`
+The `include/PacsHPDG/Solvers/` directory provides solver implementations for the Laplace, Heat, and Fisher-KPP equations. These solvers are crucial for numerical simulations in the hp-adaptive Discontinuous Galerkin (DG) method.
 
-In this folder the equation classes are built. Each of them containes all the method needed to construct the algebraic system and to solve it then. The classes are built through inheritance.
+## Classes
 
-## Classes and structs
+The class hierarchy follows an inheritance structure, where more complex PDEs extend the functionality of simpler ones. This structure allows code reuse and facilitates the implementation of time-dependent and nonlinear problems.
 
 ### [`include/PacsHPDG/Solvers/Laplacian.hpp`](./Laplacian.hpp)
+
+Base class for solving the Laplace equation using the DG method.
 
 ```cpp
 class Laplace {};
@@ -12,11 +14,15 @@ class Laplace {};
 
 ### [`include/PacsHPDG/Solvers/Heat.hpp`](./Heat.hpp)
 
+Time-dependent solver that extends Laplace.
+
 ```cpp
 class Heat : public Laplace {};
 ```
 
 ### [`include/PacsHPDG/Solvers/Fisher.hpp`](./Fisher.hpp)
+
+Nonlinear solver that extends Heat.
 
 ```cpp
 class Fisher : public Heat {};
@@ -24,7 +30,11 @@ class Fisher : public Heat {};
 
 ## Methods
 
+Provides functionality for solving the Laplace, Heat, and Fisher-KPP equations.
+
 ### [`include/PacsHPDG/Laplacian/Laplacian.hpp`](./Laplacian.hpp)
+
+Defines methods for system assembly, solver, modal coefficient extraction and mesh-related operations for the Laplace equation.
 
 ```cpp
   // Blocks.
@@ -40,6 +50,8 @@ class Fisher : public Heat {};
 ```
 
 ### [`include/PacsHPDG/Solvers/Heat.hpp`](./Heat.hpp)
+
+Defines methods for system assembly, solver, modal coefficient extraction and hp-adaptive operations for the Heat equation.
 
 ```cpp
   // Initialize the methods.
@@ -64,6 +76,8 @@ class Fisher : public Heat {};
 ```
 
 ### [`include/PacsHPDG/Solvers/Fisher.hpp`](./Fisher.hpp)
+
+Defines methods for system assembly, nonlinear term handling, solver, modal coefficient extraction for the Fisher-KPP equation.
 
 ```cpp
   // Assembly the fisher equation system matrices.

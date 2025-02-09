@@ -431,8 +431,8 @@ Vector<Real> Heat::solver(const DataHeat &data, const Mesh &mesh,
   Vector<Real> F = RHS * c_old + data.dt * data.theta * this->m_forcing +
                    data.dt * (1 - data.theta) * forcing_old;
 
-  // Solves using GMRES.
-  return solve(LHS, F, blocks, GMRES, DBI, TOL);
+  // Solves using BICGSTAB.
+  return solve(LHS, F, blocks, BICGSTAB, DBI, TOL);
 };
 
 /**

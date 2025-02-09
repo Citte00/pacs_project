@@ -129,7 +129,8 @@ int main(int argc, char **argv) {
       // Final mesh.
       std::string meshfile = "output/heat_h_" +
                              std::to_string(mesh.elements.size()) + "@" +
-                             std::to_string(data.degree) + ".poly";
+                             std::to_string(data.degree) + "_" +
+                             std::to_string(t) + ".poly";
       mesh.write(meshfile);
 
     } else {

@@ -155,9 +155,10 @@ int main(int argc, char **argv) {
         heat->forcing().resize(mesh.dofs());
         heat->assembly_force(data, mesh);
 
-        // Write mesh file only if refined.
-        std::string meshfile = "output/square_heat_hp_" +
-                               std::to_string(mesh.elements.size()) + ".poly";
+        // Final mesh.
+        std::string meshfile =
+            "output/heat_h_" + std::to_string(mesh.elements.size()) + "@" +
+            std::to_string(degree) + "_" + std::to_string(t) + ".poly";
         mesh.write(meshfile, true);
       }
 

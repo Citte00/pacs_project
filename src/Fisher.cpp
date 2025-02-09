@@ -543,8 +543,8 @@ Vector<Real> Fisher::solver(const DataFKPP &data, const Mesh &mesh,
                    data.dt * data.theta * this->m_forcing +
                    data.dt * (1.0 - data.theta) * forcing_old;
 
-  // Solves using GMRES.
-  return solve(LHS, F, blocks, GMRES, DBI, TOL);
+  // Solves using BICGSTAB.
+  return solve(LHS, F, blocks, BICGSTAB, DBI, TOL);
 }
 
 /**

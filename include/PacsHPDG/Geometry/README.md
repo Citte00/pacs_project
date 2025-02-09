@@ -1,8 +1,8 @@
-# `include/PacsHPDG/Geometry/`
-
-This folder contains all the methods and definiton related to the geometry of the problem.
+The `include/PacsHPDG/Geometry/` directory defines basic geometric primitives, meshing utilities, and Voronoi-based operations, which are crucial for handling finite element meshes in the hp-adaptive Discontinuous Galerkin method.
 
 ## Classes and structs
+
+Defines the fundamental geometric entities used in mesh generation and manipulation.
 
 ### [`include/PacsHPDG/Geometry/Shapes.hpp`](./Shapes.hpp)
 
@@ -22,7 +22,11 @@ struct Mesh {};
 
 ## Methods
 
+Defines the fundamental geometric methods used in mesh generation and manipulation.
+
 ### [`include/PacsHPDG/Geometry/Shapes.hpp`](./Shapes.hpp)
+
+Defines the fundamental geometric operations between geometric object.
 
 ```cpp
 // Distances.
@@ -49,6 +53,8 @@ Polygon reduce(const Polygon &, const Line &, const Point &);
 
 ### [`include/PacsHPDG/Geometry/Voronoi.hpp`](./Voronoi.hpp)
 
+Defines the methods used to construct the Voronoi diagrams and to divide elements in triangles.
+
 ```cpp
 // Voronoi.
 std::vector<Polygon> voronoi(const Polygon &, const std::vector<Point> &, const bool &reflect = false);
@@ -61,6 +67,8 @@ std::vector<Polygon> triangulate(const std::vector<Polygon> &);
 ```
 
 ### [`include/PacsHPDG/Geometry/Mesh.hpp`](./Mesh.hpp)
+
+Mesh related methods.
 
 ```cpp
 // Diagrams.

@@ -1,10 +1,12 @@
-# `include/PacsHPDG/Algebra/`
-
-This folder includes all the class, methods and function related to the algebra part of the code.
+The `include/PacsHPDG/Algebra/` directory contains fundamental algebraic structures and methods used for numerical computations. It provides vector, matrix, and sparse matrix representations, along with solvers and mathematical utilities for efficient linear algebra operations.
 
 ## Structs
 
+Here are presented the core algebraic data structures.
+
 ### [`include/PacsHPDG/Algebra/Vector.hpp`](./Vector.hpp)
+
+Defines a generic representation of mathematical vectors that support numerical operations.
 
 ```cpp
 template<NumericType T> struct Vector {};
@@ -12,11 +14,15 @@ template<NumericType T> struct Vector {};
 
 ### [`include/PacsHPDG/Algebra/Matrix.hpp`](./Matrix.hpp)
 
+Defines a generic dense matrix representation with built-in algebraic functionalities.
+
 ```cpp
 template<NumericType T> struct Matrix {};
 ```
 
 ### [`include/PacsHPDG/Algebra/Sparse.hpp`](./Sparse.hpp)
+
+Defines a generic sparse matrix representation for efficient storage and computation in large-scale problems.
 
 ```cpp
 template<NumericType T> struct Sparse {};
@@ -24,7 +30,11 @@ template<NumericType T> struct Sparse {};
 
 ## Methods
 
+Here are presented the mathematical operations, solvers, and utility functions for algebraic structures.
+
 ### [`include/PacsHPDG/Algebra/Solvers.hpp`](./Solvers.hpp)
+
+Implements dense and sparse solvers, including direct and iterative methods for solving linear systems. It also provides preconditioners to improve the convergence of iterative solvers.
 
 ```cpp
 // Solvers and preconditioners (enums).
@@ -64,6 +74,8 @@ template<NumericType T> Sparse<T> _dbi(const Sparse<T> &, const std::vector<std:
 
 ### [`include/PacsHPDG/Algebra/Methods/Vector.hpp`](./Methods/Vector.hpp)
 
+Provides mathematical and utility functions for `Vector<T>`.
+
 ```cpp
 // Math.
 template<NumericType T> inline T min(const Vector<T> &);
@@ -83,6 +95,8 @@ template<NumericType T> Mask lowest(const Vector<T> &, const std::size_t &);
 
 ### [`include/PacsHPDG/Algebra/Methods/Matrix.hpp`](./Methods/Matrix.hpp)
 
+Implememnts decomposition techniques and utilities for `Matrix<T>`.
+
 ```cpp
 // Math.
 template<NumericType T> std::array<Matrix<T>, 2> LU(const Matrix<T> &);
@@ -95,6 +109,8 @@ template<NumericType T> Vector<T> squash(const Matrix<T> &);
 ```
 
 ### [`include/PacsHPDG/Algebra/Methods/Sparse.hpp`](./Methods/Sparse.hpp)
+
+Provide mathematical operations for `Sparse<T>`.
 
 ```cpp
 // Math.
