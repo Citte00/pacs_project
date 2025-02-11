@@ -44,27 +44,26 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
-  heat->assembly(data, mesh);
+  Heat heat{mesh};
+  heat.assembly(data, mesh);
 
   // Initial condition.
-  Vector<Real> ch_old = heat->modal(mesh, data.c_ex);
+  Vector<Real> ch_old = heat.modal(mesh, data.c_ex);
 
   // Forcing term.
-  heat->assembly_force(data, mesh);
+  heat.assembly_force(data, mesh);
 
   // Parameters.
   int counter = 1;
-  Real t = 0.0;
-  std::size_t dofsLimit = 3E5;
+  std::size_t dofsLimit = DOFS_MAX;
   std::size_t degree = 0;
   int steps = static_cast<int>(round(data.t_f / data.dt));
 
   for (int i = 1; i <= steps; i++) {
 
     // Time step.
-    t += data.dt;
-    std::cout << "TIME: " << (heat->t() = t) << std::endl;
+    heat.t() += data.dt;
+    std::cout << "TIME: " << heat.t() << std::endl;
     // Number of elements.
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
     // Degree.
@@ -73,11 +72,11 @@ int main(int argc, char **argv) {
     std::cout << "Degree: " << degree << std::endl;
 
     // Update forcing term.
-    Vector<Real> F_old = heat->forcing();
-    heat->assembly_force(data, mesh);
+    Vector<Real> F_old = heat.forcing();
+    heat.assembly_force(data, mesh);
 
     // Linear system equation solution.
-    Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
+    Vector<Real> ch = heat.solver(data, mesh, ch_old, F_old);
 
     if (counter % data.VisualizationStep == 0) {
 
@@ -85,21 +84,17 @@ int main(int argc, char **argv) {
       HeatError error(mesh);
 
       // Compute error.
-      error.error(data, mesh, *heat, ch);
+      error.error(data, mesh, heat, ch);
 
       // Output.
-      output << "\n"
-             << error << "\n"
-             << "Residual: "
-             << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
-             << std::endl;
+      output << "\n" << error << "\n";
 
       // Compute estimator.
       HeatEstimator estimator(mesh);
-      estimator.computeEstimates(data, *heat, ch, ch_old);
+      estimator.computeEstimates(data, heat, ch, ch_old);
 
       // Determine elements to refine.
-      auto [h_mask, p_mask] = estimator.find_elem_to_refine();
+      auto [h_mask, p_mask] = estimator.find_elem_to_refine(0.7, 0.07);
 
       if (mesh.dofs() >= dofsLimit) {
         ch_old = ch;
@@ -126,7 +121,7 @@ int main(int argc, char **argv) {
           // Prolong solution for p-refinement
           ch_old.resize(estimator.mesh().dofs());
           ch_old =
-              heat->prolong_solution_p(estimator.mesh(), mesh, ch_old, p_mask);
+              heat.prolong_solution_p(estimator.mesh(), mesh, ch_old, p_mask);
 
           // Update mesh.
           mesh = estimator.mesh();
@@ -140,25 +135,19 @@ int main(int argc, char **argv) {
           // Prolong solution for h-refinement.
           ch_old.resize(estimator.mesh().dofs());
           ch_old =
-              heat->prolong_solution_h(estimator.mesh(), mesh, ch_old, h_mask);
+              heat.prolong_solution_h(estimator.mesh(), mesh, ch_old, h_mask);
 
           // Update mesh.
           mesh = estimator.mesh();
         }
 
-        // Update matrices.
-        heat = std::make_unique<Heat>(mesh);
-        heat->t() = t;
-        heat->assembly(data, mesh);
-
-        // Update forcing.
-        heat->forcing().resize(mesh.dofs());
-        heat->assembly_force(data, mesh);
+        // Update matrices and forcing term.
+        heat.update(data, mesh);
 
         // Final mesh.
         std::string meshfile =
-            "output/heat_h_" + std::to_string(mesh.elements.size()) + "@" +
-            std::to_string(degree) + "_" + std::to_string(t) + ".poly";
+            "output/heat_hp_" + std::to_string(mesh.elements.size()) + "@" +
+            std::to_string(degree) + "_" + std::to_string(heat.t()) + ".poly";
         mesh.write(meshfile, true);
       }
 

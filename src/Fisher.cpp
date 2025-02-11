@@ -12,6 +12,29 @@
 namespace pacs {
 
 /**
+ * @brief Update Fisher matrices and forcing term in adaptive framework.
+ *
+ * @param data Fisher equation data structure.
+ * @param mesh Mesh structure.
+ */
+void Fisher::update(const DataFKPP &data, const Mesh &mesh) {
+  // Dofs.
+  std::size_t dofs = mesh.dofs();
+
+  // Update matrices.
+  m_mass.reshape(dofs, dofs);
+  m_stiff.reshape(dofs, dofs);
+  m_dg_stiff.reshape(dofs, dofs);
+  m_nl_mass.reshape(dofs, dofs);
+
+  assembly(data, mesh);
+
+  // Update forcing term.
+  m_forcing.resize(dofs);
+  assembly_force(data, mesh);
+};
+
+/**
  * @brief Matrices assembly for Fisher-KPP equation.
  *
  * @param data Fisher equation data struct.

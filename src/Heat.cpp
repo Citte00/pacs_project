@@ -12,27 +12,32 @@
 namespace pacs {
 
 /**
- * @brief Initialize Heat object.
+ * @brief Update Heat matrices and forcing term in adaptive framework.
  *
- * @param mesh Mesh struct.
+ * @param data Heat equation data structure.
+ * @param mesh Mesh structure.
  */
-void Heat::initialize(const Mesh &mesh) {
+void Heat::update(const DataHeat &data, const Mesh &mesh) {
   // Dofs.
   std::size_t dofs = mesh.dofs();
 
-  // Reshape matrices.
+  // Update matrices.
   m_mass.reshape(dofs, dofs);
   m_stiff.reshape(dofs, dofs);
   m_dg_stiff.reshape(dofs, dofs);
 
-  // Resize vector.
+  assembly(data, mesh);
+
+  // Update forcing term.
   m_forcing.resize(dofs);
+
+  assembly_force(data, mesh);
 };
 
 /**
  * @brief Assembly of the heat equation matrices.
  *
- * @param Data Data structure.
+ * @param data Heat equation data structure.
  * @param mesh Mesh structure.
  * @return std::array<Sparse<Real>, 3>
  */
@@ -831,9 +836,6 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
   std::vector<std::size_t> nqn_new(new_elem);
   nqn_new[0] = 2 * new_mesh.elements[0].degree + 1;
 
-  std::vector<std::size_t> nqn_old(old_elem);
-  nqn_old[0] = 2 * old_mesh.elements[0].degree + 1;
-
   // Starting indices for old mesh.
   std::vector<std::size_t> old_starts(old_elem);
   old_starts[0] = 0;
@@ -844,7 +846,6 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
 
   for (std::size_t j = 1; j < old_elem; ++j) {
     old_starts[j] = old_starts[j - 1] + old_mesh.elements[j - 1].dofs();
-    nqn_old[j] = 2 * old_mesh.elements[j].degree + 1;
   }
   
   for (std::size_t j = 1; j < new_elem; ++j) {
@@ -874,10 +875,6 @@ Vector<Real> Heat::prolong_solution_h(const Mesh &new_mesh,
     // Refinement check.
     if (!mask_h[j])
       continue;
-
-    // Quadrature nodes and weights for old mesh.
-    auto [node_x_2d_old, node_y_2d_old, weights_2d_old] =
-        quadrature_2d(nqn_old[j]);
 
     // Global matrix indices.
     std::vector<std::size_t> old_indices(old_mesh.elements[j].dofs());

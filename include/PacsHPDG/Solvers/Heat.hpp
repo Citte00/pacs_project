@@ -25,7 +25,9 @@ protected:
 public:
   // CONSTRUCTOR.
   Heat(const Mesh &mesh_)
-      : Laplace(mesh_), m_forcing{mesh_.dofs()}, m_t{0.0} {};
+      : Laplace(mesh_), m_forcing{mesh_.dofs()}, m_t{0.0} {
+    this->m_forcing.elements.reserve(DOFS_MAX);
+  };
 
   // GETTERS.
   Vector<Real> forcing() const { return this->m_forcing; };
@@ -34,25 +36,34 @@ public:
   Real &t() { return this->m_t; };
 
   // METHODS.
-  // Initialize the methods.
-  void initialize(const Mesh &);
+  // Update matrices and forcing term in adaptive framework.
+  void update(const DataHeat &, const Mesh &);
+
   // Assembly the heat equation system matrices.
   void assembly(const DataHeat &, const Mesh &);
+  
   // Assembly the forcing term.
   void assembly_force(const DataHeat &, const Mesh &);
+  
   // Solver of the Heat equation.
   Vector<Real> solver(const DataHeat &, const Mesh &, const Vector<Real> &,
                       const Vector<Real> &, const Real &TOL = 1E-15);
+  
   // Get functions modal coefficients.
   Vector<Real> modal(const Mesh &, const TriFunctor &) const;
+  
   // Get source function modal coefficient.
   Vector<Real> modal_source(const DataHeat &, const Mesh &) const;
+  
   // hp-adaptive methods.
+  
   // Construct matrix with base indeces for each degree.
   Matrix<int> transition(const std::size_t &) const;
+  
   // prolong solution for p.
   Vector<Real> prolong_solution_p(const Mesh &, const Mesh &,
                                   const Vector<Real> &, const Mask &) const;
+  
   // prolong solution for h.
   Vector<Real> prolong_solution_h(const Mesh &, const Mesh &,
                                   const Vector<Real> &, const Mask &) const;

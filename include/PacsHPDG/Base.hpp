@@ -73,7 +73,7 @@
 #endif
 
 #ifndef DOFS_MAX
-#define DOFS_MAX 3E4
+#define DOFS_MAX 1E5
 #endif
 
 
