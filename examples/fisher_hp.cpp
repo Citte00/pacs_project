@@ -3,9 +3,9 @@
  * @author Lorenzo Citterio (github.com/Citte00)
  * @brief Fisher-KPP equation hp-adaptive refinement.
  * @date 2025-02-06
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #include <PacsHPDG.hpp>
 
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   DataFKPP data;
 
   std::ostringstream oss;
-  oss << "output/fisher_h_" << data.elements << "@" << data.degree;
+  oss << "output/fisher_hp_" << data.elements << "@" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - element size adaptive refinement." << "\n";
@@ -44,19 +44,20 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  Fisher fisher{data, mesh};
-  fisher.assembly(data, mesh);
+  std::unique_ptr<Fisher> fisher = std::make_unique<Fisher>(data, mesh);
+  fisher->assembly(data, mesh);
 
   // Initial condition.
-  Vector<Real> ch_oold = fisher.modal(mesh, data.c_ex);
-  fisher.t() += data.dt;
-  fisher.ch_old() = fisher.modal(mesh, data.c_ex);
+  Vector<Real> ch_oold = fisher->modal(mesh, data.c_ex);
+  fisher->t() += data.dt;
+  fisher->ch_old() = fisher->modal(mesh, data.c_ex);
 
   // Forcing term.
-  fisher.assembly_force(data, mesh);
+  fisher->assembly_force(data, mesh);
 
   // Parameters.
   int counter = 1;
+  Real t = 0.0;
   const int dofsLimit = DOFS_MAX;
   int steps = static_cast<int>(round(data.t_f / data.dt));
   std::size_t degree = 0;
@@ -64,8 +65,8 @@ int main(int argc, char **argv) {
   for (int i = 1; i <= steps; ++i) {
 
     // Time step.
-    fisher.t() += data.dt;
-    std::cout << "TIME: " << fisher.t() << std::endl;
+    t += data.dt;
+    std::cout << "TIME: " << (fisher->t() = t) << std::endl;
     // Number of elements.
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
     // Degree.
@@ -74,11 +75,11 @@ int main(int argc, char **argv) {
     std::cout << "Degree: " << degree << std::endl;
 
     // Update forcing term.
-    Vector<Real> F_old = fisher.forcing();
-    fisher.assembly_force(data, mesh);
+    Vector<Real> F_old = fisher->forcing();
+    fisher->assembly_force(data, mesh);
 
     // Linear system equation solution.
-    Vector<Real> ch = fisher.solver(data, mesh, ch_oold, F_old);
+    Vector<Real> ch = fisher->solver(data, mesh, ch_oold, F_old);
 
     if (counter % data.VisualizationStep == 0) {
 
@@ -86,21 +87,21 @@ int main(int argc, char **argv) {
       FisherError error(mesh);
 
       // Compute error.
-      error.error(data, mesh, fisher, ch);
+      error.error(data, mesh, *fisher, ch);
 
       // Output.
-      output << "\n"
-             << error << "\n";
+      output << "\n" << error << "\n";
 
       // Compute estimates.
       FisherEstimator estimator(mesh);
-      estimator.computeEstimates(data, fisher, ch);
+      estimator.computeEstimates(data, *fisher, ch);
 
       // Determine elements to refine.
       auto [h_mask, p_mask] = estimator.find_elem_to_refine();
 
       if (mesh.dofs() >= dofsLimit) {
-        fisher.ch_old() = ch;
+        ch_oold = fisher->ch_old();
+        fisher->ch_old() = ch;
         ++counter;
         continue;
       }
@@ -116,8 +117,8 @@ int main(int argc, char **argv) {
         Mesh new_mesh = mesh;
 
         // Initialize ch_old.
-        ch_oold = fisher.ch_old();
-        fisher.ch_old() = ch;
+        ch_oold = fisher->ch_old();
+        Vector<Real> ch_old = ch;
 
         // Perform p-refinement if necessary
         if (refine_p) {
@@ -127,10 +128,10 @@ int main(int argc, char **argv) {
 
           // Prolong solution for p-refinement
           ch_oold.resize(new_mesh.dofs());
-          ch_oold = fisher.prolong_solution_p(new_mesh, mesh, ch_oold, p_mask);
+          ch_oold = fisher->prolong_solution_p(new_mesh, mesh, ch_oold, p_mask);
 
-          fisher.ch_old().resize(new_mesh.dofs());
-          fisher.ch_old() = fisher.prolong_solution_p(new_mesh, mesh, fisher.ch_old(), p_mask);
+          ch_old.resize(new_mesh.dofs());
+          ch_old = fisher->prolong_solution_p(new_mesh, mesh, ch_old, p_mask);
 
           mesh = std::move(new_mesh);
         }
@@ -142,26 +143,34 @@ int main(int argc, char **argv) {
 
           // Prolong solution for h-refinement
           ch_oold.resize(new_mesh.dofs());
-          ch_oold = fisher.prolong_solution_h(new_mesh, mesh, ch_oold, h_mask);
+          ch_oold = fisher->prolong_solution_h(new_mesh, mesh, ch_oold, h_mask);
 
-          fisher.ch_old().resize(new_mesh.dofs());
-          fisher.ch_old() = fisher.prolong_solution_h(new_mesh, mesh, fisher.ch_old(), h_mask);
+          ch_old.resize(new_mesh.dofs());
+          ch_old = fisher->prolong_solution_h(new_mesh, mesh, ch_old, h_mask);
 
           mesh = std::move(new_mesh);
         }
 
-        // Update matrices and forcing term.
-        fisher.update(data, mesh);
+        // Update matrices.
+        fisher = std::make_unique<Fisher>(data, mesh);
+        fisher->t() = t;
+        fisher->assembly(data, mesh);
+
+        // Update solution.
+        fisher->ch_old() = ch_old;
+
+        // Update forcing term.
+        fisher->assembly_force(data, mesh);
 
         // Write mesh file only if refined
         std::string meshfile =
             "output/fisher_hp_" + std::to_string(mesh.elements.size()) + "@" +
-            std::to_string(degree) + "_" + std::to_string(fisher.t()) + ".poly";
+            std::to_string(degree) + "_" + std::to_string(t) + ".poly";
         mesh.write(meshfile, true);
       }
     } else {
-      ch_oold = fisher.ch_old();
-      fisher.ch_old() = ch;
+      ch_oold = fisher->ch_old();
+      fisher->ch_old() = ch;
     }
     ++counter;
   }

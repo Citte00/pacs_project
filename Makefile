@@ -94,7 +94,7 @@ all: tests examples domains
 
 # Debug target for debugging with gdb.
 debug: CXXFLAGS = $(DEBUG_CXXFLAGS)
-debug: distclean examples
+debug: examples
 	@echo "Build completed with debugging flags"
 
 # Library.

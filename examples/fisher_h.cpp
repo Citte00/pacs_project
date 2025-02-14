@@ -1,11 +1,11 @@
 /**
- * @file heat_h.cpp
+ * @file fisher_h.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief Heat equation element size adaptive refinement.
- * @date 2025-01-22
- *
+ * @brief Fisher-KPP equation element size adaptive refinement.
+ * @date 2025-02-06
+ * 
  * @copyright Copyright (c) 2025
- *
+ * 
  */
 #include <PacsHPDG.hpp>
 
@@ -22,10 +22,10 @@ using namespace pacs;
 int main(int argc, char **argv) {
 
   // Retrieve problem data from structure.
-  DataHeat data;
+  DataFKPP data;
 
   std::ostringstream oss;
-  oss << "output/heat_h_" << data.elements << "@" << data.degree;
+  oss << "output/fisher_h_" << data.elements << "@" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - element size adaptive refinement." << "\n";
@@ -44,54 +44,56 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
-  heat->assembly(data, mesh);
+  std::unique_ptr<Fisher> fisher = std::make_unique<Fisher>(data, mesh);
+  fisher->assembly(data, mesh);
 
   // Initial condition.
-  Vector<Real> ch_old = heat->modal(mesh, data.c_ex);
+  Vector<Real> ch_oold = fisher->modal(mesh, data.c_ex);
+  fisher->t() += data.dt;
+  fisher->ch_old() = fisher->modal(mesh, data.c_ex);
 
   // Forcing term.
-  heat->assembly_force(data, mesh);
+  fisher->assembly_force(data, mesh);
 
   // Parameters.
   int counter = 1;
   Real t = 0.0;
-  const int dofsLimit = 2 * DOFS_MAX;
+  const int dofsLimit = 1E5;
   int steps = static_cast<int>(round(data.t_f / data.dt));
 
   for (int i = 1; i <= steps; ++i) {
 
     // Time step.
     t += data.dt;
-    std::cout << "TIME: " << (heat->t() = t) << std::endl;
+    std::cout << "TIME: " << (fisher->t() = t) << std::endl;
     // Number of elements.
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Update forcing term.
-    Vector<Real> F_old = heat->forcing();
-    heat->assembly_force(data, mesh);
+    Vector<Real> F_old = fisher->forcing();
+    fisher->assembly_force(data, mesh);
 
     // Linear system equation solution.
-    Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
+    Vector<Real> ch = fisher->solver(data, mesh, ch_oold, F_old);
 
     if (counter % data.VisualizationStep == 0) {
 
       // Errors.
-      HeatError error(mesh);
+      FisherError error(mesh);
 
       // Compute error.
-      error.error(data, mesh, *heat, ch);
+      error.error(data, mesh, *fisher, ch);
 
       // Output.
       output << "\n"
              << error << "\n"
              << "Residual: "
-             << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
+             << norm(fisher->M() * ch + fisher->A() * ch - fisher->forcing())
              << std::endl;
 
       // Compute estimates.
-      HeatEstimator estimator(mesh);
-      estimator.computeEstimates(data, *heat, ch, ch_old);
+      FisherEstimator estimator(mesh);
+      estimator.computeEstimates(data, *fisher, ch);
       const auto &estimates = estimator.estimates();
 
       // Refine.
@@ -101,7 +103,8 @@ int main(int argc, char **argv) {
           std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });
 
       if (!refine_h || mesh.dofs() >= dofsLimit) {
-        ch_old = ch;
+        ch_oold = fisher->ch_old();
+        fisher->ch_old() = ch;
         ++counter;
         continue;
       }
@@ -110,29 +113,33 @@ int main(int argc, char **argv) {
       estimator.mesh_refine_size(h_mask);
       const auto &new_mesh = estimator.mesh();
 
+      ch_oold.resize(new_mesh.dofs());
+      ch_oold =
+          fisher->prolong_solution_h(new_mesh, mesh, fisher->ch_old(), h_mask);
+
       // Update matrices.
-      heat = std::make_unique<Heat>(new_mesh);
-      heat->t() = t;
-      heat->assembly(data, new_mesh);
+      fisher = std::make_unique<Fisher>(data, new_mesh);
+      fisher->t() = t;
+      fisher->assembly(data, new_mesh);
 
       // Prolong solution.
-      ch_old.resize(new_mesh.dofs());
-      ch_old = heat->prolong_solution_h(new_mesh, mesh, ch, h_mask);
+      fisher->ch_old() = fisher->prolong_solution_h(new_mesh, mesh, ch, h_mask);
 
       // Update forcing.
-      heat->assembly_force(data, new_mesh);
+      fisher->assembly_force(data, new_mesh);
 
       // Update mesh.
       mesh = std::move(new_mesh);
 
       // Final mesh.
       std::string meshfile =
-          "output/heat_h_" + std::to_string(mesh.elements.size()) + "@" +
+          "output/fisher_hp_" + std::to_string(mesh.elements.size()) + "@" +
           std::to_string(data.degree) + "_" + std::to_string(t) + ".poly";
       mesh.write(meshfile);
 
     } else {
-      ch_old = ch;
+      ch_oold = fisher->ch_old();
+      fisher->ch_old() = ch;
     }
     ++counter;
   }
