@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
       const auto &estimates = estimator.estimates();
 
       // Refine.
-      Mask h_mask = estimates > 0.6L * max(estimates);
+      Mask h_mask = estimates > 0.5L * max(estimates);
 
       bool refine_h =
           std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });

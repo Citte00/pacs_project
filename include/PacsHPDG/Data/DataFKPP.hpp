@@ -25,9 +25,6 @@ struct DataFKPP {
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int elements = 125;
-  bool meshFromFile = true;
-  std::string VTKMeshFileName = "Mesh.vtk";
-  std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Material properties
   Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
@@ -115,11 +112,11 @@ struct DataFKPP {
   Real theta = 0.5;
 
   // Space discretization
-  size_t degree = 3;
+  size_t degree = 2;
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  int VisualizationStep = 5;
+  int VisualizationStep = 10;
   int NqnVisualization = 5;
 };
 

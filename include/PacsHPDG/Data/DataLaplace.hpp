@@ -25,9 +25,6 @@ struct DataLaplace {
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int elements = 125;
-  bool meshFromFile = true;
-  std::string VTKMeshFileName = "Mesh.vtk";
-  std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Forcing Term
   Function<Vector<Real>, Vector<Real>, Vector<Real>> source_f =

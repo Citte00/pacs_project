@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
       estimator.computeEstimates(data, heat, ch, ch_old);
 
       // Determine elements to refine.
-      auto [h_mask, p_mask] = estimator.find_elem_to_refine(0.7, 0.07);
+      auto [h_mask, p_mask] = estimator.find_elem_to_refine();
 
       if (mesh.dofs() >= dofsLimit) {
         ch_old = ch;
@@ -154,7 +154,6 @@ int main(int argc, char **argv) {
     } else {
       ch_old = ch;
     }
-
     ++counter;
   }
 

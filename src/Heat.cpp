@@ -437,7 +437,7 @@ Vector<Real> Heat::solver(const DataHeat &data, const Mesh &mesh,
                    data.dt * (1 - data.theta) * forcing_old;
 
   // Solves using BICGSTAB.
-  return solve(LHS, F, blocks, BICGSTAB, DBI, TOL);
+  return solve(LHS, F, blocks, GMRES, DBI, TOL);
 };
 
 /**
@@ -789,16 +789,6 @@ Vector<Real> Heat::prolong_solution_p(const Mesh &new_mesh,
 
       for (std::size_t l = 0; l < scaled_phi.columns; ++l)
         scaled_phi.column(l, scaled_phi.column(l) * scaled);
-
-      // Computing the transition to identify basis indices.
-      Matrix<int> transitions = transition(new_mesh.elements[j].degree);
-
-      // I have to identify the indices that corresponds to the same basis.
-      std::vector<std::size_t> indexes;
-      indexes.reserve(transitions.columns);
-      for (size_t i = 0; i < transitions.columns; i++)
-        if (transitions(old_mesh.elements[j].degree - 1, i) == 1)
-          indexes.emplace_back(i);
 
       // Local coefficients.
       local_mass += scaled_phi.transpose() * phi;

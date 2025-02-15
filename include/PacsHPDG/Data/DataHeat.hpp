@@ -114,7 +114,7 @@ struct DataHeat {
   Real penalty_coeff = 10.0;
 
   // Visualization settings
-  int VisualizationStep = 5;
+  int VisualizationStep = 10;
   int NqnVisualization = 5;
 };
 

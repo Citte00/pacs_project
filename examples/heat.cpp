@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
   DataHeat data;
 
   std::ostringstream oss;
-  oss << "output/heat_" << data.degree;
+  oss << "output/heat_p_" << data.degree;
   std::ofstream output(oss.str() + ".error");
 
   output << "Square domain - uniform refinement." << "\n";

@@ -193,16 +193,16 @@ LaplaceEstimator::find_elem_to_refine(const Real &refine, const Real &speed) {
 #endif
 
   // Masks.
-  Mask p_mask = this->m_estimates > speed * max(this->m_estimates);
-  Mask h_mask = this->m_estimates > refine * max(this->m_estimates);
+  Mask p_mask = this->m_fits > speed;
+  Mask h_mask = this->m_estimates > refine * sum(this->m_estimates) / this->m_mesh.elements.size();
 
   // Strategy.
   for (std::size_t j = 0; j < this->m_mesh.elements.size(); ++j) {
-    /*if (!h_mask[j]) // p-Refine only error-marked elements.
-      p_mask[j] = false;*/
+    if (!h_mask[j] || this->m_mesh.elements[j].degree >= 10) // p-Refine only error-marked elements.
+      p_mask[j] = false;
 
     if (p_mask[j] && h_mask[j]) // p > h.
-      p_mask[j] = false;
+      h_mask[j] = false;
   }
 
   return {h_mask, p_mask};
