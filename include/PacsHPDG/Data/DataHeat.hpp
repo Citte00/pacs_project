@@ -40,9 +40,18 @@ struct DataHeat {
 
         for (size_t i = 0; i < x.length; i++)
           result[i] =
-              -(std::cos(2.0 * M_PI * x[i]) * std::cos(2 * M_PI * y[i]) + 2) +
-              8 * M_PI * M_PI * D[i] * std::cos(2 * M_PI * x[i]) *
-                  std::cos(2 * M_PI * y[i]) * (1 - t);
+              -(1.0L - std::exp(-100.0L * x[i])) / (1.0L - std::exp(-100.0)) *
+                  std::sin(M_PI * y[i]) * (1.0L - x[i]) +
+              D[i] *
+                  ((10000.0L * std::exp(-100.0L * x[i])) /
+                       (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
+                       (1.0L - x[i]) +
+                   (200.0L * std::exp(-100.0L * x[i])) /
+                       (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) +
+                   M_PI * M_PI * (1.0L - std::exp(-100.0L * x[i])) /
+                       (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
+                       (1.0L - x[i])) *
+                  (1 - t);
 
         return result;
       };
@@ -53,10 +62,9 @@ struct DataHeat {
         Vector<Real> result{x.length};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] =
-              (std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]) +
-               2.0) *
-              (1 - t);
+          result[i] = (1.0L - std::exp(-100.0L * x[i])) /
+                      (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
+                      (1.0L - x[i]) * (1 - t);
 
         return result;
       };
@@ -66,31 +74,35 @@ struct DataHeat {
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
-    for (size_t i = 0; i < x.length; i++)
-      result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
-                  std::cos(2.0 * M_PI * y[i]) * (1 - t);
+        for (size_t i = 0; i < x.length; i++)
+          result[i] = std::sin(M_PI * y[i]) * (1 - t) /
+                      (1.0L - std::exp(-100.0)) *
+                      ((100.0L * std::exp(-100.0L * x[i])) * (1.0L - x[i]) -
+                       (1.0L - std::exp(-100.0L * x[i])));
 
-    return result;
-  };
+        return result;
+      };
 
   Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
-    for (size_t i = 0; i < x.length; i++)
-      result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
-                  std::sin(2.0 * M_PI * y[i]) * (1 - t);
+        for (size_t i = 0; i < x.length; i++)
+          result[i] = M_PI * (1.0L - std::exp(-100.0L * x[i])) /
+                      (1.0L - std::exp(-100.0)) * std::cos(M_PI * y[i]) *
+                      (1.0L - x[i]) * (1 - t);
 
-    return result;
-  };
+        return result;
+      };
 
   Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.length};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] = -(
-              std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]) + 2.0);
+          result[i] = -(1.0L - std::exp(-100.0L * x[i])) /
+                      (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
+                      (1.0L - x[i]);
 
         return result;
       };
