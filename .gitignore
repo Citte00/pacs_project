@@ -13,12 +13,6 @@ lib
 
 # Executables' output.
 **/output
-**/include/PacsHPDG/Heat/heat.hpp
-**/include/PacsHPDG/Heat/heat.cpp
-**/include/PacsHPDG/Solutions.hpp
-**/include/PacsHPDG/Solutions/
-**/test/test_laplace.cpp
-**/test/test_square_smooth.cpp
 
 # Python
 **/__pycache__
@@ -32,6 +26,8 @@ lib
 # Others
 **/*.DS_Store
 **/.DS_Store
+/*.png
+/*.error
 
 # Latex.
 report/*.pdf
