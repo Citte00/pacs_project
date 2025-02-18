@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
   // Parameters.
   int counter = 1;
   Real t = 0.0;
-  const int dofsLimit = 2 * DOFS_MAX;
+  const int dofsLimit = DOFS_MAX;
   int steps = static_cast<int>(round(data.t_f / data.dt));
 
   for (int i = 1; i <= steps; ++i) {
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
       const auto &estimates = estimator.estimates();
 
       // Refine.
-      Mask h_mask = estimates > 0.5L * max(estimates);
+      Mask h_mask = estimates > 0.6L * max(estimates);
 
       bool refine_h =
           std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });

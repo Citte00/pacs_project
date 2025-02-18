@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   // Parameters.
   int counter = 1;
   Real t = 0.0;
-  const int dofsLimit = 1E5;
+  const int dofsLimit = DOFS_MAX;
   int steps = static_cast<int>(round(data.t_f / data.dt));
 
   for (int i = 1; i <= steps; ++i) {
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 
       // Final mesh.
       std::string meshfile =
-          "output/fisher_hp_" + std::to_string(mesh.elements.size()) + "@" +
+          "output/fisher_h_" + std::to_string(mesh.elements.size()) + "@" +
           std::to_string(data.degree) + "_" + std::to_string(t) + ".poly";
       mesh.write(meshfile);
 

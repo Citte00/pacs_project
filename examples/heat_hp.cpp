@@ -150,19 +150,9 @@ int main(int argc, char **argv) {
             std::to_string(degree) + "_" + std::to_string(heat.t()) + ".poly";
         mesh.write(meshfile, true);
       }
-
     } else {
       ch_old = ch;
     }
     ++counter;
   }
-
-// Solution structure (output).
-#ifndef NSOLUTIONS
-  HeatSolution solution{mesh};
-  solution.computeSolution(data, mesh, heat, ch_old);
-  std::string solfile =
-      "output/square_s_" + std::to_string(data.degree) + ".sol";
-  solution.write(solfile);
-#endif
 }
