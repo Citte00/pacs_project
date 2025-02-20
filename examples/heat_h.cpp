@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  std::unique_ptr<Heat> heat = std::make_unique<Heat>(mesh);
+  std::unique_ptr<Heat<Real>> heat = std::make_unique<Heat<Real>>(mesh);
   heat->assembly(data, mesh);
 
   // Initial condition.
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
       const auto &new_mesh = estimator.mesh();
 
       // Update matrices.
-      heat = std::make_unique<Heat>(new_mesh);
+      heat = std::make_unique<Heat<Real>>(new_mesh);
       heat->t() = t;
       heat->assembly(data, new_mesh);
 

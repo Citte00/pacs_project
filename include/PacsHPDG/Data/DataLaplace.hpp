@@ -22,12 +22,15 @@ namespace pacs {
 
 struct DataLaplace {
 
+  // Defining some aliases.
+  using SpatialFunc = Functor<Vector<Real>, Vector<Real>, Vector<Real>>;
+
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int elements = 125;
 
   // Forcing Term
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> source_f =
+  SpatialFunc source_f =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.size()};
 
@@ -39,46 +42,42 @@ struct DataLaplace {
       };
 
   // Boundary Conditions
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC =
-      [](Vector<Real> x, Vector<Real> y) {
-        Vector<Real> result{x.size()};
+  SpatialFunc DirBC = [](Vector<Real> x, Vector<Real> y) {
+    Vector<Real> result{x.size()};
 
-        for (size_t i = 0; i < x.size(); i++)
-          result[i] =
-              std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]);
+    for (size_t i = 0; i < x.size(); i++)
+      result[i] = std::cos(2.0 * M_PI * x[i]) * std::cos(2.0 * M_PI * y[i]);
 
-        return result;
-      };
+    return result;
+  };
 
   // Gradients of the Boundary Conditions
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dx =
-      [](Vector<Real> x, Vector<Real> y) {
-        Vector<Real> result{x.size()};
+  SpatialFunc DirBC_dx = [](Vector<Real> x, Vector<Real> y) {
+    Vector<Real> result{x.size()};
 
-        for (size_t i = 0; i < x.size(); i++)
-          result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
-                      std::cos(2.0 * M_PI * y[i]);
+    for (size_t i = 0; i < x.size(); i++)
+      result[i] = -2.0L * M_PI * std::sin(2.0 * M_PI * x[i]) *
+                  std::cos(2.0 * M_PI * y[i]);
 
-        return result;
-      };
+    return result;
+  };
 
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dy =
-      [](Vector<Real> x, Vector<Real> y) {
-        Vector<Real> result{x.size()};
+  SpatialFunc DirBC_dy = [](Vector<Real> x, Vector<Real> y) {
+    Vector<Real> result{x.size()};
 
-        for (size_t i = 0; i < x.size(); i++)
-          result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
-                      std::sin(2.0 * M_PI * y[i]);
+    for (size_t i = 0; i < x.size(); i++)
+      result[i] = -2.0L * M_PI * std::cos(2.0 * M_PI * x[i]) *
+                  std::sin(2.0 * M_PI * y[i]);
 
-        return result;
-      };
+    return result;
+  };
 
   // Exact Solution
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> c_ex = DirBC;
+  SpatialFunc c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dx_ex = DirBC_dx;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dy_ex = DirBC_dy;
+  SpatialFunc dc_dx_ex = DirBC_dx;
+  SpatialFunc dc_dy_ex = DirBC_dy;
   
   // Space discretization
   size_t degree = 2;

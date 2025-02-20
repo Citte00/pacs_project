@@ -22,22 +22,29 @@ namespace pacs {
 
 struct DataFKPP {
 
+  using SpatialFunc = Functor<Vector<Real>, Vector<Real>, Vector<Real>>;
+  using SpatialTimeFunc =
+      Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+  using SourceFunc =
+      Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>, Vector<Real>>;
+
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
   int elements = 125;
 
   // Material properties
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
-      [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> alpha =
-      [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
+  SpatialTimeFunc D_ext = [](Vector<Real> x, Vector<Real> y, Real t) {
+    return 1.0 + 0.0 * x;
+  };
+  SpatialTimeFunc alpha = [](Vector<Real> x, Vector<Real> y, Real t) {
+    return 1.0 + 0.0 * x;
+  };
 
   // Forcing Term
   bool homog_source_f = false;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>,
-           Vector<Real>>
-      source_f = [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D,
-                    Vector<Real> alpha) {
+  SourceFunc source_f =
+      [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D,
+         Vector<Real> alpha) {
         Vector<Real> result{x.size()};
 
         for (size_t i = 0; i < x.length; i++)
@@ -65,7 +72,7 @@ struct DataFKPP {
       };
 
   // Boundary Conditions
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
+  SpatialTimeFunc DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -78,7 +85,7 @@ struct DataFKPP {
       };
 
   // Gradients of the Boundary Conditions
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
+  SpatialTimeFunc DirBC_dx =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -91,7 +98,7 @@ struct DataFKPP {
         return result;
       };
 
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
+  SpatialTimeFunc DirBC_dy =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -103,7 +110,7 @@ struct DataFKPP {
         return result;
       };
 
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
+  SpatialFunc DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.length};
 
@@ -116,12 +123,12 @@ struct DataFKPP {
       };
 
   // Exact Solution
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
+  SpatialTimeFunc c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
+  SpatialTimeFunc dc_dx_ex = DirBC_dx;
+  SpatialTimeFunc dc_dy_ex = DirBC_dy;
+  SpatialFunc dc_dt_ex = DirBC_dt;
 
   // Time discretization
   Real t_0 = 0.0;

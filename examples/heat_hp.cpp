@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  Heat heat{mesh};
+  Heat<Real> heat{mesh};
   heat.assembly(data, mesh);
 
   // Initial condition.

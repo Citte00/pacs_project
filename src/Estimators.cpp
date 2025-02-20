@@ -216,7 +216,7 @@ LaplaceEstimator::find_elem_to_refine(const Real &refine, const Real &speed) {
  * @param numerical Numerical solution.
  */
 void LaplaceEstimator::computeEstimates(const DataLaplace &data,
-                                        const Laplace &laplacian,
+                                        const Laplace<Real> &laplacian,
                                         const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating estimates." << std::endl;
@@ -501,7 +501,7 @@ void LaplaceEstimator::write(const std::string &filename,
  * @param heat Heat equation object.
  * @param ch_old Numerical solution at the previous time step.
  */
-void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
+void HeatEstimator::computeEstimates(const DataHeat &data, const Heat<Real> &heat,
                                      const Vector<Real> &ch,
                                      const Vector<Real> &ch_old) {
 #ifndef NVERBOSE
@@ -797,7 +797,7 @@ void HeatEstimator::computeEstimates(const DataHeat &data, const Heat &heat,
  * @param fisher Fisher equation object.
  */
 void FisherEstimator::computeEstimates(const DataFKPP &data,
-                                       const Fisher &fisher,
+                                       const Fisher<Real> &fisher,
                                        const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating estimates." << std::endl;

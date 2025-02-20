@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
     mesh.write(polyfile);
 
     // Matrices.
-    Laplace laplacian(mesh);
+    Laplace<Real> laplacian(mesh);
     laplacian.assembly(data, mesh);
 
     // Forcing term.

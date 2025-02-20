@@ -20,7 +20,7 @@ namespace pacs {
  * @param numerical Numerical solution.
  */
 void LaplaceError::error(const DataLaplace &data, const Mesh &mesh,
-                         const Laplace &laplacian,
+                         const Laplace<Real> &laplacian,
                          const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating L2 and DG errors." << std::endl;
@@ -50,7 +50,7 @@ void LaplaceError::error(const DataLaplace &data, const Mesh &mesh,
  * @param numerical Numerical solution.
  */
 void LaplaceError::errors(const DataLaplace &data, const Mesh &mesh,
-                          const Laplace &laplacian,
+                          const Laplace<Real> &laplacian,
                           const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating L2 and H1 errors." << std::endl;
@@ -86,8 +86,8 @@ void LaplaceError::errors(const DataLaplace &data, const Mesh &mesh,
         sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
   }
 
-  // Loop over the elements.
-  #pragma omp parallel for schedule(dynamic)
+// Loop over the elements.
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
@@ -148,8 +148,8 @@ void LaplaceError::errors(const DataLaplace &data, const Mesh &mesh,
  * @param heat Heat equation object.
  * @param numerical Numerical solution.
  */
-void HeatError::error(const DataHeat &data, const Mesh &mesh, const Heat &heat,
-                      const Vector<Real> &numerical) {
+void HeatError::error(const DataHeat &data, const Mesh &mesh,
+                      const Heat<Real> &heat, const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating L2 and DG errors." << std::endl;
 #endif
@@ -177,8 +177,8 @@ void HeatError::error(const DataHeat &data, const Mesh &mesh, const Heat &heat,
  * @param heat Heat equation object.
  * @param numerical Numerical solution.
  */
-void HeatError::errors(const DataHeat &data, const Mesh &mesh, const Heat &heat,
-                       const Vector<Real> &numerical) {
+void HeatError::errors(const DataHeat &data, const Mesh &mesh,
+                       const Heat<Real> &heat, const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating L2 and H1 errors." << std::endl;
 #endif
@@ -276,7 +276,8 @@ void HeatError::errors(const DataHeat &data, const Mesh &mesh, const Heat &heat,
  * @param numerical Numerical Solution.
  */
 void FisherError::error(const DataFKPP &data, const Mesh &mesh,
-                         const Fisher &fisher, const Vector<Real> &numerical) {
+                        const Fisher<Real> &fisher,
+                        const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating L2, DG and energy errors." << std::endl;
 #endif
@@ -308,7 +309,8 @@ void FisherError::error(const DataFKPP &data, const Mesh &mesh,
  * @param numerical Numerical Solution.
  */
 void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
-                                const Fisher &fisher, const Vector<Real> &numerical) {
+                         const Fisher<Real> &fisher,
+                         const Vector<Real> &numerical) {
 #ifndef NVERBOSE
   std::cout << "Evaluating L2 and H1 errors." << std::endl;
 #endif
@@ -343,8 +345,8 @@ void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
         sizes[j] = (distance(p, q) > sizes[j]) ? distance(p, q) : sizes[j];
   }
 
-  // Loop over the elements.
-  #pragma omp parallel for schedule(dynamic)
+// Loop over the elements.
+#pragma omp parallel for schedule(dynamic)
   for (std::size_t j = 0; j < num_elem; ++j) {
 
     // 2D quadrature nodes and weights.
@@ -363,7 +365,7 @@ void FisherError::errors(const DataFKPP &data, const Mesh &mesh,
     std::vector<Polygon> triangles = triangulate(polygon);
 
     // Loop over the sub-triangulation.
-    for (const auto &triangle :triangles) {
+    for (const auto &triangle : triangles) {
 
       // Jacobian's determinant and physical nodes.
       auto [jacobian_det, physical_x, physical_y] =

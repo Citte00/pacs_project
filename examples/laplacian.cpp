@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     Mesh mesh{domain, std::move(diagrams[j]), data.degree};
 
     // Matrices.
-    Laplace laplacian(mesh);
+    Laplace<Real> laplacian(mesh);
     laplacian.assembly(data, mesh);
 
     // Forcing term.

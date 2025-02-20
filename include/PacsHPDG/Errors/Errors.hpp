@@ -68,10 +68,10 @@ public:
 
   // METHODS.
   // Compute L2 and DG errors.
-  void error(const DataLaplace &, const Mesh &, const Laplace &,
+  void error(const DataLaplace &, const Mesh &, const Laplace<Real> &,
              const Vector<Real> &);
   // Compute L2 and H1 errors.
-  void errors(const DataLaplace &, const Mesh &, const Laplace &,
+  void errors(const DataLaplace &, const Mesh &, const Laplace<Real> &,
               const Vector<Real> &);
 
   // Friend operator<< for polymorphic printing.
@@ -97,11 +97,11 @@ public:
 
   // METHODS.
   // Compute L2 and DG errors.
-  void error(const DataHeat &, const Mesh &, const Heat &,
+  void error(const DataHeat &, const Mesh &, const Heat<Real> &,
              const Vector<Real> &);
   // Compute L2 and H1 errors.
-  void errors(const DataHeat &, const Mesh &, const Heat &,
-                     const Vector<Real> &);
+  void errors(const DataHeat &, const Mesh &, const Heat<Real> &,
+              const Vector<Real> &);
 };
 
 /**
@@ -123,12 +123,12 @@ public:
 
   // METHODS.
   // Compute L2, DG and energy errors.
-  void error(const DataFKPP &, const Mesh &, const Fisher &,
+  void error(const DataFKPP &, const Mesh &, const Fisher<Real> &,
              const Vector<Real> &);
   // Compute L2 and H1 errors.
-  void errors(const DataFKPP &, const Mesh &, const Fisher &,
+  void errors(const DataFKPP &, const Mesh &, const Fisher<Real> &,
               const Vector<Real> &);
-              
+
   // Friend operator<< for polymorphic printing.
   friend std::ostream &operator<<(std::ostream &ost, const FisherError &error) {
     ost << "Elements: " << error.L2errors().size() << std::endl;
@@ -137,7 +137,9 @@ public:
     ost << "Size (h): " << error.h() << std::endl;
     ost << "L2 Error: " << error.L2error() << std::endl;
     ost << "DG Error: " << error.DGerror() << std::endl;
-    return ost << "Energy Error: " << std::sqrt(std::pow(error.L2error(), 2) + error.energy()) << std::endl;
+    return ost << "Energy Error: "
+               << std::sqrt(std::pow(error.L2error(), 2) + error.energy())
+               << std::endl;
   };
 };
 

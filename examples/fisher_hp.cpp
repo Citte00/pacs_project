@@ -44,7 +44,8 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  std::unique_ptr<Fisher> fisher = std::make_unique<Fisher>(data, mesh);
+  std::unique_ptr<Fisher<Real>> fisher =
+      std::make_unique<Fisher<Real>>(data, mesh);
   fisher->assembly(data, mesh);
 
   // Initial condition.
@@ -152,7 +153,7 @@ int main(int argc, char **argv) {
         }
 
         // Update matrices.
-        fisher = std::make_unique<Fisher>(data, mesh);
+        fisher = std::make_unique<Fisher<Real>>(data, mesh);
         fisher->t() = t;
         fisher->assembly(data, mesh);
 

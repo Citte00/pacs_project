@@ -44,7 +44,8 @@ int main(int argc, char **argv) {
   Mesh mesh{domain, std::move(diagram), data.degree};
 
   // Matrices.
-  std::unique_ptr<Fisher> fisher = std::make_unique<Fisher>(data, mesh);
+  std::unique_ptr<Fisher<Real>> fisher =
+      std::make_unique<Fisher<Real>>(data, mesh);
   fisher->assembly(data, mesh);
 
   // Initial condition.
@@ -118,7 +119,7 @@ int main(int argc, char **argv) {
           fisher->prolong_solution_h(new_mesh, mesh, fisher->ch_old(), h_mask);
 
       // Update matrices.
-      fisher = std::make_unique<Fisher>(data, new_mesh);
+      fisher = std::make_unique<Fisher<Real>>(data, new_mesh);
       fisher->t() = t;
       fisher->assembly(data, new_mesh);
 

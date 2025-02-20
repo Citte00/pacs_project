@@ -54,7 +54,7 @@ public:
 
   // METHODS.
   // Compute error estimates.
-  void computeEstimates(const DataLaplace &, const Laplace &,
+  void computeEstimates(const DataLaplace &, const Laplace<Real> &,
                         const Vector<Real> &numerical);
   // Polynomial fit.
   Vector<Real> polyfit(const Vector<Real> &, const Vector<Real> &,
@@ -90,7 +90,8 @@ public:
 
   // METHODS.
   // Compute error estimates.
-  void computeEstimates(const DataHeat &, const Heat &, const Vector<Real> &, const Vector<Real> &);
+  void computeEstimates(const DataHeat &, const Heat<Real> &,
+                        const Vector<Real> &, const Vector<Real> &);
 };
 
 /**
@@ -104,7 +105,7 @@ public:
 
   // METHODS.
   // Compute error estimates.
-  void computeEstimates(const DataFKPP &, const Fisher &,
+  void computeEstimates(const DataFKPP &, const Fisher<Real> &,
                         const Vector<Real> &);
 };
 

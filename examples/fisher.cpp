@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     FisherError error(mesh);
 
     // Matrices.
-    Fisher fisher(data, mesh);
+    Fisher<Real> fisher(data, mesh);
     fisher.assembly(data, mesh);
 
     // Initial condition.

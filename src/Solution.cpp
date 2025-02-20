@@ -1,11 +1,11 @@
 /**
  * @file Solution.cpp
  * @author Lorenzo Citterio (github.com/Citte00)
- * @brief 
+ * @brief
  * @date 2025-01-20
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 
 #include <PacsHPDG.hpp>
@@ -19,12 +19,13 @@ namespace pacs {
 
 /**
  * @brief Construct a new Laplace solution object.
- * 
+ *
  * @param data Laplace equation data struct.
  * @param mesh Mesh struct.
  * @param numerical numerical solution.
  */
-void LaplaceSolution::solution(const DataLaplace &data, const Mesh &mesh, const Vector<Real> &numerical) {
+void LaplaceSolution::solution(const DataLaplace &data, const Mesh &mesh,
+                               const Vector<Real> &numerical) {
 
   // Number of quadrature nodes.
   std::size_t nqn = data.NqnVisualization;
@@ -126,7 +127,7 @@ void LaplaceSolution::solution(const DataLaplace &data, const Mesh &mesh, const 
  * @param numerical numerical solution.
  */
 void HeatSolution::solution(const DataHeat &data, const Mesh &mesh,
-                                   const Heat &heat, const Vector<Real> &ch) {
+                            const Heat<Real> &heat, const Vector<Real> &ch) {
 #ifndef NVERBOSE
   std::cout << "Evaluating solutions." << std::endl;
 #endif
@@ -231,8 +232,8 @@ void HeatSolution::solution(const DataHeat &data, const Mesh &mesh,
  * @param fisher Fisher equation object.
  */
 void FisherSolution::solution(const DataFKPP &data, const Mesh &mesh,
-                                     const Fisher &fisher,
-                                     const Vector<Real> &ch) {
+                              const Fisher<Real> &fisher,
+                              const Vector<Real> &ch) {
 
   // Number of quadrature nodes.
   std::size_t nqn = GAUSS_ORDER;

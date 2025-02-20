@@ -15,11 +15,17 @@
 
 #include "../Algebra.hpp"
 #include "../Base.hpp"
+#include "../Fem.hpp"
 #include "../Geometry.hpp"
 
 namespace pacs {
 
 struct DataHeat {
+
+  // Defining some aliases.
+  using SpatialFunc = Functor<Vector<Real>, Vector<Real>, Vector<Real>>;
+  using SpatialTimeFunc = Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real>;
+  using SourceFunc = Functor<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>;
 
   // Geometrical properties
   std::vector<Point> domain = {{0.0, 0.0}, {1.0, 0.0}, {1.0, 1.0}, {0.0, 1.0}};
@@ -29,13 +35,14 @@ struct DataHeat {
   std::string meshFileSeq = "meshes/square/square_300.poly";
 
   // Material properties
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> D_ext =
-      [](Vector<Real> x, Vector<Real> y, Real t) { return 1.0 + 0.0 * x; };
+  SpatialTimeFunc D_ext = [](Vector<Real> x, Vector<Real> y, Real t) {
+    return 1.0 + 0.0 * x;
+  };
 
   // Forcing Term
   bool homog_source_f = false;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real, Vector<Real>>
-      source_f = [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D) {
+  SourceFunc source_f =
+      [](Vector<Real> x, Vector<Real> y, Real t, Vector<Real> D) {
         Vector<Real> result{x.length};
 
         for (size_t i = 0; i < x.length; i++)
@@ -57,7 +64,7 @@ struct DataHeat {
       };
 
   // Boundary Conditions
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC =
+  SpatialTimeFunc DirBC =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.length};
 
@@ -70,7 +77,7 @@ struct DataHeat {
       };
 
   // Gradients of the Boundary Conditions
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dx =
+  SpatialTimeFunc DirBC_dx =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -83,7 +90,7 @@ struct DataHeat {
         return result;
       };
 
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> DirBC_dy =
+  SpatialTimeFunc DirBC_dy =
       [](Vector<Real> x, Vector<Real> y, Real t) {
         Vector<Real> result{x.size()};
 
@@ -95,7 +102,7 @@ struct DataHeat {
         return result;
       };
 
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> DirBC_dt =
+  SpatialFunc DirBC_dt =
       [](Vector<Real> x, Vector<Real> y) {
         Vector<Real> result{x.length};
 
@@ -108,12 +115,12 @@ struct DataHeat {
       };
 
   // Exact Solution
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> c_ex = DirBC;
+  SpatialTimeFunc c_ex = DirBC;
 
   // Gradients of the Exact Solution
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dx_ex = DirBC_dx;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>, Real> dc_dy_ex = DirBC_dy;
-  Function<Vector<Real>, Vector<Real>, Vector<Real>> dc_dt_ex = DirBC_dt;
+  SpatialTimeFunc dc_dx_ex = DirBC_dx;
+  SpatialTimeFunc dc_dy_ex = DirBC_dy;
+  SpatialFunc dc_dt_ex = DirBC_dt;
 
   // Time discretization
   Real t_0 = 0.0;

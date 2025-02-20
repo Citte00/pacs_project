@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Matrices.
-    Heat heat(mesh);
+    Heat<Real> heat(mesh);
     heat.assembly(data, mesh);
 
     // Initial condition.
