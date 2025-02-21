@@ -64,16 +64,14 @@ int main(int argc, char **argv) {
     Vector<Real> numerical = laplacian.solver(mesh, forcing);
 
     // Errors.
-    LaplaceError error(mesh);
+    LaplaceError<Real> error(mesh);
 
 // Solution structure (output).
-#ifndef NSOLUTIONS
-    LaplaceSolution solution{mesh};
-    solution.computeSolution(data, mesh, numerical);
+    LaplaceSolution<Real> solution{mesh};
+    solution.solution(data, mesh, numerical);
     std::string solfile = "output/square_s_" + std::to_string(data.degree) + "_" +
                           std::to_string(j) + ".sol";
     solution.write(solfile);
-#endif
 
     // Compute error.
     error.error(data, mesh, laplacian, numerical);

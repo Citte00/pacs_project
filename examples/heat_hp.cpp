@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     if (counter % data.VisualizationStep == 0) {
 
       // Errors.
-      HeatError error(mesh);
+      HeatError<Real> error(mesh);
 
       // Compute error.
       error.error(data, mesh, heat, ch);
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
       output << "\n" << error << "\n";
 
       // Compute estimator.
-      HeatEstimator estimator(mesh);
+      HeatEstimator<Real> estimator(mesh);
       estimator.computeEstimates(data, heat, ch, ch_old);
 
       // Determine elements to refine.

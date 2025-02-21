@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
     // Errors.
-    FisherError error(mesh);
+    FisherError<Real> error(mesh);
 
     // Matrices.
     Fisher<Real> fisher(data, mesh);
@@ -83,12 +83,12 @@ int main(int argc, char **argv) {
       // Compute error.
       error.error(data, mesh, fisher, ch);
 
-      FisherEstimator estimator(mesh);
+      FisherEstimator<Real> estimator(mesh);
       estimator.computeEstimates(data, fisher, ch);
-      std::string estimate = "output/square_fisher_" +
+      std::string estimate = "output/fisher_" +
                              std::to_string(estimator.mesh().elements.size()) +
                              ".poly";
-      estimator.write(estimate, true);
+      estimator.write(estimate);
 
       // Update solution.
       ch_oold = fisher.ch_old();
@@ -96,13 +96,11 @@ int main(int argc, char **argv) {
     }
 
 // Solution structure (output).
-#ifndef NSOLUTIONS
-    FisherSolution solution{mesh};
-    solution.computeSolution(data, mesh, fisher, fisher.ch_old());
+    FisherSolution<Real> solution{mesh};
+    solution.solution(data, mesh, fisher, fisher.ch_old());
     std::string solfile = "output/square_s_" + std::to_string(data.degree) +
                           "_" + std::to_string(j) + ".sol";
     solution.write(solfile);
-#endif
 
     // Output.
     output << "\n"

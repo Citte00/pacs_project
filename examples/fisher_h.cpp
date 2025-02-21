@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     if (counter % data.VisualizationStep == 0) {
 
       // Errors.
-      FisherError error(mesh);
+      FisherError<Real> error(mesh);
 
       // Compute error.
       error.error(data, mesh, *fisher, ch);
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
              << std::endl;
 
       // Compute estimates.
-      FisherEstimator estimator(mesh);
+      FisherEstimator<Real> estimator(mesh);
       estimator.computeEstimates(data, *fisher, ch);
       const auto &estimates = estimator.estimates();
 

@@ -69,8 +69,8 @@ int main(int argc, char **argv) {
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-    LaplaceSolution solution{mesh};
-    solution.computeSolution(data, mesh, numerical);
+    LaplaceSolution<Real> solution{mesh};
+    solution.solution(data, mesh, numerical);
     std::string solfile = "output/square_h_" + std::to_string(data.elements) +
                           "@" + std::to_string(data.degree) + "_" +
                           std::to_string(index) + ".sol";
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 #endif
 
     // Errors.
-    LaplaceError error(mesh);
+    LaplaceError<Real> error(mesh);
     error.error(data, mesh, laplacian, numerical);
 
     // Output.
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
       break;
 
     // Refinement.
-    LaplaceEstimator estimator(mesh);
+    LaplaceEstimator<Real> estimator(mesh);
     estimator.mesh_refine_size(error.L2errors() >
                                refine * max(error.L2errors()));
 

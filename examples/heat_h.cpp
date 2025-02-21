@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
     if (counter % data.VisualizationStep == 0) {
 
       // Errors.
-      HeatError error(mesh);
+      HeatError<Real> error(mesh);
 
       // Compute error.
       error.error(data, mesh, *heat, ch);
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
              << std::endl;
 
       // Compute estimates.
-      HeatEstimator estimator(mesh);
+      HeatEstimator<Real> estimator(mesh);
       estimator.computeEstimates(data, *heat, ch, ch_old);
       const auto &estimates = estimator.estimates();
 

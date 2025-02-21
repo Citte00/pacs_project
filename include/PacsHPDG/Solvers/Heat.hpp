@@ -559,7 +559,7 @@ public:
 
     return (norm(coefficients) > TOLERANCE)
                ? solve(this->m_mass, coefficients, blocks, DB)
-               : Vector<T>{mesh_.dofs()};
+               : Vector<Real>{mesh_.dofs()};
   };
 
   /**
@@ -649,7 +649,7 @@ public:
 
     return (norm(coefficients) > TOLERANCE)
                ? solve(this->m_mass, coefficients, blocks, DB)
-               : Vector<T>{mesh_.dofs()};
+               : Vector<Real>{mesh_.dofs()};
   };
 
   // hp-adaptive methods.

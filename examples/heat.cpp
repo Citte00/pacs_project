@@ -81,12 +81,12 @@ int main(int argc, char **argv) {
     }
 
     // Errors.
-    HeatError error(mesh);
+    HeatError<Real> error(mesh);
 
 // Solution structure (output).
 #ifndef NSOLUTIONS
-    HeatSolution solution{mesh};
-    solution.computeSolution(data, mesh, heat, ch_old);
+    HeatSolution<Real> solution{mesh};
+    solution.solution(data, mesh, heat, ch_old);
     std::string solfile = "output/square_s_" + std::to_string(data.degree) +
                           "_" + std::to_string(j) + ".sol";
     solution.write(solfile);

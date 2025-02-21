@@ -9,9 +9,9 @@ The class hierarchy follows an inheritance structure, where more complex PDEs ex
 These classes represent error computations for different equations.
 
 ```cpp
-class LaplaceError {};
-class HeatError : public LaplaceError {};
-class FisherError : public HeatError {};
+template <NumericType T> class LaplaceError {};
+template <NumericType T> class HeatError : public LaplaceError<T> {};
+template <NumericType T> class FisherError : public HeatError<T> {};
 ```
 
 ### [`include/PacsHPDG/Error/Estimators.hpp`](./Estimators.hpp)
@@ -19,9 +19,9 @@ class FisherError : public HeatError {};
 These classes implement error estimation techniques for adaptive refinement.
 
 ```cpp
-class LaplaceEstimator {};
-class HeatEstimator : public LaplaceEstimator {};
-class FisherEstimator : public HeatEstimator {};
+template <NumericType T> class LaplaceEstimator {};
+template <NumericType T> class HeatEstimator : public LaplaceEstimator<T> {};
+template <NumericType T> class FisherEstimator : public HeatEstimator<T> {};
 ```
 
 ### [`include/PacsHPDG/Error/Solutions.hpp`](./Solutions.hpp)
@@ -29,9 +29,9 @@ class FisherEstimator : public HeatEstimator {};
 These classes store and manage numerical and exact solutions.
 
 ```cpp
-class LaplaceSolution {};
-class HeatSolution : public LaplaceSolution {};
-class FisherSolution : public HeatSolution {};
+template <NumericType T> class LaplaceSolution {};
+template <NumericType T> class HeatSolution : public LaplaceSolution<T> {};
+template <NumericType T> class FisherSolution : public HeatSolution<T> {};
 ```
 
 ## Methods
@@ -44,11 +44,11 @@ These are the main methods for errors computation.
 
 ```cpp
 // Compute L2 and DG errors.
-void error(const DataLaplace &, const Mesh &, const Laplace<Real> &, const Vector<Real> &);
+void error(const DataLaplace &, const Mesh &, const Laplace<T> &, const Vector<T> &);
 // Compute L2 and H1 errors.
-void errors(const DataLaplace &, const Mesh &, const Laplace<Real> &, const Vector<Real> &);
+void errors(const DataLaplace &, const Mesh &, const Laplace<T> &, const Vector<T> &);
 // Friend operator<< for printing.
-friend std::ostream &operator<<(std::ostream &ost, const LaplaceError &error); 
+friend std::ostream &operator<<(std::ostream &ost, const LaplaceError<T> &error); 
 ```
 
 ### [`include/PacsHPDG/Error/Estimators.hpp`](./Estimators.hpp)
@@ -57,22 +57,22 @@ These are the main methods for error estimation and mesh refinment.
 
 ```cpp
 // Compute error estimates.
-void computeEstimates(const DataLaplace &, const Laplace<Real> &, const Vector<Real> &numerical);
+void computeEstimates(const DataLaplace &, const Laplace<T> &, const Vector<T> &numerical);
 // Polynomial fit.
-Vector<Real> polyfit(const Vector<Real> &, const Vector<Real> &, const std::size_t &) const;
+Vector<T> polyfit(const Vector<T> &, const Vector<T> &, const std::size_t &) const;
 
 // Refinement.
 void mesh_refine_size(const Mask &);
 void mesh_refine_degree(const Mask &);
 
 // Elements to refine refinement.
-std::array<Mask, 2> find_elem_to_refine(const Real &refine = 0.75, const Real &speed = 1.0);
+std::array<Mask, 2> find_elem_to_refine(const Real &refine = 0.75, const Real &speed = 1.0) const;
 
 // Friend operator<< for output printing.
-friend std::ostream &operator<<(std::ostream &ost, const LaplaceEstimator &estimator);
+friend std::ostream &operator<<(std::ostream &ost, const LaplaceEstimator<T> &estimator);
 
 // Outputs the error estimate distribution.
-void write(const std::string &, const bool &estimates = false);
+void write(const std::string &);
 ```
 
 ### [`include/PacsHPDG/Error/Solutions.hpp`](./Solutions.hpp)
@@ -81,7 +81,7 @@ These are the main methods to store and plot the numerical and exact solutions.
 
 ```cpp
 // Save numerical and exact solution for plotting.
-void solution(const DataLaplace &, const Mesh &, const Vector<Real> &);
+void solution(const DataLaplace &, const Mesh &, const Vector<T> &);
 // Output solution in a .sol file.
 void write(const std::string &);
 ```
