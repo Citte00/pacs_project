@@ -30,8 +30,6 @@ lib
 /*.error
 
 # Latex.
-report/*.pdf
-presentation/*.pdf
 **/*.aux
 **/*.lof
 **/*.log
