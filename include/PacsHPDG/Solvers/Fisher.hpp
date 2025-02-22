@@ -105,11 +105,11 @@ public:
     std::size_t dofs = mesh_.dofs();
 
     // Matrices.
-    Sparse<Real> M_prj{dofs, dofs};
-    Sparse<Real> M{dofs, dofs};
-    Sparse<Real> A{dofs, dofs};
-    Sparse<Real> IA{dofs, dofs};
-    Sparse<Real> SA{dofs, dofs};
+    Sparse<T> M_prj{dofs, dofs};
+    Sparse<T> M{dofs, dofs};
+    Sparse<T> A{dofs, dofs};
+    Sparse<T> IA{dofs, dofs};
+    Sparse<T> SA{dofs, dofs};
 
     // Neighbours.
     std::vector<std::vector<std::array<int, 3>>> neighbours = mesh_.neighbours;
@@ -135,9 +135,9 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local matrices.
-      Matrix<Real> local_M_prj{indices.size(), indices.size()};
-      Matrix<Real> local_M{indices.size(), indices.size()};
-      Matrix<Real> local_A{indices.size(), indices.size()};
+      Matrix<T> local_M_prj{indices.size(), indices.size()};
+      Matrix<T> local_M{indices.size(), indices.size()};
+      Matrix<T> local_A{indices.size(), indices.size()};
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -147,21 +147,21 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Param initialization.
-        Vector<Real> Dext = data_.D_ext(physical_x, physical_y, 0.0);
-        Vector<Real> alpha = data_.alpha(physical_x, physical_y, 0.0);
+        Vector<T> Dext = data_.D_ext(physical_x, physical_y, 0.0);
+        Vector<T> alpha = data_.alpha(physical_x, physical_y, 0.0);
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Some products.
-        Matrix<Real> scaled_phi{phi};
-        Matrix<Real> scaled_phi_alpha{phi};
-        Matrix<Real> scaled_gradx{gradx_phi};
-        Matrix<Real> scaled_grady{grady_phi};
+        Matrix<T> scaled_phi{phi};
+        Matrix<T> scaled_phi_alpha{phi};
+        Matrix<T> scaled_gradx{gradx_phi};
+        Matrix<T> scaled_grady{grady_phi};
 
         for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
@@ -188,15 +188,15 @@ public:
       // Face integrals.
 
       // Local matrices.
-      Matrix<Real> local_IA{indices.size(), indices.size()};
-      Matrix<Real> local_SA{indices.size(), indices.size()};
+      Matrix<T> local_IA{indices.size(), indices.size()};
+      Matrix<T> local_SA{indices.size(), indices.size()};
 
       // Element's neighbours.
       std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
 
       // Local matrices for neighbours.
-      std::vector<Matrix<Real>> local_IAN;
-      std::vector<Matrix<Real>> local_SAN;
+      std::vector<Matrix<T>> local_IAN;
+      std::vector<Matrix<T>> local_SAN;
 
       // Penalties.
       Vector<Real> penalties = penalty(mesh_, j, data_.penalty_coeff);
@@ -219,19 +219,19 @@ public:
             faces_physical_points(edges[k], nodes_1d);
 
         // Weights scaling.
-        Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
 
         // Param initialization.
-        Vector<Real> Dext = data_.D_ext(physical_x, physical_y, 0.0);
+        Vector<T> Dext = data_.D_ext(physical_x, physical_y, 0.0);
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Local matrix assembly.
-        Matrix<Real> scaled_gradx{gradx_phi};
-        Matrix<Real> scaled_grady{grady_phi};
-        Matrix<Real> scaled_phi{phi};
+        Matrix<T> scaled_gradx{gradx_phi};
+        Matrix<T> scaled_grady{grady_phi};
+        Matrix<T> scaled_phi{phi};
 
         for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
           scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
@@ -239,7 +239,7 @@ public:
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
         }
 
-        Matrix<Real> scaled_grad =
+        Matrix<T> scaled_grad =
             normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
 
         if (neighbour == -1) { // Boundary edge.
@@ -248,8 +248,8 @@ public:
           local_SA += (penalties[k] * scaled_phi).transpose() * phi;
 
           // Empty small matrices.
-          local_IAN.emplace_back(Matrix<Real>{1, 1});
-          local_SAN.emplace_back(Matrix<Real>{1, 1});
+          local_IAN.emplace_back(Matrix<T>{1, 1});
+          local_SAN.emplace_back(Matrix<T>{1, 1});
 
         } else {
 
@@ -257,7 +257,7 @@ public:
           local_SA += (penalties[k] * scaled_phi).transpose() * phi;
 
           // Neighbour's basis function.
-          Matrix<Real> n_phi =
+          Matrix<T> n_phi =
               basis_2d(mesh_, neighbour, {physical_x, physical_y})[0];
 
           // Neighbour's local matrix.
@@ -341,7 +341,7 @@ public:
     std::size_t dofs = mesh_.dofs();
 
     // Matrices.
-    Sparse<Real> M_star{dofs, dofs};
+    Sparse<T> M_star{dofs, dofs};
 
     // Neighbours.
     std::vector<std::vector<std::array<int, 3>>> neighbours = mesh_.neighbours;
@@ -366,7 +366,7 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local matrices.
-      Matrix<Real> local_M{indices.size(), indices.size()};
+      Matrix<T> local_M{indices.size(), indices.size()};
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -376,19 +376,19 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Param initialization.
-        Vector<Real> alpha = data_.alpha(physical_x, physical_y, 0.0);
-        Vector<Real> c_star = ch_(indices);
+        Vector<T> alpha = data_.alpha(physical_x, physical_y, 0.0);
+        Vector<T> c_star = ch_(indices);
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Some products.
-        Matrix<Real> scaled_phi{phi};
-        Vector<Real> c_star_loc = phi * c_star;
+        Matrix<T> scaled_phi{phi};
+        Vector<T> c_star_loc = phi * c_star;
 
         for (std::size_t l = 0; l < scaled_phi.columns; ++l) {
           scaled_phi.column(l, (alpha * scaled_phi.column(l)) * c_star_loc *
@@ -405,7 +405,7 @@ public:
     }
 
     // Matrices.
-    Sparse<Real> non_lin = std::move(M_star);
+    Sparse<T> non_lin = std::move(M_star);
 
     // Compression.
     non_lin.compress();
@@ -463,7 +463,7 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local forcing term.
-      Vector<Real> local_f{indices.size()};
+      Vector<T> local_f{indices.size()};
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -473,17 +473,17 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Local source evaluation.
-        Vector<Real> Dext = data_.D_ext(physical_x, physical_y, this->m_t);
-        Vector<Real> alpha = data_.alpha(physical_x, physical_y, this->m_t);
-        Vector<Real> local_source =
+        Vector<T> Dext = data_.D_ext(physical_x, physical_y, this->m_t);
+        Vector<T> alpha = data_.alpha(physical_x, physical_y, this->m_t);
+        Vector<T> local_source =
             data_.source_f(physical_x, physical_y, this->m_t, Dext, alpha);
 
         // Basis functions.
         auto phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
-        Matrix<Real> scaled_phi{phi};
+        Matrix<T> scaled_phi{phi};
 
         for (std::size_t l = 0; l < scaled_phi.columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
@@ -519,19 +519,19 @@ public:
             faces_physical_points(edges[k], nodes_1d);
 
         // Weights scaling.
-        Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Param initialisation.
-        Vector<Real> Dext = data_.D_ext(physical_x, physical_y, this->m_t);
+        Vector<T> Dext = data_.D_ext(physical_x, physical_y, this->m_t);
 
         // Local matrix assembly.
-        Matrix<Real> scaled_gradx{gradx_phi};
-        Matrix<Real> scaled_grady{grady_phi};
-        Matrix<Real> scaled_phi{phi};
+        Matrix<T> scaled_gradx{gradx_phi};
+        Matrix<T> scaled_grady{grady_phi};
+        Matrix<T> scaled_phi{phi};
 
         for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
           scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
@@ -539,11 +539,11 @@ public:
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
         }
 
-        Matrix<Real> scaled_grad =
+        Matrix<T> scaled_grad =
             normal_vector[0] * scaled_gradx + normal_vector[1] * scaled_grady;
 
         // Boundary conditions.
-        Vector<Real> boundary = data_.DirBC(physical_x, physical_y, this->m_t);
+        Vector<T> boundary = data_.DirBC(physical_x, physical_y, this->m_t);
 
         // Local forcing term.
         local_f -= scaled_grad.transpose() * boundary;
@@ -578,25 +578,25 @@ public:
     auto blocks = this->block_mass(mesh_);
 
     // Assembling the constant component of the matrices.
-    Sparse<Real> LHS = this->m_mass + data_.dt * data_.theta * this->m_stiff;
-    Sparse<Real> RHS =
+    Sparse<T> LHS = this->m_mass + data_.dt * data_.theta * this->m_stiff;
+    Sparse<T> RHS =
         this->m_mass - data_.dt * (1.0 - data_.theta) * this->m_stiff;
 
     // Assembling the dynamic componenet of the marices.
     if (data_.theta == 0) {
 
-      Sparse<Real> MN = assembly_nl(data_, mesh_, this->m_ch_old);
+      Sparse<T> MN = assembly_nl(data_, mesh_, this->m_ch_old);
       RHS += data_.dt * (this->m_mass - MN);
 
     } else if (data_.theta == 1) {
 
-      Sparse<Real> MN = assembly_nl(data_, mesh_, this->m_ch_old);
+      Sparse<T> MN = assembly_nl(data_, mesh_, this->m_ch_old);
       LHS -= data_.dt * (this->m_mass - MN);
 
     } else if (data_.theta == 0.5) {
 
-      Vector<Real> c_star = 1.5 * this->m_ch_old - 0.5 * ch_oold_;
-      Sparse<Real> MN = assembly_nl(data_, mesh_, c_star);
+      Vector<T> c_star = 1.5 * this->m_ch_old - 0.5 * ch_oold_;
+      Sparse<T> MN = assembly_nl(data_, mesh_, c_star);
       LHS -= 0.5 * data_.dt * (this->m_mass - MN);
       RHS += 0.5 * data_.dt * (this->m_mass - MN);
     }
@@ -605,9 +605,9 @@ public:
     RHS.compress();
 
     // Construction of the complete RHS for the theta method.
-    Vector<Real> F = RHS * this->m_ch_old +
-                     data_.dt * data_.theta * this->m_forcing +
-                     data_.dt * (1.0 - data_.theta) * forcing_old_;
+    Vector<T> F = RHS * this->m_ch_old +
+                  data_.dt * data_.theta * this->m_forcing +
+                  data_.dt * (1.0 - data_.theta) * forcing_old_;
 
     // Solves using BICGSTAB.
     return solve(LHS, F, blocks, BICGSTAB, DBI, tol_);
@@ -643,7 +643,7 @@ public:
     }
 
     // Coefficients.
-    Vector<Real> coefficients{mesh_.dofs()};
+    Vector<T> coefficients{mesh_.dofs()};
 
 // Loop over the elements.
 #pragma omp parallel for schedule(dynamic)
@@ -665,7 +665,7 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local coefficients.
-      Vector<Real> local_coefficients{indices.size()};
+      Vector<T> local_coefficients{indices.size()};
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -675,19 +675,19 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
-        Matrix<Real> scaled_phi = phi;
+        Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+        Matrix<T> scaled_phi = phi;
 
         for (std::size_t l = 0; l < scaled_phi.columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // function solution.
-        Vector<Real> D_ext = data_.D_ext(physical_x, physical_y, this->m_t);
-        Vector<Real> alpha = data_.alpha(physical_x, physical_y, this->m_t);
-        Vector<Real> local_function =
+        Vector<T> D_ext = data_.D_ext(physical_x, physical_y, this->m_t);
+        Vector<T> alpha = data_.alpha(physical_x, physical_y, this->m_t);
+        Vector<T> local_function =
             data_.source_f(physical_x, physical_y, this->m_t, D_ext, alpha);
 
         // Local coefficients.
@@ -703,7 +703,7 @@ public:
 
     return (norm(coefficients) > TOLERANCE)
                ? solve(this->m_mass, coefficients, blocks, DB)
-               : Vector<Real>{mesh_.dofs()};
+               : Vector<T>{mesh_.dofs()};
   };
 };
 } // namespace pacs

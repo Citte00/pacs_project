@@ -97,13 +97,13 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+        Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
 
         // Numerical solution.
-        Vector<Real> local_numerical = phi * ch_(indices);
+        Vector<T> local_numerical = phi * ch_(indices);
 
         // Exact solution.
-        Vector<Real> local_exact = data_.c_ex(physical_x, physical_y);
+        Vector<T> local_exact = data_.c_ex(physical_x, physical_y);
 
         // Writing.
         this->m_x(local_indices, physical_x);
@@ -209,14 +209,13 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+        Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
 
         // Numerical solution.
-        Vector<Real> local_numerical = phi * ch_(indices);
+        Vector<T> local_numerical = phi * ch_(indices);
 
         // Exact solution.
-        Vector<Real> local_exact =
-            data_.c_ex(physical_x, physical_y, heat_.t());
+        Vector<T> local_exact = data_.c_ex(physical_x, physical_y, heat_.t());
 
         // Writing.
         this->m_x(local_indices, physical_x);
@@ -295,14 +294,13 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+        Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
 
         // Numerical solution.
-        Vector<Real> local_numerical = phi * ch_(indices);
+        Vector<T> local_numerical = phi * ch_(indices);
 
         // Exact solution.
-        Vector<Real> local_exact =
-            data_.c_ex(physical_x, physical_y, fisher_.t());
+        Vector<T> local_exact = data_.c_ex(physical_x, physical_y, fisher_.t());
 
         // Writing.
         this->m_x(local_indices, physical_x);

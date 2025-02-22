@@ -136,4 +136,9 @@ int main(int argc, char **argv) {
     }
     ++counter;
   }
+  HeatSolution<Real> solution{mesh};
+  solution.solution(data, mesh, *heat, ch_old);
+  std::string solfile = "output/square_s_" + std::to_string(data.degree) + "_" +
+                        std::to_string(data.elements) + ".sol";
+  solution.write(solfile);
 }

@@ -83,12 +83,12 @@ public:
 #endif
 
     // Matrices.
-    Sparse<Real> mass = laplacian_.M();
-    Sparse<Real> dg_stiff = laplacian_.DG();
+    Sparse<T> mass = laplacian_.M();
+    Sparse<T> dg_stiff = laplacian_.DG();
 
     // Error vector.
-    Vector<Real> u_modals = laplacian_.modal(mesh_, data_.c_ex);
-    Vector<Real> error = u_modals - ch_;
+    Vector<T> u_modals = laplacian_.modal(mesh_, data_.c_ex);
+    Vector<T> error = u_modals - ch_;
 
     // DG Error.
     this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
@@ -157,19 +157,19 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Solutions.
-        Vector<Real> u = data_.c_ex(physical_x, physical_y);
-        Vector<Real> uh = phi * ch_(indices);
+        Vector<T> u = data_.c_ex(physical_x, physical_y);
+        Vector<T> uh = phi * ch_(indices);
 
-        Vector<Real> grad_u = data_.dc_dx_ex(physical_x, physical_y) +
-                              data_.dc_dy_ex(physical_x, physical_y);
-        Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch_(indices);
+        Vector<T> grad_u = data_.dc_dx_ex(physical_x, physical_y) +
+                           data_.dc_dy_ex(physical_x, physical_y);
+        Vector<T> grad_uh = (gradx_phi + grady_phi) * ch_(indices);
 
         // Local L2 error.
         this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
@@ -228,12 +228,12 @@ public:
 #endif
 
     // Matrices.
-    Sparse<Real> mass = heat_.M();
-    Sparse<Real> dg_stiff = heat_.DG();
+    Sparse<T> mass = heat_.M();
+    Sparse<T> dg_stiff = heat_.DG();
 
     // Error vector.
-    Vector<Real> u_modals = heat_.modal(mesh_, data_.c_ex);
-    Vector<Real> error = u_modals - ch_;
+    Vector<T> u_modals = heat_.modal(mesh_, data_.c_ex);
+    Vector<T> error = u_modals - ch_;
 
     // DG Error.
     this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
@@ -302,20 +302,19 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Solutions.
-        Vector<Real> u = data_.c_ex(physical_x, physical_y, heat_.t());
-        Vector<Real> uh = phi * ch_(indices);
+        Vector<T> u = data_.c_ex(physical_x, physical_y, heat_.t());
+        Vector<T> uh = phi * ch_(indices);
 
-        Vector<Real> grad_u =
-            data_.dc_dx_ex(physical_x, physical_y, heat_.t()) +
-            data_.dc_dy_ex(physical_x, physical_y, heat_.t());
-        Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch_(indices);
+        Vector<T> grad_u = data_.dc_dx_ex(physical_x, physical_y, heat_.t()) +
+                           data_.dc_dy_ex(physical_x, physical_y, heat_.t());
+        Vector<T> grad_uh = (gradx_phi + grady_phi) * ch_(indices);
 
         // Local L2 error.
         this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));
@@ -366,12 +365,12 @@ public:
 #endif
 
     // Matrices.
-    Sparse<Real> mass = fisher_.M();
-    Sparse<Real> dg_stiff = fisher_.DG();
+    Sparse<T> mass = fisher_.M();
+    Sparse<T> dg_stiff = fisher_.DG();
 
     // Error vector.
-    Vector<Real> u_modals = fisher_.modal(mesh_, data_.c_ex);
-    Vector<Real> error = u_modals - ch_;
+    Vector<T> u_modals = fisher_.modal(mesh_, data_.c_ex);
+    Vector<T> error = u_modals - ch_;
 
     // DG Error.
     this->m_dg_error = std::sqrt(dot(error, dg_stiff * error));
@@ -443,20 +442,19 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh_, j, {physical_x, physical_y});
 
         // Solutions.
-        Vector<Real> u = data_.c_ex(physical_x, physical_y, fisher_.t());
-        Vector<Real> uh = phi * ch_(indices);
+        Vector<T> u = data_.c_ex(physical_x, physical_y, fisher_.t());
+        Vector<T> uh = phi * ch_(indices);
 
-        Vector<Real> grad_u =
-            data_.dc_dx_ex(physical_x, physical_y, fisher_.t()) +
-            data_.dc_dy_ex(physical_x, physical_y, fisher_.t());
-        Vector<Real> grad_uh = (gradx_phi + grady_phi) * ch_(indices);
+        Vector<T> grad_u = data_.dc_dx_ex(physical_x, physical_y, fisher_.t()) +
+                           data_.dc_dy_ex(physical_x, physical_y, fisher_.t());
+        Vector<T> grad_uh = (gradx_phi + grady_phi) * ch_(indices);
 
         // Local L2 error.
         this->m_l2_errors[j] += dot(scaled, (u - uh) * (u - uh));

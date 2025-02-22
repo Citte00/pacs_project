@@ -73,11 +73,11 @@ public:
 #endif
 
     // X.
-    Matrix<Real> X{x_.length, p_ + 1};
+    Matrix<T> X{x_.length, p_ + 1};
 
     // Building X.
     for (std::size_t j = 0; j < p_ + 1; ++j) {
-      X.column(j, Vector<Real>{x_.length, 1.0});
+      X.column(j, Vector<T>{x_.length, 1.0});
 
       for (std::size_t k = 0; k < j; ++k) {
         X.column(j, X.column(j) * x_);
@@ -121,7 +121,7 @@ public:
     std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
     // Sizes.
-    Vector<Real> sizes{num_elem};
+    Vector<T> sizes{num_elem};
 
     for (std::size_t j = 0; j < sizes.length; ++j) {
       Element element{mesh.elements[j]};
@@ -135,11 +135,11 @@ public:
     auto blocks = laplacian_.block_mass(mesh);
 
     // Coefficients.
-    Vector<Real> f_modals = laplacian_.modal(mesh, data_.source_f);
-    Vector<Real> g_modals = laplacian_.modal(mesh, data_.DirBC);
+    Vector<T> f_modals = laplacian_.modal(mesh, data_.source_f);
+    Vector<T> g_modals = laplacian_.modal(mesh, data_.DirBC);
 
     // Estimate.
-    Real estimate = 0.0;
+    T estimate = 0.0;
 
     // Loop over the elements.
 #pragma omp parallel for reduction(+ : estimate) schedule(dynamic)
@@ -161,7 +161,7 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Thread-local variable to accumulate estimates.
-      Real local_estimate = 0.0;
+      T local_estimate = 0.0;
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -171,20 +171,20 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
-        Matrix<Real> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
+        Matrix<T> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
+        Matrix<T> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
 
         // Local numerical laplacian.
-        Vector<Real> lap_uh = lap_phi * ch_(indices);
+        Vector<T> lap_uh = lap_phi * ch_(indices);
 
         // Local exact source.
-        Vector<Real> f = data_.source_f(physical_x, physical_y);
+        Vector<T> f = data_.source_f(physical_x, physical_y);
 
         // Local source approximation.
-        Vector<Real> f_bar = phi * f_modals(indices);
+        Vector<T> f_bar = phi * f_modals(indices);
 
         // Local estimator, R_{K, E}^2.
         local_estimate += sizes[j] * sizes[j] *
@@ -219,38 +219,38 @@ public:
             faces_physical_points(edges[k], nodes_1d);
 
         // Weights scaling.
-        Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh, j, {physical_x, physical_y});
-        Matrix<Real> scaled_phi{phi};
+        Matrix<T> scaled_phi{phi};
 
         for (std::size_t l = 0; l < scaled_phi.columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local numerical solution and gradients.
-        Vector<Real> uh = phi * ch_(indices);
+        Vector<T> uh = phi * ch_(indices);
 
-        Matrix<Real> grad =
+        Matrix<T> grad =
             normal_vector[0] * gradx_phi + normal_vector[1] * grady_phi;
-        Vector<Real> grad_uh = grad * ch_(indices);
+        Vector<T> grad_uh = grad * ch_(indices);
 
-        Matrix<Real> grad_t =
+        Matrix<T> grad_t =
             edge_vector[0] * gradx_phi + edge_vector[1] * grady_phi;
-        Vector<Real> grad_uh_t = grad_t * ch_(indices);
+        Vector<T> grad_uh_t = grad_t * ch_(indices);
 
         if (neighbour == -1) { // Boundary edge.
 
           // Local exact Dirichlet and gradient.
-          Vector<Real> g = data_.DirBC(physical_x, physical_y);
-          Vector<Real> grad_g_t =
+          Vector<T> g = data_.DirBC(physical_x, physical_y);
+          Vector<T> grad_g_t =
               edge_vector[0] * data_.dc_dx_ex(physical_x, physical_y) +
               edge_vector[1] * data_.dc_dy_ex(physical_x, physical_y);
 
           // Approximate Dirichlet and gradient.
-          Vector<Real> g_bar = phi * g_modals(indices);
-          Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
+          Vector<T> g_bar = phi * g_modals(indices);
+          Vector<T> grad_g_t_bar = grad_t * g_modals(indices);
 
           // Local estimator, R_{K, J}^2.
           local_estimate +=
@@ -286,15 +286,15 @@ public:
             n_indices[h] = starts[n_index] + h;
 
           // Neighbour's numerical solution and gradients.
-          Vector<Real> n_uh = n_phi * ch_(n_indices);
+          Vector<T> n_uh = n_phi * ch_(n_indices);
 
-          Matrix<Real> n_grad =
+          Matrix<T> n_grad =
               normal_vector[0] * n_gradx_phi + normal_vector[1] * n_grady_phi;
-          Vector<Real> n_grad_uh = n_grad * ch_(n_indices);
+          Vector<T> n_grad_uh = n_grad * ch_(n_indices);
 
-          Matrix<Real> n_grad_t =
+          Matrix<T> n_grad_t =
               edge_vector[0] * n_gradx_phi + edge_vector[1] * n_grady_phi;
-          Vector<Real> n_grad_uh_t = n_grad_t * ch_(n_indices);
+          Vector<T> n_grad_uh_t = n_grad_t * ch_(n_indices);
 
           // Local estimator, R_{K, J}^2.
           local_estimate +=
@@ -315,23 +315,23 @@ public:
       estimate += local_estimate;
 
       // Degrees.
-      Vector<Real> degrees{indices.size()};
+      Vector<T> degrees{indices.size()};
       std::size_t counter = 0;
 
       for (std::size_t i = 0; i < mesh.elements[j].degree + 1; ++i)
         for (std::size_t k = 0; k < mesh.elements[j].degree + 1 - i; ++k) {
-          degrees[counter] = static_cast<Real>(i + k);
+          degrees[counter] = static_cast<T>(i + k);
           ++counter;
         }
 
       // Coefficients.
-      Vector<Real> coefficients = ch_(indices);
+      Vector<T> coefficients = ch_(indices);
 
       for (auto &coefficient : coefficients.elements)
         coefficient = std::log(std::abs(coefficient));
 
       // Fit.
-      Vector<Real> fit = this->polyfit(degrees, coefficients, 1);
+      Vector<T> fit = this->polyfit(degrees, coefficients, 1);
       this->m_fits[j] = -fit[1];
     }
 
@@ -478,8 +478,8 @@ public:
    * @param speed_ Solution's smoothness.
    * @return std::array<Mask, 2>
    */
-  std::array<Mask, 2> find_elem_to_refine(const Real &refine_ = 0.75,
-                                          const Real &speed_ = 1.0) const {
+  std::array<Mask, 2> find_elem_to_refine(const T &refine_ = 0.75,
+                                          const T &speed_ = 1.0) const {
 #ifndef NDEBUG // Integrity check.
     assert((refine_ > 0.0L) && (refine_ < 1.0L));
     assert(speed_ > 0.0L);
@@ -600,7 +600,7 @@ public:
     std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
     // Sizes.
-    Vector<Real> sizes{num_elem};
+    Vector<T> sizes{num_elem};
 
     for (std::size_t j = 0; j < sizes.length; ++j) {
       Element element{mesh.elements[j]};
@@ -611,11 +611,11 @@ public:
     }
 
     // Coefficients.
-    Vector<Real> f_modals = heat_.modal_source(data_, mesh);
-    Vector<Real> g_modals = heat_.modal(mesh, data_.DirBC);
+    Vector<T> f_modals = heat_.modal_source(data_, mesh);
+    Vector<T> g_modals = heat_.modal(mesh, data_.DirBC);
 
     // Estimate.
-    Real estimate = 0.0;
+    T estimate = 0.0;
 
     // Loop over the elements.
 #pragma omp parallel for reduction(+ : estimate) schedule(dynamic)
@@ -637,7 +637,7 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local estimate.
-      Real local_estimate = 0.0;
+      T local_estimate = 0.0;
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -647,27 +647,26 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
-        Matrix<Real> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
+        Matrix<T> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
+        Matrix<T> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
 
         // Local exact source.
-        Vector<Real> D_ext = data_.D_ext(physical_x, physical_y, heat_.t());
-        Vector<Real> f =
-            data_.source_f(physical_x, physical_y, heat_.t(), D_ext);
+        Vector<T> D_ext = data_.D_ext(physical_x, physical_y, heat_.t());
+        Vector<T> f = data_.source_f(physical_x, physical_y, heat_.t(), D_ext);
 
         // Local numerical heat.
-        Vector<Real> lap_uh = D_ext * (lap_phi * ch_(indices));
+        Vector<T> lap_uh = D_ext * (lap_phi * ch_(indices));
 
         // Local time derivative.
-        Vector<Real> local_uh = phi * ch_(indices);
-        Vector<Real> local_uh_old = phi * ch_old_(indices);
-        Vector<Real> partial_uh_t = (local_uh - local_uh_old) / data_.dt;
+        Vector<T> local_uh = phi * ch_(indices);
+        Vector<T> local_uh_old = phi * ch_old_(indices);
+        Vector<T> partial_uh_t = (local_uh - local_uh_old) / data_.dt;
 
         // Local source approximation.
-        Vector<Real> f_bar = phi * f_modals(indices);
+        Vector<T> f_bar = phi * f_modals(indices);
 
         // Local estimator, R_{K, E}^2.
         local_estimate += sizes[j] * sizes[j] *
@@ -703,40 +702,40 @@ public:
             faces_physical_points(edges[k], nodes_1d);
 
         // Weights scaling.
-        Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh, j, {physical_x, physical_y});
-        Matrix<Real> scaled_phi{phi};
+        Matrix<T> scaled_phi{phi};
 
         for (std::size_t l = 0; l < scaled_phi.columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local numerical solution and gradients.
-        Vector<Real> uh = phi * ch_(indices);
+        Vector<T> uh = phi * ch_(indices);
 
-        Matrix<Real> grad =
+        Matrix<T> grad =
             normal_vector[0] * gradx_phi + normal_vector[1] * grady_phi;
-        Vector<Real> grad_uh = grad * ch_(indices);
+        Vector<T> grad_uh = grad * ch_(indices);
 
-        Matrix<Real> grad_t =
+        Matrix<T> grad_t =
             edge_vector[0] * gradx_phi + edge_vector[1] * grady_phi;
-        Vector<Real> grad_uh_t = grad_t * ch_(indices);
+        Vector<T> grad_uh_t = grad_t * ch_(indices);
 
         if (neighbour == -1) { // Boundary edge.
 
           // Local exact Dirichlet and gradient.
-          Vector<Real> g = data_.DirBC(physical_x, physical_y, heat_.t());
-          Vector<Real> grad_g_t =
+          Vector<T> g = data_.DirBC(physical_x, physical_y, heat_.t());
+          Vector<T> grad_g_t =
               edge_vector[0] *
                   data_.dc_dx_ex(physical_x, physical_y, heat_.t()) +
               edge_vector[1] *
                   data_.dc_dy_ex(physical_x, physical_y, heat_.t());
 
           // Approximate Dirichlet and gradient.
-          Vector<Real> g_bar = phi * g_modals(indices);
-          Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
+          Vector<T> g_bar = phi * g_modals(indices);
+          Vector<T> grad_g_t_bar = grad_t * g_modals(indices);
 
           // Local estimator, R_{K, J}^2.
           local_estimate +=
@@ -772,15 +771,15 @@ public:
             n_indices[h] = starts[n_index] + h;
 
           // Neighbour's numerical solution and gradients.
-          Vector<Real> n_uh = n_phi * ch_(n_indices);
+          Vector<T> n_uh = n_phi * ch_(n_indices);
 
-          Matrix<Real> n_grad =
+          Matrix<T> n_grad =
               normal_vector[0] * n_gradx_phi + normal_vector[1] * n_grady_phi;
-          Vector<Real> n_grad_uh = n_grad * ch_(n_indices);
+          Vector<T> n_grad_uh = n_grad * ch_(n_indices);
 
-          Matrix<Real> n_grad_t =
+          Matrix<T> n_grad_t =
               edge_vector[0] * n_gradx_phi + edge_vector[1] * n_grady_phi;
-          Vector<Real> n_grad_uh_t = n_grad_t * ch_(n_indices);
+          Vector<T> n_grad_uh_t = n_grad_t * ch_(n_indices);
 
           // Local estimator, R_{K, J}^2.
           local_estimate +=
@@ -801,23 +800,23 @@ public:
       estimate += local_estimate;
 
       // Degrees.
-      Vector<Real> degrees{indices.size()};
+      Vector<T> degrees{indices.size()};
       std::size_t counter = 0;
 
       for (std::size_t i = 0; i < mesh.elements[j].degree + 1; ++i)
         for (std::size_t k = 0; k < mesh.elements[j].degree + 1 - i; ++k) {
-          degrees[counter] = static_cast<Real>(i + k);
+          degrees[counter] = static_cast<T>(i + k);
           ++counter;
         }
 
       // Coefficients.
-      Vector<Real> coefficients = ch_(indices);
+      Vector<T> coefficients = ch_(indices);
 
       for (auto &coefficient : coefficients.elements)
         coefficient = std::log(std::abs(coefficient));
 
       // Fit.
-      Vector<Real> fit = this->polyfit(degrees, coefficients, 1);
+      Vector<T> fit = this->polyfit(degrees, coefficients, 1);
       this->m_fits[j] = -fit[1];
     }
 
@@ -871,7 +870,7 @@ public:
     std::vector<std::vector<std::array<int, 3>>> neighbours = mesh.neighbours;
 
     // Sizes.
-    Vector<Real> sizes{mesh.elements.size()};
+    Vector<T> sizes{mesh.elements.size()};
 
     for (std::size_t j = 0; j < sizes.length; ++j) {
       Element element{mesh.elements[j]};
@@ -882,11 +881,11 @@ public:
     }
 
     // Coefficients.
-    Vector<Real> f_modals = fisher_.modal_source(data_, mesh);
-    Vector<Real> g_modals = fisher_.modal(mesh, data_.DirBC);
+    Vector<T> f_modals = fisher_.modal_source(data_, mesh);
+    Vector<T> g_modals = fisher_.modal(mesh, data_.DirBC);
 
     // Estimate.
-    Real estimate = 0.0;
+    T estimate = 0.0;
 
     // Loop over the elements.
 #pragma omp parallel for reduction(+ : estimate) schedule(dynamic)
@@ -908,7 +907,7 @@ public:
       std::vector<Polygon> triangles = triangulate(polygon);
 
       // Local estimate.
-      Real local_estimate = 0.0;
+      T local_estimate = 0.0;
 
       // Loop over the sub-triangulation.
       for (const auto &triangle : triangles) {
@@ -918,33 +917,33 @@ public:
             get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
 
         // Weights scaling.
-        Vector<Real> scaled = jacobian_det * weights_2d;
+        Vector<T> scaled = jacobian_det * weights_2d;
 
         // Basis functions.
-        Matrix<Real> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
-        Matrix<Real> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
+        Matrix<T> phi = basis_2d(mesh, j, {physical_x, physical_y})[0];
+        Matrix<T> lap_phi = lap_basis_2d(mesh, j, {physical_x, physical_y});
 
         // Coefficients.
-        Vector<Real> D_ext = data_.D_ext(physical_x, physical_y, fisher_.t());
-        Vector<Real> alpha = data_.alpha(physical_x, physical_y, fisher_.t());
+        Vector<T> D_ext = data_.D_ext(physical_x, physical_y, fisher_.t());
+        Vector<T> alpha = data_.alpha(physical_x, physical_y, fisher_.t());
 
         // Local time derivative.
-        Vector<Real> local_uh = phi * ch_(indices);
-        Vector<Real> local_uh_old = phi * fisher_.ch_old()(indices);
-        Vector<Real> partial_uh_t = (local_uh - local_uh_old) / data_.dt;
+        Vector<T> local_uh = phi * ch_(indices);
+        Vector<T> local_uh_old = phi * fisher_.ch_old()(indices);
+        Vector<T> partial_uh_t = (local_uh - local_uh_old) / data_.dt;
 
         // Local numerical laplacian.
-        Vector<Real> lap_uh = lap_phi * ch_(indices);
+        Vector<T> lap_uh = lap_phi * ch_(indices);
 
         // Local numerical non-linear term.
-        Vector<Real> nl_uh = alpha * local_uh * (1.0 - local_uh);
+        Vector<T> nl_uh = alpha * local_uh * (1.0 - local_uh);
 
         // Local exact source.
-        Vector<Real> f =
+        Vector<T> f =
             data_.source_f(physical_x, physical_y, fisher_.t(), D_ext, alpha);
 
         // Local source approximation.
-        Vector<Real> f_bar = phi * f_modals(indices);
+        Vector<T> f_bar = phi * f_modals(indices);
 
         // Local estimator, R_{K, E}^2.
         local_estimate +=
@@ -981,40 +980,40 @@ public:
             faces_physical_points(edges[k], nodes_1d);
 
         // Weights scaling.
-        Vector<Real> scaled = std::abs(edges[k]) * weights_1d;
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
 
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh, j, {physical_x, physical_y});
-        Matrix<Real> scaled_phi{phi};
+        Matrix<T> scaled_phi{phi};
 
         for (std::size_t l = 0; l < scaled_phi.columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local numerical solution and gradients.
-        Vector<Real> uh = phi * ch_(indices);
+        Vector<T> uh = phi * ch_(indices);
 
-        Matrix<Real> grad =
+        Matrix<T> grad =
             normal_vector[0] * gradx_phi + normal_vector[1] * grady_phi;
-        Vector<Real> grad_uh = grad * ch_(indices);
+        Vector<T> grad_uh = grad * ch_(indices);
 
-        Matrix<Real> grad_t =
+        Matrix<T> grad_t =
             edge_vector[0] * gradx_phi + edge_vector[1] * grady_phi;
-        Vector<Real> grad_uh_t = grad_t * ch_(indices);
+        Vector<T> grad_uh_t = grad_t * ch_(indices);
 
         if (neighbour == -1) { // Boundary edge.
 
           // Local exact Dirichlet and gradient.
-          Vector<Real> g = data_.DirBC(physical_x, physical_y, fisher_.t());
-          Vector<Real> grad_g_t =
+          Vector<T> g = data_.DirBC(physical_x, physical_y, fisher_.t());
+          Vector<T> grad_g_t =
               edge_vector[0] *
                   data_.dc_dx_ex(physical_x, physical_y, fisher_.t()) +
               edge_vector[1] *
                   data_.dc_dy_ex(physical_x, physical_y, fisher_.t());
 
           // Approximate Dirichlet and gradient.
-          Vector<Real> g_bar = phi * g_modals(indices);
-          Vector<Real> grad_g_t_bar = grad_t * g_modals(indices);
+          Vector<T> g_bar = phi * g_modals(indices);
+          Vector<T> grad_g_t_bar = grad_t * g_modals(indices);
 
           // Local estimator, R_{K, J}^2.
           local_estimate +=
@@ -1050,15 +1049,15 @@ public:
             n_indices[h] = starts[n_index] + h;
 
           // Neighbour's numerical solution and gradients.
-          Vector<Real> n_uh = n_phi * ch_(n_indices);
+          Vector<T> n_uh = n_phi * ch_(n_indices);
 
-          Matrix<Real> n_grad =
+          Matrix<T> n_grad =
               normal_vector[0] * n_gradx_phi + normal_vector[1] * n_grady_phi;
-          Vector<Real> n_grad_uh = n_grad * ch_(n_indices);
+          Vector<T> n_grad_uh = n_grad * ch_(n_indices);
 
-          Matrix<Real> n_grad_t =
+          Matrix<T> n_grad_t =
               edge_vector[0] * n_gradx_phi + edge_vector[1] * n_grady_phi;
-          Vector<Real> n_grad_uh_t = n_grad_t * ch_(n_indices);
+          Vector<T> n_grad_uh_t = n_grad_t * ch_(n_indices);
 
           // Local estimator, R_{K, J}^2.
           local_estimate +=
@@ -1079,23 +1078,23 @@ public:
       estimate += local_estimate;
 
       // Degrees.
-      Vector<Real> degrees{indices.size()};
+      Vector<T> degrees{indices.size()};
       std::size_t counter = 0;
 
       for (std::size_t i = 0; i < mesh.elements[j].degree + 1; ++i)
         for (std::size_t k = 0; k < mesh.elements[j].degree + 1 - i; ++k) {
-          degrees[counter] = static_cast<Real>(i + k);
+          degrees[counter] = static_cast<T>(i + k);
           ++counter;
         }
 
       // Coefficients.
-      Vector<Real> coefficients = ch_(indices);
+      Vector<T> coefficients = ch_(indices);
 
       for (auto &coefficient : coefficients.elements)
         coefficient = std::log(std::abs(coefficient));
 
       // Fit.
-      Vector<Real> fit = this->polyfit(degrees, coefficients, 1);
+      Vector<T> fit = this->polyfit(degrees, coefficients, 1);
       this->m_fits[j] = -fit[1];
     }
 
