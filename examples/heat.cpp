@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     heat.assembly_force(data, mesh);
     Vector<Real> F_old{heat.forcing().length};
 
-    int steps = static_cast<int>(round(data.t_f/data.dt));
+    int steps = static_cast<int>(round((data.t_f - data.t_0) / data.dt));
     for (int i = 1; i <= steps; ++i) {
 
       // Time step.

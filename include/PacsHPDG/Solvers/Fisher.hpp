@@ -211,9 +211,7 @@ public:
         auto [edge, neighbour, n_edge] = element_neighbours[k];
 
         // 1D Quadrature nodes and weights.
-        auto [nodes_1d, weights_1d] =
-            (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour]))
-                            : quadrature_1d(nqn[j]);
+        auto [nodes_1d, weights_1d] = quadrature_1d(nqn[j]);
 
         auto [normal_vector, edge_vector, physical_x, physical_y] =
             faces_physical_points(edges[k], nodes_1d);
@@ -586,19 +584,19 @@ public:
     if (data_.theta == 0) {
 
       Sparse<T> MN = assembly_nl(data_, mesh_, this->m_ch_old);
-      RHS += data_.dt * (this->m_mass - MN);
+      RHS += data_.dt * (this->m_nl_mass - MN);
 
     } else if (data_.theta == 1) {
 
       Sparse<T> MN = assembly_nl(data_, mesh_, this->m_ch_old);
-      LHS -= data_.dt * (this->m_mass - MN);
+      LHS -= data_.dt * (this->m_nl_mass - MN);
 
     } else if (data_.theta == 0.5) {
 
       Vector<T> c_star = 1.5 * this->m_ch_old - 0.5 * ch_oold_;
       Sparse<T> MN = assembly_nl(data_, mesh_, c_star);
-      LHS -= 0.5 * data_.dt * (this->m_mass - MN);
-      RHS += 0.5 * data_.dt * (this->m_mass - MN);
+      LHS -= 0.5 * data_.dt * (this->m_nl_mass - MN);
+      RHS += 0.5 * data_.dt * (this->m_nl_mass - MN);
     }
 
     LHS.compress();

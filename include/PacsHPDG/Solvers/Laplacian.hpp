@@ -217,9 +217,7 @@ public:
         auto [edge, neighbour, n_edge] = element_neighbours[k];
 
         // 1D quadrature nodes and weights.
-        auto [nodes_1d, weights_1d] =
-            (neighbour > 0) ? quadrature_1d(std::max(nqn[j], nqn[neighbour]))
-                            : quadrature_1d(nqn[j]);
+        auto [nodes_1d, weights_1d] = quadrature_1d(nqn[j]);
 
         auto [normal_vector, edge_vector, physical_x, physical_y] =
             faces_physical_points(edges[k], nodes_1d);

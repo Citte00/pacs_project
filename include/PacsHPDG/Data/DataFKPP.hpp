@@ -132,7 +132,7 @@ struct DataFKPP {
 
   // Time discretization
   Real t_0 = 0.0;
-  Real t_f = 1e-5;
+  Real t_f = 1e-3;
   Real dt = 1e-5;
   Real theta = 0.5;
 

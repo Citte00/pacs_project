@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
     // Forcing term.
     fisher.assembly_force(data, mesh);
 
-    int steps = static_cast<int>(round(data.t_f / data.dt));
+    int steps = static_cast<int>(round((data.t_f - data.t_0) / data.dt));
     for (int i = 1; i <= steps; i++) {
 
       // Time step.

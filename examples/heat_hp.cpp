@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
   int counter = 1;
   std::size_t dofsLimit = DOFS_MAX;
   std::size_t degree = 0;
-  int steps = static_cast<int>(round(data.t_f / data.dt));
+  int steps = static_cast<int>(round((data.t_f - data.t_0) / data.dt));
 
   for (int i = 1; i <= steps; i++) {
 

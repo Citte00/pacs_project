@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
   int counter = 1;
   Real t = 0.0;
   const int dofsLimit = DOFS_MAX;
-  int steps = static_cast<int>(round(data.t_f / data.dt));
+  int steps = static_cast<int>(round((data.t_f - data.t_0) / data.dt));
   std::size_t degree = 0;
 
   for (int i = 1; i <= steps; ++i) {
