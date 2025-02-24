@@ -135,8 +135,8 @@ public:
 #pragma omp parallel for schedule(dynamic)
     for (std::size_t j = 0; j < num_elem; ++j) {
 
-      // 2D quadrature nodes and weights.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+      // Quadrature nodes and weights.
+      auto [nodes_1d, weights_1d, nodes_2d, weights_2d] = Quadrature(nqn[j]);
 
       // Global matrix indices.
       std::vector<std::size_t> indices(mesh_.elements[j].dofs());
@@ -158,7 +158,7 @@ public:
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, nodes_2d);
 
         // Weights scaling.
         Vector<T> scaled = jacobian_det * weights_2d;
@@ -216,9 +216,7 @@ public:
         // Neighbour information.
         auto [edge, neighbour, n_edge] = element_neighbours[k];
 
-        // 1D quadrature nodes and weights.
-        auto [nodes_1d, weights_1d] = quadrature_1d(nqn[j]);
-
+        // Physical points.
         auto [normal_vector, edge_vector, physical_x, physical_y] =
             faces_physical_points(edges[k], nodes_1d);
 
@@ -349,8 +347,8 @@ public:
 #pragma omp parallel for schedule(dynamic)
     for (std::size_t j = 0; j < num_elem; ++j) {
 
-      // 2D quadrature nodes and weights.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+      // Quadrature nodes and weights.
+      auto [nodes_1d, weights_1d, nodes_2d, weights_2d] = Quadrature(nqn[j]);
 
       // Global matrix indices.
       std::vector<std::size_t> indices(mesh_.elements[j].dofs());
@@ -371,7 +369,7 @@ public:
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, nodes_2d);
 
         // Weights scaling.
         Vector<T> scaled = jacobian_det * weights_2d;
@@ -406,9 +404,6 @@ public:
 
         // Neighbour information.
         auto [edge, neighbour, n_edge] = element_neighbours[k];
-
-        // 1D quadrature nodes and weights.
-        auto [nodes_1d, weights_1d] = quadrature_1d(nqn[j]);
 
         // Only domain's border,
         if (neighbour != -1)
