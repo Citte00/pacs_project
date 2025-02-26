@@ -59,6 +59,7 @@ for line in lines:
     
     try:
         estimates.append(float(data[-1]))
+        print(data[-3])
 
     except ValueError:
         continue

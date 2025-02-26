@@ -99,12 +99,12 @@ for size in sizes:
 # Plots.
 
 # Errors.
-l2_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
+l2_errors_string: str = "\n\\addplot[solarized-blue, mark=*] coordinates "
 l2_errors_string += "{" + " ".join((f"({sizes[j]},{l2_errors[j]})" for j in range(len(sizes)))) + "};"
 l2_errors_string += "\n"
 l2_errors_string += "\\addlegendentry{$L^2$ Error}\n"
 
-dg_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
+dg_errors_string: str = "\n\\addplot[solarized-blue, mark=*] coordinates "
 dg_errors_string += "{" + " ".join((f"({sizes[j]},{dg_errors[j]})" for j in range(len(sizes)))) + "};"
 dg_errors_string += "\n"
 dg_errors_string += "\\addlegendentry{$DG$ Error}\n"
@@ -113,13 +113,13 @@ l2_plots.append(l2_errors_string)
 dg_plots.append(dg_errors_string)
 
 # Comparison.
-l2_comparison_string: str = f"\n\\addplot[solarized-base02, dashed] coordinates "
+l2_comparison_string: str = f"\n\\addplot[solarized-blue, dashed] coordinates "
 l2_comparison_string += "{"+ f"({sizes[0]},{l2_comparison[0]}) ({sizes[-1]},{l2_comparison[-1]})" + "};\n"
 l2_comparison_string += "\\addlegendentry{$\\mathcal{O}(h^{" + str(degree + 1) + "})$}\n"
 
 l2_plots.append(l2_comparison_string)
 
-dg_comparison_string: str = f"\n\\addplot[solarized-base02, dashed] coordinates "
+dg_comparison_string: str = f"\n\\addplot[solarized-blue, dashed] coordinates "
 dg_comparison_string += "{"+ f"({sizes[0]},{dg_comparison[0]}) ({sizes[-1]},{dg_comparison[-1]})" + "};\n"
 dg_comparison_string += "\\addlegendentry{$\\mathcal{O}(h^{" + str(degree) + "})$}\n"
 
@@ -131,7 +131,7 @@ if "lshape" in sys.argv[1]:
     for size in sizes:
         dg_comparison.append((size / sizes[-1]) ** (2/3) * dg_errors[-1])
 
-    dg_comparison_string: str = f"\n\\addplot[solarized-base02, dotted] coordinates "
+    dg_comparison_string: str = f"\n\\addplot[solarized-blue, dotted] coordinates "
     dg_comparison_string += "{"+ f"({sizes[0]},{dg_comparison[0]}) ({sizes[-1]},{dg_comparison[-1]})" + "};\n"
     dg_comparison_string += "\\addlegendentry{$\\mathcal{O}(h^{2/3})$}\n"
 
@@ -148,13 +148,13 @@ if "--energy" in sys.argv:
     for size in sizes:
         energy_comparison.append((size / sizes[-1]) ** degree * energy_errors[-1])
 
-    energy_errors_string: str = "\n\\addplot[solarized-base02, mark=*] coordinates "
+    energy_errors_string: str = "\n\\addplot[solarized-blue, mark=*] coordinates "
     energy_errors_string += "{" + " ".join((f"({sizes[j]},{energy_errors[j]})" for j in range(len(sizes)))) + "};"
     energy_errors_string += "\n"
     energy_errors_string += "\\addlegendentry{Energy Error}\n"
     energy_plots.append(energy_errors_string)
 
-    energy_comparison_string: str = f"\n\\addplot[solarized-base02, dashed] coordinates "
+    energy_comparison_string: str = f"\n\\addplot[solarized-blue, dashed] coordinates "
     energy_comparison_string += "{"+ f"({sizes[0]},{energy_comparison[0]}) ({sizes[-1]},{energy_comparison[-1]})" + "};\n"
     energy_comparison_string += "\\addlegendentry{$\\mathcal{O}(h^{" + str(degree) + "})$}\n"
     energy_plots.append(energy_comparison_string)

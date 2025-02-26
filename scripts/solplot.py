@@ -70,7 +70,7 @@ for line in lines:
         continue
 
 # Plot.
-fig, axes = plt.subplots(1, 3)
+fig, axes = plt.subplots(1, 3, figsize=(16,8))
 fig.suptitle("Solution Scatterplot")
 
 data: list[list[float]] = [numerical, exact, error]
