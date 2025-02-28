@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-@file estimatesplot.py
+@file batch_estimatesplot.py
 @author Lorenzo Citterio (github.com/Citte00)
 @date 2025-01-24
 
@@ -16,118 +16,137 @@ from matplotlib.colors import Normalize
 import numpy as np
 import sys
 import os
+from glob import glob
 
 # Font.
 matplotlib.rcParams.update({'font.size': 18})
 
-if len(sys.argv) <= 1:
-    print(f"Usage: {sys.argv[0]} /path/to/file.poly.")
-    sys.exit(0)
-
-try:
-    if sys.argv[1].split(".")[-1] != "poly":
-        raise
-
-    file = open(sys.argv[1], "r+")
-    lines: list[str] = file.read().split("\n")
-    file.close()
-
-except FileNotFoundError:
-    print("File not found.")
-    sys.exit(-1)
-
-except:
-    print("Load a .poly file.")
-    sys.exit(-1)
-
-# Black.
-black: list[float] = [7 / 255, 54 / 255, 66 / 255]
-
-# Create a figure and axis
-fig, ax = plt.subplots(figsize=(10,8))
-
-# Normalize the colormap
-estimates: list[float] = []
-
-
-for line in lines:
-    if line:
-        if line[0] == "@":
-            continue
-
-    data: list[str] = line.split(" ")
-    
+def process_poly_file(file_path):
+    """Process a single .poly file and generate a .png file."""
     try:
-        estimates.append(float(data[-1]))
-        print(data[-3])
+        with open(file_path, "r") as file:
+            lines = file.read().split("\n")
 
-    except ValueError:
-        continue
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+        return
 
-norm = Normalize(vmin=min(estimates), vmax=max(estimates))
+    except:
+        print(f"Error reading file: {file_path}")
+        return
 
-for line in lines:
-    if line:
-        if line[0] == "@":
-            continue
+    # Black.
+    black = [7 / 255, 54 / 255, 66 / 255]
 
-    x: list[float] = []
-    y: list[float] = []
+    # Normalize the colormap
+    estimates = []
+    errors = []
+    comparison = []
 
-    data: list[str] = line.split(" ")
-    data: list[float] = [float(number) for number in data if number]
+    for line in lines:
+        if line and line[0] != "@":
+            data = line.split(" ")
+            try:
+                estimates.append(float(data[-3]))
+                errors.append(float(data[-2]))
+                comparison.append(float(data[-1]))
+            except ValueError:
+                continue
+
+    if not (estimates and errors and comparison):
+        print(f"No valid data in {file_path}")
+        return
     
-    try:
-        for j in range(0, len(data) if len(data) % 2 == 0 else len(data) - 1, 2):
-            x.append(float(data[j]))
-            y.append(float(data[j + 1]))
+    estimates_list = [estimates, errors, comparison]
 
-    except ValueError:
-        continue
+    # Define titles for each plot
+    titles = ["Estimates", "DG error", "Comparison"]
 
-    if not (x and y):
-        continue
+    # Create a figure and axis
+    fig, ax = plt.subplots(1, 3, figsize=(24, 8))
+    fig.suptitle("Error Estimates Distribution", color="white", fontsize=20)
 
-    # Color.
-    color: tuple[int] = list(cm.turbo(norm(float(data[-1]))))
-    color[3] = 0.75 # Reduces alpha.
+    for k in range(len(estimates_list)):
 
-    # Plot.
-    ax.fill(x, y, facecolor=color, edgecolor=black, linewidth=0.25)
+        norm = Normalize(vmin=min(estimates_list[k]), vmax=max(estimates_list[k]))
 
-# Create a ScalarMappable for the colorbar
-sm = plt.cm.ScalarMappable(cmap=cm.turbo, norm=norm)
-sm.set_array([])
+        for line in lines:
+            if line and line[0] != "@":
+                x, y = [], []
+                data = [float(number) for number in line.split(" ") if number]
 
-# Add colorbar
-cbar = fig.colorbar(sm, ax=ax, ticks=np.linspace(min(estimates), max(estimates), num=5), alpha=0.75)
-cbar.ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2e'))  # Adjust precision as needed
+                try:
+                    for j in range(0, len(data) - 3, 2):
+                        x.append(data[j])
+                        y.append(data[j + 1])
 
-ax.set_aspect('equal', adjustable='box')
+                except ValueError:
+                    continue
 
-# Background and axes styling
-fig.patch.set_facecolor("#3A3A3A")  # Charcoal gray (lighter black)
-ax.set_facecolor("#3A3A3A")  # Match background
+                if not (x and y):
+                    continue
 
-# Set text and borders to light gray/white for contrast
-ax.spines["top"].set_color("#D3D3D3")
-ax.spines["bottom"].set_color("#D3D3D3")
-ax.spines["left"].set_color("#D3D3D3")
-ax.spines["right"].set_color("#D3D3D3")
+                # Color.
+                color = list(cm.turbo(norm(float(data[-3 + k]))))
+                color[3] = 0.75  # Reduces alpha.
 
-# Change tick and axis label colors
-ax.xaxis.label.set_color("white")
-ax.yaxis.label.set_color("white")
-ax.tick_params(colors="white")
+                # Plot.
+                ax[k].fill(x, y, facecolor=color, edgecolor=black, linewidth=0.25)
 
-# Set colorbar text to white for readability
-cbar.ax.yaxis.label.set_color("white")
-cbar.ax.tick_params(colors="white")
+        # Create a ScalarMappable for the colorbar
+        sm = plt.cm.ScalarMappable(cmap=cm.turbo, norm=norm)
+        sm.set_array([])
 
-# Output.
-if matplotlib.get_backend() == "agg":
-    name = f"{os.path.splitext(sys.argv[1])[0]}.png"
-    print(f"No interactive backend available. Plot will be saved as {name}.")
-    plt.savefig(name)
-else:
-    plt.show()
+        # Add colorbar
+        cbar = fig.colorbar(sm, ax=ax[k], ticks=np.linspace(min(estimates_list[k]), max(estimates_list[k]), num=5), alpha=0.75)
+        cbar.ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%.2e'))
+
+        ax[k].set_title(titles[k], color="white", fontsize=18)
+        ax[k].set_aspect('equal', adjustable='box')
+
+        # Background and axes styling
+        fig.patch.set_facecolor("#3A3A3A")
+        ax[k].set_facecolor("#3A3A3A")
+
+        # Set text and borders to light gray/white for contrast
+        for spine in ax[k].spines.values():
+            spine.set_color("#D3D3D3")
+
+        ax[k].xaxis.label.set_color("white")
+        ax[k].yaxis.label.set_color("white")
+        ax[k].tick_params(colors="white")
+
+        cbar.ax.yaxis.label.set_color("white")
+        cbar.ax.tick_params(colors="white")
+
+    # Save the output in the same directory as the input file
+    output_name = f"{os.path.splitext(file_path)[0]}.png"
+    plt.savefig(output_name)
+    print(f"Saved: {output_name}")
+    plt.close(fig)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} /path/to/file_or_folder")
+        sys.exit(0)
+
+    input_path = sys.argv[1]
+
+    if os.path.isfile(input_path) and input_path.endswith(".poly"):
+        # Process a single file
+        process_poly_file(input_path)
+
+    elif os.path.isdir(input_path):
+        # Process all .poly files in the directory
+        poly_files = glob(os.path.join(input_path, "*.poly"))
+
+        if not poly_files:
+            print(f"No .poly files found in {input_path}.")
+            sys.exit(0)
+
+        for poly_file in poly_files:
+            process_poly_file(poly_file)
+
+    else:
+        print(f"Error: {input_path} is not a valid file or directory.")
+        sys.exit(1)
