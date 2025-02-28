@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
     // Output.
     output << "\n"
            << error << "\n"
-           << "Laplacian: " << laplacian.A().rows << " x "
-           << laplacian.A().columns << "\n"
+           << "Laplacian: " << laplacian.A().m_rows << " x "
+           << laplacian.A().m_columns << "\n"
            << "Residual: " << norm(laplacian.A() * numerical - forcing)
            << std::endl;
 

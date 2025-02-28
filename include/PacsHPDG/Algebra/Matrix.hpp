@@ -3,9 +3,9 @@
  * @author Lorenzo Citterio (github.com/Citte00)
  * @brief Matrix class and methods.
  * @date 2025-01-18
- * 
+ *
  * @copyright Copyright (c) 2025
- * 
+ *
  */
 #ifndef INCLUDE_PACSHPDG_ALGEBRA_MATRIX_HPP
 #define INCLUDE_PACSHPDG_ALGEBRA_MATRIX_HPP
@@ -31,8 +31,8 @@ namespace pacs {
 template <NumericType T> struct Matrix {
 
   // Shape.
-  std::size_t rows;
-  std::size_t columns;
+  std::size_t m_rows;
+  std::size_t m_columns;
 
   // Elements.
   std::vector<T> elements;
@@ -42,31 +42,31 @@ template <NumericType T> struct Matrix {
   /**
    * @brief Constructs a new empty Matrix.
    *
-   * @param rows Rows.
-   * @param columns Columns.
+   * @param m_rows Rows.
+   * @param m_columns Columns.
    */
-  inline Matrix(const std::size_t &rows, const std::size_t &columns)
-      : rows{rows}, columns{columns},
-        elements(rows * columns, static_cast<T>(0)) {
+  inline Matrix(const std::size_t &m_rows, const std::size_t &m_columns)
+      : m_rows{m_rows}, m_columns{m_columns},
+        elements(m_rows * m_columns, static_cast<T>(0)) {
 #ifndef NDEBUG // Integrity check.
-    assert((rows > 0) && (columns > 0));
+    assert((m_rows > 0) && (m_columns > 0));
 #endif
   }
 
   /**
    * @brief Constructs a new Matrix from a given std::vector.
    *
-   * @param rows Rows.
-   * @param columns Columns.
+   * @param m_rows Rows.
+   * @param m_columns Columns.
    * @param elements
    */
-  inline Matrix(const std::size_t &rows, const std::size_t &columns,
+  inline Matrix(const std::size_t &m_rows, const std::size_t &m_columns,
                 const std::vector<T> &elements)
-      : rows{rows}, columns{columns},
+      : m_rows{m_rows}, m_columns{m_columns},
         elements(elements.begin(), elements.end()) {
 #ifndef NDEBUG // Integrity check.
-    assert((rows > 0) && (columns > 0));
-    assert(elements.size() == rows * columns);
+    assert((m_rows > 0) && (m_columns > 0));
+    assert(elements.size() == m_rows * m_columns);
 #endif
   }
 
@@ -76,7 +76,7 @@ template <NumericType T> struct Matrix {
    * @param matrix Matrix.
    */
   inline Matrix(const Matrix &matrix)
-      : rows{matrix.rows}, columns{matrix.columns},
+      : m_rows{matrix.m_rows}, m_columns{matrix.m_columns},
         elements(matrix.elements.begin(), matrix.elements.end()) {}
 
   /**
@@ -87,7 +87,8 @@ template <NumericType T> struct Matrix {
    */
   inline Matrix &operator=(const Matrix &matrix) {
 #ifndef NDEBUG
-    assert((this->rows == matrix.rows) && (this->columns == matrix.columns));
+    assert((this->m_rows == matrix.m_rows) &&
+           (this->m_columns == matrix.m_columns));
 #endif
 
 #ifdef PARALLEL
@@ -112,10 +113,10 @@ template <NumericType T> struct Matrix {
    */
   inline T operator()(const std::size_t &j, const std::size_t &k) const {
 #ifndef NDEBUG // Integrity check.
-    assert((j < this->rows) && (k < this->columns));
+    assert((j < this->m_rows) && (k < this->m_columns));
 #endif
 
-    return this->elements[j * this->columns + k];
+    return this->elements[j * this->m_columns + k];
   }
 
   /**
@@ -127,10 +128,10 @@ template <NumericType T> struct Matrix {
    */
   inline T &operator()(const std::size_t &j, const std::size_t &k) {
 #ifndef NDEBUG // Integrity check.
-    assert((j < this->rows) && (k < this->columns));
+    assert((j < this->m_rows) && (k < this->m_columns));
 #endif
 
-    return this->elements[j * this->columns + k];
+    return this->elements[j * this->m_columns + k];
   }
 
   /**
@@ -141,18 +142,18 @@ template <NumericType T> struct Matrix {
    */
   Vector<T> row(const std::size_t j) const {
 #ifndef NDEBUG // Integrity check.
-    assert(j < this->rows);
+    assert(j < this->m_rows);
 #endif
 
-    Vector<T> row{this->columns};
+    Vector<T> row{this->m_columns};
 
 #ifdef PARALLEL
-    std::copy(POLICY, this->elements.begin() + j * this->columns,
-              this->elements.begin() + (j + 1) * this->columns,
+    std::copy(POLICY, this->elements.begin() + j * this->m_columns,
+              this->elements.begin() + (j + 1) * this->m_columns,
               row.elements.begin());
 #else
-    std::copy(this->elements.begin() + j * this->columns,
-              this->elements.begin() + (j + 1) * this->columns,
+    std::copy(this->elements.begin() + j * this->m_columns,
+              this->elements.begin() + (j + 1) * this->m_columns,
               row.elements.begin());
 #endif
 
@@ -167,15 +168,15 @@ template <NumericType T> struct Matrix {
    */
   void row(const std::size_t j, const T &scalar) {
 #ifndef NDEBUG // Integrity check.
-    assert(j < this->rows);
+    assert(j < this->m_rows);
 #endif
 
 #ifdef PARALLEL
-    std::for_each_n(POLICY, this->elements.begin() + j * this->columns,
-                    this->columns,
+    std::for_each_n(POLICY, this->elements.begin() + j * this->m_columns,
+                    this->m_columns,
                     [scalar](auto &element) { element = scalar; });
 #else
-    std::for_each_n(this->elements.begin() + j * this->columns, this->columns,
+    std::for_each_n(this->elements.begin() + j * this->m_columns, this->m_columns,
                     [scalar](auto &element) { element = scalar; });
 #endif
   }
@@ -188,16 +189,16 @@ template <NumericType T> struct Matrix {
    */
   void row(const std::size_t j, const Vector<T> &vector) {
 #ifndef NDEBUG // Integrity check.
-    assert(j < this->rows);
-    assert(vector.length == this->columns);
+    assert(j < this->m_rows);
+    assert(vector.length == this->m_columns);
 #endif
 
 #ifdef PARALLEL
     std::copy(POLICY, vector.elements.begin(), vector.elements.end(),
-              this->elements.begin() + j * this->columns);
+              this->elements.begin() + j * this->m_columns);
 #else
     std::copy(vector.elements.begin(), vector.elements.end(),
-              this->elements.begin() + j * this->columns);
+              this->elements.begin() + j * this->m_columns);
 #endif
   }
 
@@ -209,13 +210,13 @@ template <NumericType T> struct Matrix {
    */
   Vector<T> column(const std::size_t &k) const {
 #ifndef NDEBUG // Integrity check.
-    assert(k < this->columns);
+    assert(k < this->m_columns);
 #endif
 
-    Vector<T> column{this->rows};
+    Vector<T> column{this->m_rows};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
-      column[j] = this->elements[j * this->columns + k];
+    for (std::size_t j = 0; j < this->m_rows; ++j)
+      column[j] = this->elements[j * this->m_columns + k];
 
     return column;
   }
@@ -228,11 +229,11 @@ template <NumericType T> struct Matrix {
    */
   void column(const std::size_t &k, const T &scalar) {
 #ifndef NDEBUG // Integrity check.
-    assert(k < this->columns);
+    assert(k < this->m_columns);
 #endif
 
-    for (std::size_t j = 0; j < this->rows; ++j)
-      this->elements[j * this->columns + k] = scalar;
+    for (std::size_t j = 0; j < this->m_rows; ++j)
+      this->elements[j * this->m_columns + k] = scalar;
   }
 
   /**
@@ -243,12 +244,12 @@ template <NumericType T> struct Matrix {
    */
   void column(const std::size_t &k, const Vector<T> &vector) {
 #ifndef NDEBUG // Integrity check.
-    assert(k < this->columns);
-    assert(vector.length == this->rows);
+    assert(k < this->m_columns);
+    assert(vector.length == this->m_rows);
 #endif
 
-    for (std::size_t j = 0; j < this->rows; ++j)
-      this->elements[j * this->columns + k] = vector.elements[j];
+    for (std::size_t j = 0; j < this->m_rows; ++j)
+      this->elements[j * this->m_columns + k] = vector.elements[j];
   }
 
   // SIZE.
@@ -258,21 +259,20 @@ template <NumericType T> struct Matrix {
    *
    * @return std::size_t
    */
-  inline std::size_t size() const { return this->rows * this->columns; }
+  inline std::size_t size() const { return this->m_rows * this->m_columns; }
 
   // SHAPE.
 
   /**
    * @brief Returns the reshaped Matrix.
    *
-   * @param rows Rows.
-   * @param columns Columns.
+   * @param m_rows Rows.
+   * @param m_columns Columns.
    */
-  inline void reshape(const std::size_t &rows,
-                      const std::size_t &columns) {
-    this->rows = rows;
-    this->columns = columns;
-    this->elements.resize(rows * columns, 0.0);
+  inline void reshape(const std::size_t &m_rows, const std::size_t &m_columns) {
+    this->m_rows = m_rows;
+    this->m_columns = m_columns;
+    this->elements.resize(m_rows * m_columns, 0.0);
   };
 
   /**
@@ -281,12 +281,12 @@ template <NumericType T> struct Matrix {
    * @return Matrix
    */
   Matrix transpose() const {
-    Matrix transpose{this->columns, this->rows};
+    Matrix transpose{this->m_columns, this->m_rows};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
-      for (std::size_t k = 0; k < this->columns; ++k)
-        transpose.elements[k * this->rows + j] =
-            this->elements[j * this->columns + k];
+    for (std::size_t j = 0; j < this->m_rows; ++j)
+      for (std::size_t k = 0; k < this->m_columns; ++k)
+        transpose.elements[k * this->m_rows + j] =
+            this->elements[j * this->m_columns + k];
 
     return transpose;
   }
@@ -298,14 +298,14 @@ template <NumericType T> struct Matrix {
    */
   Matrix diagonal() const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == this->columns);
+    assert(this->m_rows == this->m_columns);
 #endif
 
-    Matrix diagonal{this->rows, this->columns};
+    Matrix diagonal{this->m_rows, this->m_columns};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
-      diagonal.elements[j * (this->columns + 1)] =
-          this->elements[j * (this->columns + 1)];
+    for (std::size_t j = 0; j < this->m_rows; ++j)
+      diagonal.elements[j * (this->m_columns + 1)] =
+          this->elements[j * (this->m_columns + 1)];
 
     return diagonal;
   }
@@ -317,20 +317,20 @@ template <NumericType T> struct Matrix {
    */
   Matrix lower() const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == this->columns);
+    assert(this->m_rows == this->m_columns);
 #endif
 
-    Matrix lower{this->rows, this->columns};
+    Matrix lower{this->m_rows, this->m_columns};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
+    for (std::size_t j = 0; j < this->m_rows; ++j)
 #ifdef PARALLEL
-      std::copy(POLICY, this->elements.begin() + j * this->columns,
-                this->elements.begin() + j * this->columns + j,
-                lower.elements.begin() + j * this->columns);
+      std::copy(POLICY, this->elements.begin() + j * this->m_columns,
+                this->elements.begin() + j * this->m_columns + j,
+                lower.elements.begin() + j * this->m_columns);
 #else
-      std::copy(this->elements.begin() + j * this->columns,
-                this->elements.begin() + j * this->columns + j,
-                lower.elements.begin() + j * this->columns);
+      std::copy(this->elements.begin() + j * this->m_columns,
+                this->elements.begin() + j * this->m_columns + j,
+                lower.elements.begin() + j * this->m_columns);
 #endif
 
     return lower;
@@ -343,20 +343,20 @@ template <NumericType T> struct Matrix {
    */
   Matrix upper() const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == this->columns);
+    assert(this->m_rows == this->m_columns);
 #endif
 
-    Matrix upper{this->rows, this->columns};
+    Matrix upper{this->m_rows, this->m_columns};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
+    for (std::size_t j = 0; j < this->m_rows; ++j)
 #ifdef PARALLEL
-      std::copy(POLICY, this->elements.begin() + j * this->columns + j + 1,
-                this->elements.begin() + (j + 1) * this->columns,
-                upper.elements.begin() + j * this->columns + j + 1);
+      std::copy(POLICY, this->elements.begin() + j * this->m_columns + j + 1,
+                this->elements.begin() + (j + 1) * this->m_columns,
+                upper.elements.begin() + j * this->m_columns + j + 1);
 #else
-      std::copy(this->elements.begin() + j * this->columns + j + 1,
-                this->elements.begin() + (j + 1) * this->columns,
-                upper.elements.begin() + j * this->columns + j + 1);
+      std::copy(this->elements.begin() + j * this->m_columns + j + 1,
+                this->elements.begin() + (j + 1) * this->m_columns,
+                upper.elements.begin() + j * this->m_columns + j + 1);
 #endif
 
     return upper;
@@ -377,7 +377,7 @@ template <NumericType T> struct Matrix {
    * @return Matrix
    */
   Matrix operator-() const {
-    Matrix result{this->rows, this->columns};
+    Matrix result{this->m_rows, this->m_columns};
 
 #ifdef PARALLEL
     std::transform(POLICY, this->elements.begin(), this->elements.end(),
@@ -399,7 +399,7 @@ template <NumericType T> struct Matrix {
    * @return Matrix
    */
   Matrix operator*(const T &scalar) const {
-    Matrix result{this->rows, this->columns};
+    Matrix result{this->m_rows, this->m_columns};
 
 #ifdef PARALLEL
     std::transform(POLICY, this->elements.begin(), this->elements.end(),
@@ -422,7 +422,7 @@ template <NumericType T> struct Matrix {
    * @return Matrix
    */
   friend Matrix operator*(const T &scalar, const Matrix &matrix) {
-    Matrix result{matrix.rows, matrix.columns};
+    Matrix result{matrix.m_rows, matrix.m_columns};
 
 #ifdef PARALLEL
     std::transform(POLICY, matrix.elements.begin(), matrix.elements.end(),
@@ -464,7 +464,7 @@ template <NumericType T> struct Matrix {
    * @return Matrix
    */
   Matrix operator/(const T &scalar) const {
-    Matrix result{this->rows, this->columns};
+    Matrix result{this->m_rows, this->m_columns};
 
 #ifdef PARALLEL
     std::transform(POLICY, this->elements.begin(), this->elements.end(),
@@ -507,10 +507,11 @@ template <NumericType T> struct Matrix {
    */
   Matrix operator+(const Matrix &matrix) const {
 #ifndef NDEBUG // Integrity check.
-    assert((this->rows == matrix.rows) && (this->columns == matrix.columns));
+    assert((this->m_rows == matrix.m_rows) &&
+           (this->m_columns == matrix.m_columns));
 #endif
 
-    Matrix result{this->rows, this->columns};
+    Matrix result{this->m_rows, this->m_columns};
 
 #ifdef PARALLEL
     std::transform(
@@ -535,7 +536,8 @@ template <NumericType T> struct Matrix {
    */
   Matrix &operator+=(const Matrix &matrix) {
 #ifndef NDEBUG // Integrity check.
-    assert((this->rows == matrix.rows) && (this->columns == matrix.columns));
+    assert((this->m_rows == matrix.m_rows) &&
+           (this->m_columns == matrix.m_columns));
 #endif
 
 #ifdef PARALLEL
@@ -561,10 +563,11 @@ template <NumericType T> struct Matrix {
    */
   Matrix operator-(const Matrix &matrix) const {
 #ifndef NDEBUG // Integrity check.
-    assert((this->rows == matrix.rows) && (this->columns == matrix.columns));
+    assert((this->m_rows == matrix.m_rows) &&
+           (this->m_columns == matrix.m_columns));
 #endif
 
-    Matrix result{this->rows, this->columns};
+    Matrix result{this->m_rows, this->m_columns};
 
 #ifdef PARALLEL
     std::transform(
@@ -589,7 +592,8 @@ template <NumericType T> struct Matrix {
    */
   Matrix &operator-=(const Matrix &matrix) {
 #ifndef NDEBUG // Integrity check.
-    assert((this->rows == matrix.rows) && (this->columns == matrix.columns));
+    assert((this->m_rows == matrix.m_rows) &&
+           (this->m_columns == matrix.m_columns));
 #endif
 
 #ifdef PARALLEL
@@ -615,22 +619,22 @@ template <NumericType T> struct Matrix {
    */
   Vector<T> operator*(const Vector<T> &vector) const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->columns == vector.length);
+    assert(this->m_columns == vector.length);
 #endif
 
-    Vector<T> result{this->rows};
+    Vector<T> result{this->m_rows};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
+    for (std::size_t j = 0; j < this->m_rows; ++j)
 #ifdef PARALLEL
       result.elements[j] = std::transform_reduce(
           POLICY, vector.elements.begin(), vector.elements.end(),
-          this->elements.begin() + j * this->columns, static_cast<T>(0),
+          this->elements.begin() + j * this->m_columns, static_cast<T>(0),
           std::plus{},
           [](const auto &first, const auto &second) { return first * second; });
 #else
       result.elements[j] = std::inner_product(
           vector.elements.begin(), vector.elements.end(),
-          this->elements.begin() + j * this->columns, static_cast<T>(0));
+          this->elements.begin() + j * this->m_columns, static_cast<T>(0));
 #endif
 
     return result;
@@ -645,15 +649,15 @@ template <NumericType T> struct Matrix {
    */
   friend Vector<T> operator*(const Vector<T> &vector, const Matrix &matrix) {
 #ifndef NDEBUG // Integrity check.
-    assert(vector.length == matrix.rows);
+    assert(vector.length == matrix.m_rows);
 #endif
 
-    Vector<T> result{matrix.columns};
+    Vector<T> result{matrix.m_columns};
 
-    for (std::size_t j = 0; j < matrix.columns; ++j)
-      for (std::size_t k = 0; k < matrix.rows; ++k)
+    for (std::size_t j = 0; j < matrix.m_columns; ++j)
+      for (std::size_t k = 0; k < matrix.m_rows; ++k)
         result.elements[j] +=
-            vector.elements[k] * matrix.elements[k * matrix.rows + j];
+            vector.elements[k] * matrix.elements[k * matrix.m_rows + j];
 
     return result;
   }
@@ -666,17 +670,17 @@ template <NumericType T> struct Matrix {
    */
   Matrix operator*(const Matrix &matrix) const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->columns == matrix.rows);
+    assert(this->m_columns == matrix.m_rows);
 #endif
 
-    Matrix result{this->rows, matrix.columns};
+    Matrix result{this->m_rows, matrix.m_columns};
 
-    for (std::size_t j = 0; j < this->rows; ++j)
-      for (std::size_t k = 0; k < matrix.columns; ++k)
-        for (std::size_t h = 0; h < this->columns; ++h)
-          result.elements[j * result.columns + k] +=
-              this->elements[j * this->columns + h] *
-              matrix.elements[h * matrix.columns + k];
+    for (std::size_t j = 0; j < this->m_rows; ++j)
+      for (std::size_t k = 0; k < matrix.m_columns; ++k)
+        for (std::size_t h = 0; h < this->m_columns; ++h)
+          result.elements[j * result.m_columns + k] +=
+              this->elements[j * this->m_columns + h] *
+              matrix.elements[h * matrix.m_columns + k];
 
     return result;
   }
@@ -691,11 +695,11 @@ template <NumericType T> struct Matrix {
    * @return std::ostream&
    */
   friend std::ostream &operator<<(std::ostream &ost, const Matrix &matrix) {
-    for (std::size_t j = 0; j < matrix.rows; ++j) {
-      for (std::size_t k = 0; k < matrix.columns; ++k)
-        ost << matrix.elements[j * matrix.columns + k] << " ";
+    for (std::size_t j = 0; j < matrix.m_rows; ++j) {
+      for (std::size_t k = 0; k < matrix.m_columns; ++k)
+        ost << matrix.elements[j * matrix.m_columns + k] << " ";
 
-      if (j < matrix.rows - 1)
+      if (j < matrix.m_rows - 1)
         ost << std::endl;
     }
     return ost;

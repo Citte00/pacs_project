@@ -26,13 +26,13 @@ namespace pacs {
     template<NumericType T>
     std::array<Matrix<T>, 2> LU(const Matrix<T> &matrix) {
         #ifndef NDEBUG
-        assert(matrix.rows == matrix.columns); // Integrity check.
+        assert(matrix.m_rows == matrix.m_columns); // Integrity check.
         #endif
 
-        Matrix<T> L{matrix.rows, matrix.columns};
-        Matrix<T> U{matrix.rows, matrix.columns};
+        Matrix<T> L{matrix.m_rows, matrix.m_columns};
+        Matrix<T> U{matrix.m_rows, matrix.m_columns};
 
-        for(std::size_t j = 0; j < matrix.columns; ++j) {
+        for(std::size_t j = 0; j < matrix.m_columns; ++j) {
             L(j, j) = static_cast<T>(1);
 
             for(std::size_t i = 0; i <= j; ++i) {
@@ -44,7 +44,7 @@ namespace pacs {
                 U(i, j) = matrix(i, j) - sum;
             }
 
-            for(std::size_t i = j + 1; i < matrix.rows; ++i) {
+            for(std::size_t i = j + 1; i < matrix.m_rows; ++i) {
                 T sum = static_cast<T>(0);
 
                 for (std::size_t k = 0; k < j; ++k)
@@ -66,29 +66,29 @@ namespace pacs {
     template<NumericType T>
     std::array<Matrix<T>, 2> QR(const Matrix<T> &matrix) {
 
-        Matrix<T> I{matrix.rows, matrix.rows};
+        Matrix<T> I{matrix.m_rows, matrix.m_rows};
 
-        for(std::size_t j = 0; j < matrix.rows; ++j)
-            I.elements[j * (matrix.rows + 1)] = static_cast<T>(1);
+        for(std::size_t j = 0; j < matrix.m_rows; ++j)
+            I.elements[j * (matrix.m_rows + 1)] = static_cast<T>(1);
 
         Matrix<T> Q{I};
         Matrix<T> R{matrix};
 
-        for(std::size_t j = 0; j < ((matrix.rows > matrix.columns) ? matrix.columns : matrix.rows); ++j) {
+        for(std::size_t j = 0; j < ((matrix.m_rows > matrix.m_columns) ? matrix.m_columns : matrix.m_rows); ++j) {
 
-            Vector<T> vector{matrix.rows - j};
+            Vector<T> vector{matrix.m_rows - j};
 
-            for(std::size_t k = 0; k < matrix.rows - j; ++k)
-                vector[k] = R.elements[(j + k) * matrix.columns + j];
+            for(std::size_t k = 0; k < matrix.m_rows - j; ++k)
+                vector[k] = R.elements[(j + k) * matrix.m_columns + j];
 
             vector[0] += (vector[0] > 0 ? static_cast<T>(1) : static_cast<T>(-1)) * norm(vector);
             vector /= norm(vector);
 
             Matrix<T> H{I};
 
-            for(std::size_t k = 0; k < matrix.rows - j; ++k)
-                for(std::size_t l = 0; l < matrix.rows - j; ++l)
-                    H.elements[(j + k) * matrix.rows + (j + l)] -= 2 * vector[k] * vector[l];
+            for(std::size_t k = 0; k < matrix.m_rows - j; ++k)
+                for(std::size_t l = 0; l < matrix.m_rows - j; ++l)
+                    H.elements[(j + k) * matrix.m_rows + (j + l)] -= 2 * vector[k] * vector[l];
 
             R = H * R;
             Q = Q * H.transpose();
@@ -127,11 +127,11 @@ namespace pacs {
      */
     template<NumericType T>
     Vector<T> squash(const Matrix<T> &matrix) {
-        Vector<T> result{matrix.rows * matrix.columns};
+        Vector<T> result{matrix.m_rows * matrix.m_columns};
 
-        for(std::size_t j = 0; j < matrix.rows; ++j)
-            for(std::size_t k = 0; k < matrix.columns; ++k)
-                result[j * matrix.columns + k] = matrix(j, k);
+        for(std::size_t j = 0; j < matrix.m_rows; ++j)
+            for(std::size_t k = 0; k < matrix.m_columns; ++k)
+                result[j * matrix.m_columns + k] = matrix(j, k);
 
         return result;
     }
@@ -146,12 +146,12 @@ namespace pacs {
     template<NumericType T>
     T mtrace(const Matrix<T> &matrix) {
         #ifndef NDEBUG // Integrity check.
-        assert(matrix.rows == matrix.columns);
+        assert(matrix.m_rows == matrix.m_columns);
         #endif
 
         T product = static_cast<T>(1);
 
-        for(std::size_t j = 0; j < matrix.rows; ++j)
+        for(std::size_t j = 0; j < matrix.m_rows; ++j)
             product *= matrix(j, j);
 
         return product;

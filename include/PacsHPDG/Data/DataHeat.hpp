@@ -47,18 +47,9 @@ struct DataHeat {
 
         for (size_t i = 0; i < x.length; i++)
           result[i] =
-              -(1.0L - std::exp(-100.0L * x[i])) / (1.0L - std::exp(-100.0)) *
-                  std::sin(M_PI * y[i]) * (1.0L - x[i]) +
-              D[i] *
-                  ((10000.0L * std::exp(-100.0L * x[i])) /
-                       (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
-                       (1.0L - x[i]) +
-                   (200.0L * std::exp(-100.0L * x[i])) /
-                       (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) +
-                   M_PI * M_PI * (1.0L - std::exp(-100.0L * x[i])) /
-                       (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
-                       (1.0L - x[i])) *
-                  (1 - t);
+              -(std::cos(2 * M_PI * x[i]) * std::cos(2 * M_PI * y[i]) + 2) +
+                  8.0 * M_PI * M_PI *
+              D[i] * std::cos(2 * M_PI * x[i]) * std::cos(2 * M_PI * y[i]) * (1 - t);
 
         return result;
       };
@@ -69,9 +60,7 @@ struct DataHeat {
         Vector<Real> result{x.length};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] = (1.0L - std::exp(-100.0L * x[i])) /
-                      (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
-                      (1.0L - x[i]) * (1 - t);
+          result[i] = (std::cos(2 * M_PI * x[i]) * std::cos(2 * M_PI * y[i]) + 2) * (1 - t);
 
         return result;
       };
@@ -82,10 +71,9 @@ struct DataHeat {
         Vector<Real> result{x.size()};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] = std::sin(M_PI * y[i]) * (1 - t) /
-                      (1.0L - std::exp(-100.0)) *
-                      ((100.0L * std::exp(-100.0L * x[i])) * (1.0L - x[i]) -
-                       (1.0L - std::exp(-100.0L * x[i])));
+          result[i] =
+              - 2 * M_PI * (std::sin(2 * M_PI * x[i]) * std::cos(2 * M_PI * y[i])) *
+              (1 - t);
 
         return result;
       };
@@ -95,9 +83,10 @@ struct DataHeat {
         Vector<Real> result{x.size()};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] = M_PI * (1.0L - std::exp(-100.0L * x[i])) /
-                      (1.0L - std::exp(-100.0)) * std::cos(M_PI * y[i]) *
-                      (1.0L - x[i]) * (1 - t);
+          result[i] =
+              -2 * M_PI *
+              (std::cos(2 * M_PI * x[i]) * std::sin(2 * M_PI * y[i])) *
+              (1 - t);
 
         return result;
       };
@@ -107,9 +96,8 @@ struct DataHeat {
         Vector<Real> result{x.length};
 
         for (size_t i = 0; i < x.length; i++)
-          result[i] = -(1.0L - std::exp(-100.0L * x[i])) /
-                      (1.0L - std::exp(-100.0)) * std::sin(M_PI * y[i]) *
-                      (1.0L - x[i]);
+          result[i] =
+              - (std::cos(2 * M_PI * x[i]) * std::cos(2 * M_PI * y[i]) + 2);
 
         return result;
       };
@@ -124,8 +112,8 @@ struct DataHeat {
 
   // Time discretization
   Real t_0 = 0.0;
-  Real t_f = 1e-3;
-  Real dt = 1e-5;
+  Real t_f = 1.0;
+  Real dt = 1e-2;
   Real theta = 0.5;
 
   // Space discretization

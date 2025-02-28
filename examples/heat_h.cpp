@@ -43,84 +43,70 @@ int main(int argc, char **argv) {
   // Mesh.
   Mesh mesh{domain, std::move(diagram), data.degree};
 
-  // Matrices.
-  std::unique_ptr<Heat<Real>> heat = std::make_unique<Heat<Real>>(mesh);
-  heat->assembly(data, mesh);
+  // Sequence of meshes.
+  for (std::size_t index = 0; index < TESTS_MAX; ++index) {
 
-  // Initial condition.
-  Vector<Real> ch_old = heat->modal(mesh, data.c_ex);
+    // Verbosity.
+    std::cout << "\nDEGREE: " << data.degree << "\nINDEX: " << index << "\n"
+              << std::endl;
 
-  // Forcing term.
-  heat->assembly_force(data, mesh);
+    // Matrices.
+    Heat<Real> heat(mesh);
+    heat.assembly(data, mesh);
 
-  // Parameters.
-  int counter = 1;
-  Real t = 0.0;
-  const int dofsLimit = DOFS_MAX;
-  int steps = static_cast<int>(round((data.t_f - data.t_0) / data.dt));
+    // Initial condition.
+    Vector<Real> ch_old = heat.modal(mesh, data.c_ex);
 
-  for (int i = 1; i <= steps; ++i) {
+    // Forcing term.
+    heat.assembly_force(data, mesh);
 
-    // Time step.
-    t += data.dt;
-    std::cout << "TIME: " << (heat->t() = t) << std::endl;
-    // Number of elements.
-    std::cout << "Elements: " << mesh.elements.size() << std::endl;
+    // Parameters.
+    Real t = 0.0;
+    const int dofsLimit = DOFS_MAX;
+    int steps = static_cast<int>(round((data.t_f - data.t_0) / data.dt));
 
-    // Update forcing term.
-    Vector<Real> F_old = heat->forcing();
-    heat->assembly_force(data, mesh);
+    for (int i = 1; i <= steps; ++i) {
 
-    // Linear system equation solution.
-    Vector<Real> ch = heat->solver(data, mesh, ch_old, F_old);
+      // Time step.
+      heat.t() += data.dt;
+      std::cout << "TIME: " << heat.t() << std::endl;
+      // Number of elements.
+      std::cout << "Elements: " << mesh.elements.size() << std::endl;
 
-    if (counter % data.VisualizationStep == 0) {
+      // Update forcing term.
+      Vector<Real> F_old = heat.forcing();
+      heat.assembly_force(data, mesh);
+
+      // Linear system equation solution.
+      Vector<Real> ch = heat.solver(data, mesh, ch_old, F_old);
 
       // Errors.
       HeatError<Real> error(mesh);
 
       // Compute error.
-      error.error(data, mesh, *heat, ch);
+      error.error(data, mesh, heat, ch);
 
       // Output.
-      output << "\n"
-             << error << "\n"
-             << "Residual: "
-             << norm(heat->M() * ch + heat->A() * ch - heat->forcing())
-             << std::endl;
+      output << "\n" << error << "\n";
+
+      // Exit.
+      if (error.dofs() > dofsLimit)
+        break;
 
       // Compute estimates.
       HeatEstimator<Real> estimator(mesh);
-      estimator.computeEstimates(data, *heat, ch, ch_old);
+      estimator.computeEstimates(data, heat, ch, ch_old);
       const auto &estimates = estimator.estimates();
 
       // Refine.
-      Mask h_mask = estimates > 0.6L * max(estimates);
+      Mask h_mask = estimates > 0.75L * max(estimates);
 
       bool refine_h =
           std::any_of(h_mask.begin(), h_mask.end(), [](bool v) { return v; });
 
-      if (!refine_h || mesh.dofs() >= dofsLimit) {
-        ch_old = ch;
-        ++counter;
-        continue;
-      }
-
       // Refine mesh.
       estimator.mesh_refine_size(h_mask);
       const auto &new_mesh = estimator.mesh();
-
-      // Update matrices.
-      heat = std::make_unique<Heat<Real>>(new_mesh);
-      heat->t() = t;
-      heat->assembly(data, new_mesh);
-
-      // Prolong solution.
-      ch_old.resize(new_mesh.dofs());
-      ch_old = heat->prolong_solution_h(new_mesh, mesh, ch, h_mask);
-
-      // Update forcing.
-      heat->assembly_force(data, new_mesh);
 
       // Update mesh.
       mesh = std::move(new_mesh);
@@ -130,15 +116,6 @@ int main(int argc, char **argv) {
           "output/heat_h_" + std::to_string(mesh.elements.size()) + "@" +
           std::to_string(data.degree) + "_" + std::to_string(t) + ".poly";
       mesh.write(meshfile);
-
-    } else {
-      ch_old = ch;
     }
-    ++counter;
   }
-  HeatSolution<Real> solution{mesh};
-  solution.solution(data, mesh, *heat, ch_old);
-  std::string solfile = "output/square_s_" + std::to_string(data.degree) + "_" +
-                        std::to_string(data.elements) + ".sol";
-  solution.write(solfile);
 }

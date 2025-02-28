@@ -9,11 +9,11 @@
  */
 #include <PacsHPDG.hpp>
 
+#include <chrono>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <string>
-#include <chrono>
 
 // To save typing the full qualified names.
 using namespace pacs;
@@ -66,11 +66,11 @@ int main(int argc, char **argv) {
     // Errors.
     LaplaceError<Real> error(mesh);
 
-// Solution structure (output).
+    // Solution structure (output).
     LaplaceSolution<Real> solution{mesh};
     solution.solution(data, mesh, numerical);
-    std::string solfile = "output/square_s_" + std::to_string(data.degree) + "_" +
-                          std::to_string(j) + ".sol";
+    std::string solfile = "output/square_s_" + std::to_string(data.degree) +
+                          "_" + std::to_string(j) + ".sol";
     solution.write(solfile);
 
     // Compute error.
@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
     // Output.
     output << "\n" << error << "\n";
 
-    output << "Laplacian: " << laplacian.A().rows << " x "
-           << laplacian.A().columns << "\n";
+    output << "Laplacian: " << laplacian.A().m_rows << " x "
+           << laplacian.A().m_columns << "\n";
     output << "Residual: " << norm(laplacian.A() * numerical - forcing)
            << std::endl;
   }

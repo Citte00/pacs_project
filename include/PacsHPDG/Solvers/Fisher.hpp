@@ -163,7 +163,7 @@ public:
         Matrix<T> scaled_gradx{gradx_phi};
         Matrix<T> scaled_grady{grady_phi};
 
-        for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_gradx.m_columns; ++l) {
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
           scaled_phi_alpha.column(l, (alpha * scaled_phi_alpha.column(l)) *
                                          scaled);
@@ -229,7 +229,7 @@ public:
         Matrix<T> scaled_grady{grady_phi};
         Matrix<T> scaled_phi{phi};
 
-        for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_gradx.m_columns; ++l) {
           scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
           scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
@@ -386,7 +386,7 @@ public:
         Matrix<T> scaled_phi{phi};
         Vector<T> c_star_loc = phi * c_star;
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l) {
           scaled_phi.column(l, (alpha * scaled_phi.column(l)) * c_star_loc *
                                    scaled);
         }
@@ -481,7 +481,7 @@ public:
         auto phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
         Matrix<T> scaled_phi{phi};
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local forcing term.
@@ -527,7 +527,7 @@ public:
         Matrix<T> scaled_grady{grady_phi};
         Matrix<T> scaled_phi{phi};
 
-        for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_gradx.m_columns; ++l) {
           scaled_gradx.column(l, (Dext * scaled_gradx.column(l)) * scaled);
           scaled_grady.column(l, (Dext * scaled_grady.column(l)) * scaled);
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
@@ -675,7 +675,7 @@ public:
         Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
         Matrix<T> scaled_phi = phi;
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // function solution.

@@ -138,7 +138,7 @@ public:
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, nodes_2d);
 
         // Weights scaling.
         Vector<T> scaled = jacobian_det * weights_2d;
@@ -155,7 +155,7 @@ public:
         Matrix<T> scaled_gradx{gradx_phi};
         Matrix<T> scaled_grady{grady_phi};
 
-        for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_gradx.m_columns; ++l) {
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
           scaled_gradx.column(l, (D_ext * scaled_gradx.column(l)) * scaled);
           scaled_grady.column(l, (D_ext * scaled_grady.column(l)) * scaled);
@@ -219,7 +219,7 @@ public:
         Matrix<T> scaled_grady{grady_phi};
         Matrix<T> scaled_phi{phi};
 
-        for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_gradx.m_columns; ++l) {
           scaled_gradx.column(l, (D_ext * scaled_gradx.column(l)) * scaled);
           scaled_grady.column(l, (D_ext * scaled_grady.column(l)) * scaled);
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
@@ -326,7 +326,7 @@ public:
 // Loop over the elements.
 #pragma omp parallel for schedule(dynamic)
     for (std::size_t j = 0; j < num_elem; ++j) {
-      
+
       // Local quadrature nodes and weights.
       auto [nodes_1d, weights_1d, nodes_2d, weights_2d] = Quadrature(nqn[j]);
 
@@ -363,7 +363,7 @@ public:
         auto phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
         Matrix<T> scaled_phi{phi};
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local forcing term.
@@ -409,7 +409,7 @@ public:
         Vector<T> D_ext = data_.D_ext(physical_x, physical_y, m_t);
         Vector<T> boundary = data_.DirBC(physical_x, physical_y, m_t);
 
-        for (std::size_t l = 0; l < scaled_gradx.columns; ++l) {
+        for (std::size_t l = 0; l < scaled_gradx.m_columns; ++l) {
           scaled_gradx.column(l, (D_ext * scaled_gradx.column(l)) * scaled);
           scaled_grady.column(l, (D_ext * scaled_grady.column(l)) * scaled);
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
@@ -534,7 +534,7 @@ public:
         Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
         Matrix<T> scaled_phi = phi;
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // function solution.
@@ -622,7 +622,7 @@ public:
         Matrix<T> phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
         Matrix<T> scaled_phi = phi;
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // function solution.
@@ -742,7 +742,7 @@ public:
         Matrix<T> phi_old = basis_2d(old_mesh_, j, {physical_x, physical_y})[0];
         Matrix<T> scaled_phi{phi};
 
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
           scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local coefficients.
@@ -892,7 +892,7 @@ public:
               basis_2d(old_mesh_, j, {physical_x, physical_y})[0];
           Matrix<T> scaled_phi{phi};
 
-          for (std::size_t l = 0; l < scaled_phi.columns; ++l)
+          for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
             scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
           // Local coefficients.

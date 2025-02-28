@@ -224,10 +224,6 @@ public:
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh, j, {physical_x, physical_y});
-        Matrix<T> scaled_phi{phi};
-
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
-          scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local numerical solution and gradients.
         Vector<T> uh = phi * ch_(indices);
@@ -522,7 +518,7 @@ public:
    *
    * @param filename_ File name.
    */
-  void write(const std::string &filename_) {
+  void write(const std::string &filename_, const LaplaceError<T> &error_) {
     // File loading.
     std::ofstream file{filename_};
 
@@ -545,7 +541,12 @@ public:
         file << std::setprecision(12) << vertex[0] << " "
              << std::setprecision(12) << vertex[1] << " ";
 
-      file << this->m_estimates[count];
+      T estimate = std::sqrt(this->m_estimates[count]);
+      T error = error_.H1errors()[count];
+
+      file << estimate << " ";
+      file << error << " ";
+      file << std::abs(error - estimate) / error;
 
       file << "\n";
       count++;
@@ -663,7 +664,9 @@ public:
         // Local time derivative.
         Vector<T> local_uh = phi * ch_(indices);
         Vector<T> local_uh_old = phi * ch_old_(indices);
-        Vector<T> partial_uh_t = (local_uh - local_uh_old) / data_.dt;
+        Vector<T> partial_uh_t{local_uh.size()};
+        if (data_.dt != 0)
+          partial_uh_t = (local_uh - local_uh_old) / data_.dt;
 
         // Local source approximation.
         Vector<T> f_bar = phi * f_modals(indices);
@@ -707,10 +710,6 @@ public:
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh, j, {physical_x, physical_y});
-        Matrix<T> scaled_phi{phi};
-
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
-          scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local numerical solution and gradients.
         Vector<T> uh = phi * ch_(indices);
@@ -930,7 +929,9 @@ public:
         // Local time derivative.
         Vector<T> local_uh = phi * ch_(indices);
         Vector<T> local_uh_old = phi * fisher_.ch_old()(indices);
-        Vector<T> partial_uh_t = (local_uh - local_uh_old) / data_.dt;
+        Vector<T> partial_uh_t{local_uh.size()};
+        if (data_.dt != 0)
+          partial_uh_t = (local_uh - local_uh_old) / data_.dt;
 
         // Local numerical laplacian.
         Vector<T> lap_uh = lap_phi * ch_(indices);
@@ -985,10 +986,6 @@ public:
         // Basis functions.
         auto [phi, gradx_phi, grady_phi] =
             basis_2d(mesh, j, {physical_x, physical_y});
-        Matrix<T> scaled_phi{phi};
-
-        for (std::size_t l = 0; l < scaled_phi.columns; ++l)
-          scaled_phi.column(l, scaled_phi.column(l) * scaled);
 
         // Local numerical solution and gradients.
         Vector<T> uh = phi * ch_(indices);

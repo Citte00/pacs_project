@@ -31,12 +31,11 @@ namespace pacs {
  *
  * @tparam T Matrix' type.
  */
-template <NumericType T> 
-struct Sparse {
+template <NumericType T> struct Sparse {
 
   // Shape.
-  std::size_t rows;
-  std::size_t columns;
+  std::size_t m_rows;
+  std::size_t m_columns;
 
   // Compression flag.
   bool compressed = false;
@@ -54,31 +53,31 @@ struct Sparse {
   /**
    * @brief Constructs a new empty Sparse matrix.
    *
-   * @param rows Rows.
-   * @param columns Columns.
+   * @param m_rows Rows.
+   * @param m_columns Columns.
    */
-  Sparse(const std::size_t &rows, const std::size_t &columns)
-      : rows{rows}, columns{columns} {
+  Sparse(const std::size_t &m_rows, const std::size_t &m_columns)
+      : m_rows{m_rows}, m_columns{m_columns} {
 #ifndef NDEBUG // Integrity check.
-    assert((rows > 0) && (columns > 0));
+    assert((m_rows > 0) && (m_columns > 0));
 #endif
   }
 
   /**
    * @brief Constructs a new Sparse matrix from a given std::map.
    *
-   * @param rows Rows.
-   * @param columns Columns.
+   * @param m_rows Rows.
+   * @param m_columns Columns.
    * @param elements Elements.
    */
-  Sparse(const std::size_t &rows, const std::size_t &columns,
+  Sparse(const std::size_t &m_rows, const std::size_t &m_columns,
          const std::map<std::array<std::size_t, 2>, T> &elements)
-      : rows{rows}, columns{columns}, elements{elements} {
+      : m_rows{m_rows}, m_columns{m_columns}, elements{elements} {
 #ifndef NDEBUG // Integrity checks.
-    assert((rows > 0) && (columns > 0));
+    assert((m_rows > 0) && (m_columns > 0));
 
     for (const auto &[key, value] : elements)
-      assert((key[0] < rows) && (key[1] < columns));
+      assert((key[0] < m_rows) && (key[1] < m_columns));
 
 #endif
   }
@@ -87,20 +86,20 @@ struct Sparse {
    * @brief Construct a new Sparse matrix from given inner, outer and values
    * vectors.
    *
-   * @param rows Number of rows.
-   * @param columns Number of columns.
+   * @param m_rows Number of m_rows.
+   * @param m_columns Number of columns.
    * @param inner Inner vector.
    * @param outer Outer vector.
    * @param values Values vector.
    */
-  Sparse(const std::size_t &rows, const std::size_t &columns,
+  Sparse(const std::size_t &m_rows, const std::size_t &m_columns,
          const std::vector<std::size_t> &inner,
          const std::vector<std::size_t> &outer, const std::vector<T> &values)
-      : rows{rows}, columns{columns}, compressed{true}, inner{inner},
+      : m_rows{m_rows}, m_columns{m_columns}, compressed{true}, inner{inner},
         outer{outer}, values{values} {
 #ifndef NDEBUG // Integrity checks.
-    assert((rows > 0) && (columns > 0));
-    assert(inner.size() == rows + 1);
+    assert((m_rows > 0) && (m_columns > 0));
+    assert(inner.size() == m_rows + 1);
     assert(outer.size() == values.size());
 
     for (std::size_t j = 1; j < inner.size(); ++j) {
@@ -110,8 +109,8 @@ struct Sparse {
     }
 
     for (std::size_t j = 1; j < outer.size(); ++j) {
-      assert(outer[j - 1] < columns);
-      assert(outer[j] < columns);
+      assert(outer[j - 1] < m_columns);
+      assert(outer[j] < m_columns);
       assert(outer[j - 1] < outer[j]);
     }
 #endif
@@ -123,7 +122,7 @@ struct Sparse {
    * @param sparse Sparse matrix.
    */
   Sparse(const Sparse &sparse)
-      : rows{sparse.rows}, columns{sparse.columns},
+      : m_rows{sparse.m_rows}, m_columns{sparse.m_columns},
         compressed{sparse.compressed} {
     if (!(sparse.compressed))
       this->elements = sparse.elements;
@@ -149,7 +148,8 @@ struct Sparse {
    */
   Sparse &operator=(const Sparse &sparse) {
 #ifndef NDEBUG
-    assert((this->rows == sparse.rows) && (this->columns == sparse.columns));
+    assert((this->m_rows == sparse.m_rows) &&
+           (this->m_columns == sparse.m_columns));
 #endif
 
     this->compressed = sparse.compressed;
@@ -185,15 +185,15 @@ struct Sparse {
    * @return Matrix<T>
    */
   operator Matrix<T>() const {
-    Matrix<T> matrix{this->rows, this->columns};
+    Matrix<T> matrix{this->m_rows, this->m_columns};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements)
-        matrix.elements[key[0] * this->columns + key[1]] = element;
+        matrix.elements[key[0] * this->m_columns + key[1]] = element;
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
-          matrix.elements[j + this->columns + this->outer[k]] = this->values[k];
+          matrix.elements[j + this->m_columns + this->outer[k]] = this->values[k];
 
     return matrix;
   }
@@ -209,7 +209,7 @@ struct Sparse {
    */
   T operator()(const std::size_t &j, const std::size_t &k) const {
 #ifndef NDEBUG // Out-of-bound check.
-    assert((j < this->rows) && (k < this->columns));
+    assert((j < this->m_rows) && (k < this->m_columns));
 #endif
 
     // Checks for the value inside elements, otherwise returns
@@ -239,7 +239,7 @@ struct Sparse {
 #ifndef NDEBUG // Out-of-bound check.
     for (std::size_t j = 0; j < J.size(); ++j)
       for (std::size_t k = 0; k < K.size(); ++k)
-        assert((J[j] < this->rows) && (K[k] < this->columns));
+        assert((J[j] < this->m_rows) && (K[k] < this->m_columns));
 #endif
 
     Matrix<T> matrix{J.size(), K.size()};
@@ -262,7 +262,7 @@ struct Sparse {
    */
   void insert(const std::size_t &j, const std::size_t &k, const T &element) {
 #ifndef NDEBUG // Integrity check.
-    assert((j < this->rows) && (k < this->columns));
+    assert((j < this->m_rows) && (k < this->m_columns));
     assert(!(this->compressed));
 #endif
 
@@ -280,13 +280,13 @@ struct Sparse {
   void insert(const std::vector<std::size_t> &J,
               const std::vector<std::size_t> &K, const Matrix<T> &elements) {
 #ifndef NDEBUG // Integrity checks.
-    assert(J.size() == elements.rows);
-    assert(K.size() == elements.columns);
+    assert(J.size() == elements.m_rows);
+    assert(K.size() == elements.m_columns);
 
     for (std::size_t j = 0; j < J.size(); ++j)
-      assert((J[j] < this->rows) && (j < elements.rows));
+      assert((J[j] < this->m_rows) && (j < elements.m_rows));
     for (std::size_t k = 0; k < K.size(); ++k)
-      assert((K[k] < this->columns) && (k < elements.columns));
+      assert((K[k] < this->m_columns) && (k < elements.m_columns));
 #endif
 
     for (std::size_t j = 0; j < J.size(); ++j)
@@ -306,7 +306,7 @@ struct Sparse {
    */
   void add(const std::size_t &j, const std::size_t &k, const T &element) {
 #ifndef NDEBUG // Integrity check.
-    assert((j < this->rows) && (k < this->columns));
+    assert((j < this->m_rows) && (k < this->m_columns));
     assert(!(this->compressed));
 #endif
 
@@ -328,13 +328,13 @@ struct Sparse {
   void add(const std::vector<std::size_t> &J, const std::vector<std::size_t> &K,
            const Matrix<T> &elements) {
 #ifndef NDEBUG // Integrity checks.
-    assert(J.size() == elements.rows);
-    assert(K.size() == elements.columns);
+    assert(J.size() == elements.m_rows);
+    assert(K.size() == elements.m_columns);
 
     for (std::size_t j = 0; j < J.size(); ++j)
-      assert((J[j] < this->rows) && (j < elements.rows));
+      assert((J[j] < this->m_rows) && (j < elements.m_rows));
     for (std::size_t k = 0; k < K.size(); ++k)
-      assert((K[k] < this->columns) && (k < elements.columns));
+      assert((K[k] < this->m_columns) && (k < elements.m_columns));
 #endif
 
     for (std::size_t j = 0; j < J.size(); ++j)
@@ -357,10 +357,10 @@ struct Sparse {
    */
   Vector<T> row(const std::size_t &j) const {
 #ifndef NDEBUG // Integrity check.
-    assert(j < this->rows);
+    assert(j < this->m_rows);
 #endif
 
-    Vector<T> row{this->columns};
+    Vector<T> row{this->m_columns};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements) {
@@ -385,14 +385,14 @@ struct Sparse {
    */
   void row(const std::size_t &j, const T &scalar) {
 #ifndef NDEBUG // Integrity check.
-    assert(j < this->rows);
+    assert(j < this->m_rows);
     assert(!this->compressed);
 #endif
 
     if (std::abs(scalar) <= TOLERANCE)
       return;
 
-    for (std::size_t k = 0; k < this->columns; ++k)
+    for (std::size_t k = 0; k < this->m_columns; ++k)
       this->elements[{j, k}] = scalar;
   }
 
@@ -404,14 +404,36 @@ struct Sparse {
    */
   void row(const std::size_t &j, const Vector<T> &vector) {
 #ifndef NDEBUG // Integrity check.
-    assert(j < this->rows);
-    assert(vector.length == this->columns);
+    assert(j < this->m_rows);
+    assert(vector.length == this->m_columns);
     assert(!this->compressed);
 #endif
 
-    for (std::size_t k = 0; k < this->columns; ++k)
+    for (std::size_t k = 0; k < this->m_columns; ++k)
       this->insert(j, k, vector[k]);
   }
+
+  /**
+   * @brief Returns the indexes-range rows as a sub-matrix.
+   *
+   * @param indexes Rows to return.
+   * @return Sparse<T>
+   */
+  Sparse<T> rows(const std::vector<std::size_t> &indexes) {
+#ifndef NDEBUG // Integrity check.
+    assert(indexes.size() < this->m_columns);
+#endif
+
+    Sparse<T> result{indexes.size(), this->m_columns};
+    std::size_t count = 0;
+
+    for (const auto &index : indexes) {
+      result.row(count, this->row(index));
+      count++;
+    }
+
+    return result;
+  };
 
   /**
    * @brief Return the k-th column as a Vector.
@@ -421,10 +443,10 @@ struct Sparse {
    */
   Vector<T> column(const std::size_t &k) const {
 #ifndef NDEBUG // Integrity check.
-    assert(k < this->columns);
+    assert(k < this->m_columns);
 #endif
 
-    Vector<T> column{this->rows};
+    Vector<T> column{this->m_rows};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements) {
@@ -432,7 +454,7 @@ struct Sparse {
           column[key[0]] = element;
       }
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t h = this->inner[j]; h < this->inner[j + 1]; ++h)
           if (this->outer[h] == k) {
             column[j] = this->values[h];
@@ -450,14 +472,14 @@ struct Sparse {
    */
   void column(const std::size_t &k, const T &scalar) {
 #ifndef NDEBUG // Integrity check.
-    assert(k < this->columns);
+    assert(k < this->m_columns);
     assert(!this->compressed);
 #endif
 
     if (std::abs(scalar) <= TOLERANCE)
       return;
 
-    for (std::size_t j = 0; j < this->rows; ++j)
+    for (std::size_t j = 0; j < this->m_rows; ++j)
       this->elements[{j, k}] = scalar;
   }
 
@@ -469,48 +491,70 @@ struct Sparse {
    */
   void column(const std::size_t &k, const Vector<T> &vector) {
 #ifndef NDEBUG // Integrity check.
-    assert(k < this->columns);
-    assert(vector.length == this->rows);
+    assert(k < this->m_columns);
+    assert(vector.length == this->m_rows);
     assert(!this->compressed);
 #endif
 
-    for (std::size_t j = 0; j < this->rows; ++j)
+    for (std::size_t j = 0; j < this->m_rows; ++j)
       this->insert(j, k, vector[j]);
   }
+
+  /**
+   * @brief Returns indexes-range columns as a sub-matrix.
+   *
+   * @param indexes Columns to return.
+   * @return Sparse<T>
+   */
+  Sparse<T> columns(const std::vector<std::size_t> &indexes) {
+#ifndef NDEBUG // Integrity check.
+    assert(indexes.size() < this->m_rows);
+#endif
+
+    Sparse<T> result{this->m_rows, indexes.size()};
+    std::size_t count = 0;
+
+    for (const auto &index : indexes) {
+      result.column(count, this->column(index));
+      count++;
+    }
+
+    return result;
+  };
 
   // SHAPE.
 
   /**
    * @brief Returns the reshaped Sparse matrix.
    *
-   * @param rows Rows.
-   * @param columns Columns.
+   * @param m_rows Rows.
+   * @param m_columns Columns.
    */
-  void reshape(const std::size_t &rows, const std::size_t &columns) {
+  void reshape(const std::size_t &m_rows, const std::size_t &m_columns) {
 
-    this->rows = rows;
-    this->columns = columns;
+    this->m_rows = m_rows;
+    this->m_columns = m_columns;
 
     if (this->compressed) {
-      this->inner.resize(rows + 1, 0.0);
-      this->outer.resize(rows * columns, 0.0);
-      this->values.resize(rows * columns, 0.0);
+      this->inner.resize(m_rows + 1, 0.0);
+      this->outer.resize(m_rows * m_columns, 0.0);
+      this->values.resize(m_rows * m_columns, 0.0);
     }
   };
-  
+
   /**
    * @brief Returns the transpose Sparse matrix.
    *
    * @return Sparse
    */
   Sparse transpose() const {
-    Sparse transpose{this->columns, this->rows};
+    Sparse transpose{this->m_columns, this->m_rows};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements)
         transpose.elements[{key[1], key[0]}] = element;
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           transpose.elements[{this->outer[k], j}] = this->values[k];
 
@@ -524,10 +568,10 @@ struct Sparse {
    */
   Sparse diagonal() const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == this->columns);
+    assert(this->m_rows == this->m_columns);
 #endif
 
-    Sparse diagonal{this->rows, this->columns};
+    Sparse diagonal{this->m_rows, this->m_columns};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements) {
@@ -535,7 +579,7 @@ struct Sparse {
           diagonal.elements[key] = element;
       }
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (j == this->outer[k]) {
             diagonal.elements[{j, this->outer[k]}] = this->values[k];
@@ -552,10 +596,10 @@ struct Sparse {
    */
   Sparse lower() const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == this->columns);
+    assert(this->m_rows == this->m_columns);
 #endif
 
-    Sparse lower{this->rows, this->columns};
+    Sparse lower{this->m_rows, this->m_columns};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements) {
@@ -563,7 +607,7 @@ struct Sparse {
           lower.elements[key] = element;
       }
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (j > this->outer[k])
             lower.elements[{j, this->outer[k]}] = this->values[k];
@@ -578,10 +622,10 @@ struct Sparse {
    */
   Sparse upper() const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == this->columns);
+    assert(this->m_rows == this->m_columns);
 #endif
 
-    Sparse upper{this->rows, this->columns};
+    Sparse upper{this->m_rows, this->m_columns};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements) {
@@ -589,7 +633,7 @@ struct Sparse {
           upper.elements[key] = element;
       }
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (j < this->outer[k])
             upper.elements[{j, this->outer[k]}] = this->values[k];
@@ -616,12 +660,12 @@ struct Sparse {
     std::size_t last_row = 0;
     std::size_t last_column = 0;
 
-    for (std::size_t j = 0; j < this->rows; ++j) {
-      for (std::size_t k = j; k < this->columns; ++k)
+    for (std::size_t j = 0; j < this->m_rows; ++j) {
+      for (std::size_t k = j; k < this->m_columns; ++k)
         if (std::abs((*this)(j, k)) > TOLERANCE)
           last_row = (last_row < k) ? k : last_row;
 
-      for (std::size_t k = j; k < this->rows; ++k)
+      for (std::size_t k = j; k < this->m_rows; ++k)
         if (std::abs((*this)(k, j)) > TOLERANCE)
           last_column = (last_column < k) ? k : last_column;
 
@@ -662,7 +706,7 @@ struct Sparse {
         if (key[0] != key[1])
           return false;
     } else {
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (j != this->outer[k])
             return false;
@@ -683,7 +727,7 @@ struct Sparse {
         if (key[0] < key[1])
           return false;
     } else {
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (j < this->outer[k])
             return false;
@@ -704,7 +748,7 @@ struct Sparse {
         if (key[0] > key[1])
           return false;
     } else {
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (j > this->outer[k])
             return false;
@@ -720,7 +764,7 @@ struct Sparse {
    * @return false
    */
   bool is_symmetric() const {
-    if (this->rows != this->columns)
+    if (this->m_rows != this->m_columns)
       return false;
 
     Sparse transpose = this->transpose();
@@ -735,7 +779,7 @@ struct Sparse {
           return false;
       }
     } else {
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           if (transpose.elements.contains({j, this->outer[k]})) {
             if (std::abs(this->outer[k] -
@@ -755,7 +799,7 @@ struct Sparse {
    * @return false
    */
   bool is_block_diagonal() const {
-    if (this->rows != this->columns)
+    if (this->m_rows != this->m_columns)
       return false;
 
     // Simpler but does not check for compression.
@@ -765,19 +809,19 @@ struct Sparse {
     std::size_t last_row = 0;
     std::size_t last_column = 0;
 
-    for (std::size_t j = 0; j < this->rows; ++j) {
-      for (std::size_t k = j; k < this->columns; ++k)
+    for (std::size_t j = 0; j < this->m_rows; ++j) {
+      for (std::size_t k = j; k < this->m_columns; ++k)
         if (std::abs((*this)(j, k)) > TOLERANCE)
           last_row = (last_row < k) ? k : last_row;
 
-      for (std::size_t k = j; k < this->rows; ++k)
+      for (std::size_t k = j; k < this->m_rows; ++k)
         if (std::abs((*this)(k, j)) > TOLERANCE)
           last_column = (last_column < k) ? k : last_column;
 
       if (last_row != last_column)
         return false;
 
-      if ((j == this->rows - 1) && (end == 0))
+      if ((j == this->m_rows - 1) && (end == 0))
         return false;
 
       if ((last_row == j) && (last_column == j))
@@ -812,11 +856,11 @@ struct Sparse {
     std::array<std::size_t, 2> current{0, 0};
     std::array<std::size_t, 2> next{1, 0};
 
-    this->inner.resize(this->rows + 1);
+    this->inner.resize(this->m_rows + 1);
     this->inner[0] = index;
 
     // Compression.
-    for (std::size_t j = 1; j < this->rows + 1; ++j) {
+    for (std::size_t j = 1; j < this->m_rows + 1; ++j) {
       for (auto it = this->elements.lower_bound(current);
            (*it).first < (*(this->elements.lower_bound(next))).first; ++it) {
         auto [key, value] = (*it);
@@ -913,7 +957,8 @@ struct Sparse {
    */
   Sparse operator+(const Sparse &sparse) const {
 #ifndef NDEBUG // Integrity checks.
-    assert((this->rows == sparse.rows) && (this->columns == sparse.columns));
+    assert((this->m_rows == sparse.m_rows) &&
+           (this->m_columns == sparse.m_columns));
 #endif
 
     Sparse result{*this};
@@ -927,7 +972,7 @@ struct Sparse {
           result.elements[key] = element;
       }
     else
-      for (std::size_t j = 0; j < sparse.rows; ++j)
+      for (std::size_t j = 0; j < sparse.m_rows; ++j)
         for (std::size_t k = sparse.inner[j]; k < sparse.inner[j + 1]; ++k) {
           if (result.elements.contains({j, sparse.outer[k]}))
             result.elements[{j, sparse.outer[k]}] += sparse.values[k];
@@ -946,7 +991,8 @@ struct Sparse {
    */
   Sparse &operator+=(const Sparse &sparse) {
 #ifndef NDEBUG // Integrity checks.
-    assert((this->rows == sparse.rows) && (this->columns == sparse.columns));
+    assert((this->m_rows == sparse.m_rows) &&
+           (this->m_columns == sparse.m_columns));
     assert(!this->compressed);
 #endif
 
@@ -958,7 +1004,7 @@ struct Sparse {
           this->elements[key] = element;
       }
     else
-      for (std::size_t j = 0; j < sparse.rows; ++j)
+      for (std::size_t j = 0; j < sparse.m_rows; ++j)
         for (std::size_t k = sparse.inner[j]; k < sparse.inner[j + 1]; ++k) {
           if (this->elements.contains({j, sparse.outer[k]}))
             this->elements[{j, sparse.outer[k]}] += sparse.values[k];
@@ -977,7 +1023,8 @@ struct Sparse {
    */
   Sparse operator-(const Sparse &sparse) const {
 #ifndef NDEBUG // Integrity checks.
-    assert((this->rows == sparse.rows) && (this->columns == sparse.columns));
+    assert((this->m_rows == sparse.m_rows) &&
+           (this->m_columns == sparse.m_columns));
 #endif
 
     Sparse result{*this};
@@ -991,7 +1038,7 @@ struct Sparse {
           result.elements[key] = -element;
       }
     else
-      for (std::size_t j = 0; j < sparse.rows; ++j)
+      for (std::size_t j = 0; j < sparse.m_rows; ++j)
         for (std::size_t k = sparse.inner[j]; k < sparse.inner[j + 1]; ++k) {
           if (result.elements.contains({j, sparse.outer[k]}))
             result.elements[{j, sparse.outer[k]}] -= sparse.values[k];
@@ -1010,7 +1057,8 @@ struct Sparse {
    */
   Sparse &operator-=(const Sparse &sparse) {
 #ifndef NDEBUG // Integrity checks.
-    assert((this->rows == sparse.rows) && (this->columns == sparse.columns));
+    assert((this->m_rows == sparse.m_rows) &&
+           (this->m_columns == sparse.m_columns));
     assert(!this->compressed);
 #endif
 
@@ -1022,7 +1070,7 @@ struct Sparse {
           this->elements[key] = -element;
       }
     else
-      for (std::size_t j = 0; j < sparse.rows; ++j)
+      for (std::size_t j = 0; j < sparse.m_rows; ++j)
         for (std::size_t k = sparse.inner[j]; k < sparse.inner[j + 1]; ++k) {
           if (this->elements.contains({j, sparse.outer[k]}))
             this->elements[{j, sparse.outer[k]}] -= sparse.values[k];
@@ -1153,16 +1201,16 @@ struct Sparse {
    */
   Vector<T> operator*(const Vector<T> &vector) const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->rows == vector.length);
+    assert(this->m_rows == vector.length);
 #endif
 
-    Vector<T> result{this->rows};
+    Vector<T> result{this->m_rows};
 
     if (!(this->compressed))
       for (const auto &[key, element] : this->elements)
         result[key[0]] += element * vector[key[1]];
     else
-      for (std::size_t j = 0; j < this->rows; ++j)
+      for (std::size_t j = 0; j < this->m_rows; ++j)
         for (std::size_t k = this->inner[j]; k < this->inner[j + 1]; ++k)
           result[j] += this->values[k] * vector[this->outer[k]];
 
@@ -1178,18 +1226,18 @@ struct Sparse {
    */
   Sparse operator*(const Sparse &sparse) const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->columns == sparse.rows);
+    assert(this->m_columns == sparse.m_rows);
     assert(this->compressed);
     assert(sparse.compressed);
 #endif
 
-    Sparse result{this->rows, sparse.columns};
-    std::vector<std::map<std::size_t, T>> row_values(this->rows);
+    Sparse result{this->m_rows, sparse.m_columns};
+    std::vector<std::map<std::size_t, T>> row_values(this->m_rows);
 
     result.compressed = true;
-    result.inner.resize(this->rows + 1, 0);
+    result.inner.resize(this->m_rows + 1, 0);
 
-    for (std::size_t i = 0; i < this->rows; ++i) {
+    for (std::size_t i = 0; i < this->m_rows; ++i) {
       for (std::size_t k = this->inner[i]; k < this->inner[i + 1]; ++k) {
         std::size_t colA = this->outer[k];
         T valueA = this->values[k];
@@ -1203,7 +1251,7 @@ struct Sparse {
       }
     }
 
-    for (std::size_t i = 0; i < this->rows; ++i) {
+    for (std::size_t i = 0; i < this->m_rows; ++i) {
       result.inner[i] = result.outer.size();
       for (const auto &[col, value] : row_values[i]) {
         if (std::abs(value) > TOLERANCE) {
@@ -1213,7 +1261,7 @@ struct Sparse {
       }
     }
 
-    result.inner[this->rows] = result.outer.size();
+    result.inner[this->m_rows] = result.outer.size();
 
     return result;
   }
@@ -1236,12 +1284,12 @@ struct Sparse {
           ost << std::endl;
       }
     else {
-      for (std::size_t j = 0; j < sparse.rows; ++j)
+      for (std::size_t j = 0; j < sparse.m_rows; ++j)
         for (std::size_t k = sparse.inner[j]; k < sparse.inner[j + 1]; ++k) {
           ost << "(" << j << ", " << sparse.outer[k]
               << "): " << sparse.values[k];
 
-          if (k < sparse.inner[sparse.rows] - 1)
+          if (k < sparse.inner[sparse.m_rows] - 1)
             ost << std::endl;
         }
     }

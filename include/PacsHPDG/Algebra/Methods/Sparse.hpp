@@ -1,11 +1,11 @@
 /**
  * @file Sparse.hpp
  * @author Andrea Di Antonio (github.com/diantonioandrea)
- * @brief 
+ * @brief
  * @date 2024-05-26
- * 
+ *
  * @copyright Copyright (c) 2024
- * 
+ *
  */
 
 #ifndef SPARSE_METHODS_PACS
@@ -15,27 +15,26 @@
 
 namespace pacs {
 
-    /**
-     * @brief Product of diagonal elements.
-     * 
-     * @tparam T Numeric type.
-     * @param sparse Sparse matrix.
-     * @return T
-     */
-    template<NumericType T>
-    T mtrace(const Sparse<T> &sparse) {
-        #ifndef NDEBUG // Integrity check.
-        assert(sparse.rows == sparse.columns);
-        #endif
+/**
+ * @brief Product of diagonal elements.
+ *
+ * @tparam T Numeric type.
+ * @param sparse Sparse matrix.
+ * @return T
+ */
+template <NumericType T> T mtrace(const Sparse<T> &sparse) {
+#ifndef NDEBUG // Integrity check.
+  assert(sparse.m_rows == sparse.m_columns);
+#endif
 
-        T product = static_cast<T>(1);
+  T product = static_cast<T>(1);
 
-        for(std::size_t j = 0; j < sparse.rows; ++j)
-            product *= sparse(j, j);
+  for (std::size_t j = 0; j < sparse.m_rows; ++j)
+    product *= sparse(j, j);
 
-        return product;
-    }
-    
+  return product;
 }
+
+} // namespace pacs
 
 #endif

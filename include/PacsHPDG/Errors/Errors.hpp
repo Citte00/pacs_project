@@ -37,11 +37,13 @@ protected:
 
   Vector<T> m_l2_errors;
   Vector<T> m_h1_errors;
+  Vector<T> m_dg_errors;
 
 public:
   // CONSTRUCTOR.
   LaplaceError(const Mesh &mesh_)
-      : m_l2_errors{mesh_.elements.size()}, m_h1_errors{mesh_.elements.size()} {
+      : m_l2_errors{mesh_.elements.size()}, m_h1_errors{mesh_.elements.size()},
+        m_dg_errors{mesh_.elements.size()} {
 
     this->m_dofs = mesh_.dofs();
 
@@ -66,6 +68,7 @@ public:
   T DGerror() const { return this->m_dg_error; };
   Vector<T> L2errors() const { return this->m_l2_errors; };
   Vector<T> H1errors() const { return this->m_h1_errors; };
+  Vector<T> DGerrors() const { return this->m_dg_errors; };
 
   // METHODS.
   /**
@@ -135,7 +138,7 @@ public:
     for (std::size_t j = 0; j < num_elem; ++j) {
 
       // 2D quadrature nodes and weights.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+      auto [nodes_1d, weights_1d, nodes_2d, weights_2d] = Quadrature(nqn[j]);
 
       // Global matrix indices.
       std::vector<std::size_t> indices(mesh_.elements[j].dofs());
@@ -154,7 +157,7 @@ public:
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, nodes_2d);
 
         // Weights scaling.
         Vector<T> scaled = jacobian_det * weights_2d;
@@ -179,8 +182,46 @@ public:
             dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
       }
 
+      // Element's neighbours.
+      std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
+
+      // Penalties.
+      Vector<Real> penalties = penalty(mesh_, j, data_.penalty_coeff);
+
+      // Edges.
+      std::vector<Segment> edges{polygon.edges()};
+
+      // Jump error.
+      T jump = 0.0;
+
+      // Loop over faces.
+      for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
+
+        // Physical points.
+        auto [normal_vector, edge_vector, physical_x, physical_y] =
+            faces_physical_points(edges[k], nodes_1d);
+
+        // Weights scaling.
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
+
+        // Basis functions.
+        auto phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+        Matrix<T> scaled_phi{phi};
+
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
+          scaled_phi.column(l, scaled_phi.column(l) * scaled);
+
+        // Local solutions.
+        Vector<T> u = data_.c_ex(physical_x, physical_y);
+        Vector<T> uh = phi * ch_(indices);
+
+        // Jump error.
+        jump += penalties[k] * dot(scaled, (uh - u) * (uh - u));
+      }
+
       this->m_l2_errors[j] = std::sqrt(this->m_l2_errors[j]);
       this->m_h1_errors[j] = std::sqrt(this->m_h1_errors[j]);
+      this->m_dg_errors[j] = this->m_h1_errors[j] + std::sqrt(jump);
     }
   };
 
@@ -240,6 +281,31 @@ public:
 
     // L2 Error.
     this->m_l2_error = std::sqrt(dot(error, mass * error));
+
+    // Number of elements.
+    std::size_t num_elem = mesh_.elements.size();
+
+    // Starting indices.
+    std::vector<std::size_t> starts(num_elem);
+    starts[0] = 0;
+
+    for (std::size_t j = 1; j < num_elem; ++j)
+      starts[j] = starts[j - 1] + mesh_.elements[j - 1].dofs();
+
+      // Loop over the elements.
+#pragma omp parallel for schedule(dynamic)
+    for (std::size_t j = 0; j < num_elem; ++j) {
+
+      // Global matrix indices.
+      std::vector<std::size_t> indices(mesh_.elements[j].dofs());
+
+      for (std::size_t k = 0; k < mesh_.elements[j].dofs(); ++k)
+        indices[k] = starts[j] + k;
+
+      Matrix<T> stiff = dg_stiff(indices, indices);
+      Vector<T> e = error(indices);
+      this->m_dg_errors[j] = std::sqrt(dot(e, stiff * e));
+    }
   };
 
   /**
@@ -280,7 +346,7 @@ public:
     for (std::size_t j = 0; j < num_elem; ++j) {
 
       // 2D quadrature nodes and weights.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+      auto [nodes_1d, weights_1d, nodes_2d, weights_2d] = Quadrature(nqn[j]);
 
       // Global matrix indices.
       std::vector<std::size_t> indices(mesh_.elements[j].dofs());
@@ -299,7 +365,7 @@ public:
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, nodes_2d);
 
         // Weights scaling.
         Vector<T> scaled = jacobian_det * weights_2d;
@@ -324,8 +390,65 @@ public:
             dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
       }
 
+      // Element's neighbours.
+      std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
+
+      // Penalties.
+      Vector<Real> penalties = penalty(mesh_, j, data_.penalty_coeff);
+
+      // Edges.
+      std::vector<Segment> edges{polygon.edges()};
+
+      // Jump error.
+      T jump = 0.0;
+
+      // Loop over faces.
+      for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
+
+        // Physical points.
+        auto [normal_vector, edge_vector, physical_x, physical_y] =
+            faces_physical_points(edges[k], nodes_1d);
+
+        // Weights scaling.
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
+
+        // Basis functions.
+        auto phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+
+        Vector<T> uh = phi * ch_(indices);
+
+        if( element_neighbours[k][1] == -1){
+
+          // Boundary term.
+          Vector<T> g = data_.DirBC(physical_x, physical_y, heat_.t());
+
+          jump += penalties[k] * dot(scaled, (uh - g) * (uh - g));
+        
+        } else {
+
+          // Neighbour's basis function.
+          auto [n_phi, n_gradx_phi, n_grady_phi] =
+              basis_2d(mesh, neighbour, {physical_x, physical_y});
+
+          std::size_t n_index = element_neighbours[k][1];
+          std::size_t n_dofs =
+              mesh.elements[n_index].dofs(); // Neighbour's dofs.
+
+          std::vector<std::size_t> n_indices(n_dofs);
+          for (std::size_t h = 0; h < n_dofs; ++h)
+            n_indices[h] = starts[n_index] + h;
+
+          // Neighbour's numerical solution and gradients.
+          Vector<T> n_uh = n_phi * ch_(n_indices);
+
+          // Jump error.
+          jump += penalties[k] * dot(scaled, (uh - n_uh) * (uh - n_uh));
+        }
+      }
+
       this->m_l2_errors[j] = std::sqrt(this->m_l2_errors[j]);
       this->m_h1_errors[j] = std::sqrt(this->m_h1_errors[j]);
+      this->m_dg_errors[j] = this->m_h1_errors[j] + std::sqrt(jump);
     }
   };
 };
@@ -420,7 +543,7 @@ public:
     for (std::size_t j = 0; j < num_elem; ++j) {
 
       // 2D quadrature nodes and weights.
-      auto [nodes_x_2d, nodes_y_2d, weights_2d] = quadrature_2d(nqn[j]);
+      auto [nodes_1d, weights_1d, nodes_2d, weights_2d] = Quadrature(nqn[j]);
 
       // Global matrix indices.
       std::vector<std::size_t> indices(mesh_.elements[j].dofs());
@@ -439,7 +562,7 @@ public:
 
         // Jacobian's determinant and physical nodes.
         auto [jacobian_det, physical_x, physical_y] =
-            get_Jacobian_physical_points(triangle, {nodes_x_2d, nodes_y_2d});
+            get_Jacobian_physical_points(triangle, nodes_2d);
 
         // Weights scaling.
         Vector<T> scaled = jacobian_det * weights_2d;
@@ -464,8 +587,46 @@ public:
             dot(scaled, (grad_u - grad_uh) * (grad_u - grad_uh));
       }
 
+      // Element's neighbours.
+      std::vector<std::array<int, 3>> element_neighbours = neighbours[j];
+
+      // Penalties.
+      Vector<Real> penalties = penalty(mesh_, j, data_.penalty_coeff);
+
+      // Edges.
+      std::vector<Segment> edges{polygon.edges()};
+
+      // Jump error.
+      T jump = 0.0;
+
+      // Loop over faces.
+      for (std::size_t k = 0; k < element_neighbours.size(); ++k) {
+
+        // Physical points.
+        auto [normal_vector, edge_vector, physical_x, physical_y] =
+            faces_physical_points(edges[k], nodes_1d);
+
+        // Weights scaling.
+        Vector<T> scaled = std::abs(edges[k]) * weights_1d;
+
+        // Basis functions.
+        auto phi = basis_2d(mesh_, j, {physical_x, physical_y})[0];
+        Matrix<T> scaled_phi{phi};
+
+        for (std::size_t l = 0; l < scaled_phi.m_columns; ++l)
+          scaled_phi.column(l, scaled_phi.column(l) * scaled);
+
+        // Local solutions.
+        Vector<T> u = data_.c_ex(physical_x, physical_y, fisher_.t());
+        Vector<T> uh = phi * ch_(indices);
+
+        // Jump error.
+        jump += penalties[k] * dot(scaled, (uh - u) * (uh - u));
+      }
+
       this->m_l2_errors[j] = std::sqrt(this->m_l2_errors[j]);
       this->m_h1_errors[j] = std::sqrt(this->m_h1_errors[j]);
+      this->m_dg_errors[j] = this->m_h1_errors[j] + std::sqrt(jump);
     }
   };
 

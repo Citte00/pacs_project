@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
       std::string estimate = "output/fisher_" +
                              std::to_string(estimator.mesh().elements.size()) +
                              ".poly";
-      estimator.write(estimate);
+      estimator.write(estimate, error);
 
       // Update solution.
       ch_oold = fisher.ch_old();

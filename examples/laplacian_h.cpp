@@ -80,12 +80,13 @@ int main(int argc, char **argv) {
     // Errors.
     LaplaceError<Real> error(mesh);
     error.error(data, mesh, laplacian, numerical);
+    error.errors(data, mesh, laplacian, numerical);
 
     // Output.
     output << "\n"
            << error << "\n"
-           << "Laplacian: " << laplacian.A().rows << " x "
-           << laplacian.A().columns << "\n"
+           << "Laplacian: " << laplacian.A().m_rows << " x "
+           << laplacian.A().m_columns << "\n"
            << "Residual: " << norm(laplacian.A() * numerical - forcing)
            << std::endl;
 
@@ -95,8 +96,9 @@ int main(int argc, char **argv) {
 
     // Refinement.
     LaplaceEstimator<Real> estimator(mesh);
-    estimator.mesh_refine_size(error.L2errors() >
-                               refine * max(error.L2errors()));
+    estimator.computeEstimates(data, laplacian, numerical);
+    estimator.mesh_refine_size(estimator.estimates() >
+                               refine * max(estimator.estimates()));
 
     // Update mesh.
     mesh = estimator.mesh();
