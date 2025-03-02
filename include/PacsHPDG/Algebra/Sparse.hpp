@@ -1201,7 +1201,7 @@ template <NumericType T> struct Sparse {
    */
   Vector<T> operator*(const Vector<T> &vector) const {
 #ifndef NDEBUG // Integrity check.
-    assert(this->m_rows == vector.length);
+    assert(this->m_columns == vector.length);
 #endif
 
     Vector<T> result{this->m_rows};

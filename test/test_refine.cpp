@@ -37,7 +37,7 @@ int main() {
     refinement[2] = true;
 
     // Refinement.
-    LaplaceEstimator estimator(mesh);
+    LaplaceEstimator<Real> estimator(mesh);
     estimator.mesh_refine_size(refinement);
 
     std::cout << "Dofs: " << mesh.dofs() << std::endl;

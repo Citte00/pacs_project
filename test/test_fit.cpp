@@ -42,6 +42,6 @@ int main() {
   y[3] = 16.0L;
 
   // Polynomial fit.
-  LaplaceEstimator estimator(mesh);
+  LaplaceEstimator<Real> estimator(mesh);
   std::cout << estimator.polyfit(x, y, 2) << std::endl;
 }
